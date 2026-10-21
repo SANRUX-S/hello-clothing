@@ -1,0 +1,116 @@
+{
+  "date": "2026-10-21",
+  "processing": "WebP quality 85, full original framing, no upscaling, no retouching or generated content.",
+  "photos": [
+    {
+      "file": "/campaign/real/couple-graphic-tees.webp",
+      "description": "Two models wearing black and white HELLO! graphic tees",
+      "source": "WhatsApp Image 2026-10-20 at 20.52.12.jpeg",
+      "width": 960,
+      "height": 1280,
+      "bytes": 272574,
+      "sourceWidth": 960,
+      "sourceHeight": 1280,
+      "sourceSha256": "0a9a47b2d958a6b3b1e088d9ae6f265180da40fc3a15740be790fb37eccfd7a8"
+    },
+    {
+      "file": "/campaign/real/man-black-hoodie.webp",
+      "description": "Model in black HELLO! hoodie against a shutter",
+      "source": "WhatsApp Image 2026-10-20 at 20.52.11.jpeg",
+      "width": 960,
+      "height": 1280,
+      "bytes": 92768,
+      "sourceWidth": 960,
+      "sourceHeight": 1280,
+      "sourceSha256": "dc5db4d71b98cee5cc1010d20422ebfe8d2511aa52123abb56cd8e2edd1cc997"
+    },
+    {
+      "file": "/campaign/real/man-charcoal-hoodie.webp",
+      "description": "Model in charcoal HELLO! hoodie against greenery",
+      "source": "WhatsApp Image 2026-10-20 at 20.52.13.jpeg",
+      "width": 960,
+      "height": 1280,
+      "bytes": 173972,
+      "sourceWidth": 960,
+      "sourceHeight": 1280,
+      "sourceSha256": "77eeef3426fc805a966ec9ae1c23a38d6ebd0f1518b3dab0f75290585cb31333"
+    },
+    {
+      "file": "/campaign/real/man-white-tee.webp",
+      "description": "Model in white HELLO! tee and olive trousers",
+      "source": "WhatsApp Image 2026-10-20 at 20.52.12 (2).jpeg",
+      "width": 960,
+      "height": 1280,
+      "bytes": 112052,
+      "sourceWidth": 960,
+      "sourceHeight": 1280,
+      "sourceSha256": "17a5aa46f195697906e41ad39a03b871887dfb01c9c23fa972327b6beae2b597"
+    },
+    {
+      "file": "/campaign/real/man-graphic-tee-side.webp",
+      "description": "Side view of white graphic HELLO! tee",
+      "source": "WhatsApp Image 2026-10-20 at 20.52.10 (2).jpeg",
+      "width": 960,
+      "height": 1280,
+      "bytes": 82744,
+      "sourceWidth": 960,
+      "sourceHeight": 1280,
+      "sourceSha256": "eddf007585e8ee8173ca71b7c29a361e9ffc1c40a26b723b66690289e7972839"
+    },
+    {
+      "file": "/campaign/real/man-graphic-tee-back.webp",
+      "description": "Rear view of white graphic HELLO! tee",
+      "source": "WhatsApp Image 2026-10-20 at 20.52.10 (1).jpeg",
+      "width": 960,
+      "height": 1280,
+      "bytes": 106986,
+      "sourceWidth": 960,
+      "sourceHeight": 1280,
+      "sourceSha256": "afa7ab78b38643094e3a56ff785dda128db6713e8f21a509fdb897d34c022b9d"
+    },
+    {
+      "file": "/campaign/real/woman-black-tee.webp",
+      "description": "Model in black HELLO! tee",
+      "source": "WhatsApp Image 2026-10-20 at 20.53.19.jpeg",
+      "width": 1024,
+      "height": 1280,
+      "bytes": 200648,
+      "sourceWidth": 1024,
+      "sourceHeight": 1280,
+      "sourceSha256": "8f304c745c003a505d77e5d7e0637eab4594ab28546f23ba25f5bde099ca2131"
+    },
+    {
+      "file": "/campaign/real/woman-white-hoodie.webp",
+      "description": "Model in white HELLO! hoodie against bamboo",
+      "source": "WhatsApp Image 2026-10-20 at 20.53.20.jpeg",
+      "width": 960,
+      "height": 1280,
+      "bytes": 114416,
+      "sourceWidth": 960,
+      "sourceHeight": 1280,
+      "sourceSha256": "e1c9048e46eb6d423f403bee73b15ae510ae32969d086bd9aff83966a5f5bc7c"
+    },
+    {
+      "file": "/campaign/real/woman-white-hoodie-profile.webp",
+      "description": "Profile view of model in white HELLO! hoodie",
+      "source": "WhatsApp Image 2026-10-20 at 20.53.20 (1).jpeg",
+      "width": 960,
+      "height": 1280,
+      "bytes": 135276,
+      "sourceWidth": 960,
+      "sourceHeight": 1280,
+      "sourceSha256": "911307e90eecbec20a62decb786cb4d95214c33f151170b0b37744b51db8d06d"
+    },
+    {
+      "file": "/campaign/real/woman-white-hoodie-up.webp",
+      "description": "Model in white HELLO! hoodie with hood raised",
+      "source": "WhatsApp Image 2026-10-20 at 20.53.19 (1).jpeg",
+      "width": 960,
+      "height": 1280,
+      "bytes": 128340,
+      "sourceWidth": 960,
+      "sourceHeight": 1280,
+      "sourceSha256": "f9b3b0c5cab1df3b3bb67a0fef022e4364b9f36c8b8554e9bb2398d7172b6c8e"
+    }
+  ]
+}
