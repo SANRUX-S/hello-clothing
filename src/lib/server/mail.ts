@@ -62,6 +62,7 @@ export async function sendOrderConfirmationEmail(order: {
     : 'Credit / Debit Card (Verified)';
 
   const trackUrl = `https://www.helloclothing.store/track-order?ref=${encodeURIComponent(order.reference)}`;
+  const receiptUrl = `https://www.helloclothing.store/order-confirmation/${encodeURIComponent(order.reference)}`;
   const subtotalFormatted = formatLKR(order.subtotal || 0);
   const deliveryFormatted = (order.delivery === 0) ? 'FREE' : formatLKR(order.delivery || 50000);
   const totalFormatted = formatLKR(order.total || 0);
@@ -171,17 +172,20 @@ export async function sendOrderConfirmationEmail(order: {
                     Account Name: HELLO! CLOTHING PVT LTD<br>
                     Account No: 1000 2489 1234<br>
                     <span style="font-size: 12px; color: #94a3b8; display: block; margin-top: 6px;">
-                      Please WhatsApp your deposit slip with reference <strong>${order.reference}</strong> to <strong>+94 77 123 4567</strong>.
+                      Please WhatsApp your deposit slip with reference <strong>${order.reference}</strong> to <strong>+94 78 619 1260</strong>.
                     </span>
                   </div>
                 </td>
               </tr>` : ''}
 
-              <!-- CTA Button -->
+              <!-- CTA Buttons -->
               <tr>
                 <td style="padding-top: 28px; text-align: center;">
-                  <a href="${trackUrl}" target="_blank" style="display: inline-block; background-color: #ffffff; color: #000000; font-size: 13px; font-weight: 800; letter-spacing: 0.5px; text-decoration: none; padding: 14px 28px; border-radius: 6px; text-transform: uppercase;">
+                  <a href="${trackUrl}" target="_blank" style="display: inline-block; background-color: #ffffff; color: #000000; font-size: 13px; font-weight: 800; letter-spacing: 0.5px; text-decoration: none; padding: 13px 24px; border-radius: 6px; text-transform: uppercase; margin: 4px;">
                     Track Order Live &rarr;
+                  </a>
+                  <a href="${receiptUrl}" target="_blank" style="display: inline-block; background-color: #1f2022; border: 1px solid #383a3e; color: #4ade80; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; text-decoration: none; padding: 12px 22px; border-radius: 6px; text-transform: uppercase; margin: 4px;">
+                    View / Print Receipt &rarr;
                   </a>
                 </td>
               </tr>
@@ -368,6 +372,7 @@ export async function sendOrderStatusUpdateEmail(order: {
   }
 
   const trackUrl = `https://www.helloclothing.store/track-order?ref=${encodeURIComponent(order.reference)}`;
+  const receiptUrl = `https://www.helloclothing.store/order-confirmation/${encodeURIComponent(order.reference)}`;
 
   const html = `
     <!DOCTYPE html>
@@ -417,8 +422,11 @@ export async function sendOrderStatusUpdateEmail(order: {
 
               <tr>
                 <td style="padding-top: 28px; text-align: center;">
-                  <a href="${trackUrl}" target="_blank" style="display: inline-block; background-color: #ffffff; color: #000000; font-size: 13px; font-weight: 800; letter-spacing: 0.5px; text-decoration: none; padding: 14px 28px; border-radius: 6px; text-transform: uppercase;">
+                  <a href="${trackUrl}" target="_blank" style="display: inline-block; background-color: #ffffff; color: #000000; font-size: 13px; font-weight: 800; letter-spacing: 0.5px; text-decoration: none; padding: 13px 24px; border-radius: 6px; text-transform: uppercase; margin: 4px;">
                     View Live Courier Progress &rarr;
+                  </a>
+                  <a href="${receiptUrl}" target="_blank" style="display: inline-block; background-color: #1f2022; border: 1px solid #383a3e; color: #4ade80; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; text-decoration: none; padding: 12px 22px; border-radius: 6px; text-transform: uppercase; margin: 4px;">
+                    View Official Receipt &rarr;
                   </a>
                 </td>
               </tr>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, Check, CheckCircle2, Copy, ExternalLink, ImagePlus, Images, LayoutDashboard, Menu, Package, Plus, Search, Settings2, ShoppingBag, SlidersHorizontal, Tags, Trash2, Type, X, Pencil, Save, RotateCcw, ShieldCheck, Boxes, MessageCircle, Truck, UserRound, Eye, MapPin, Mail } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, Check, CheckCircle2, Copy, ExternalLink, ImagePlus, Images, LayoutDashboard, Menu, Package, Plus, Search, Settings2, ShoppingBag, SlidersHorizontal, Tags, Trash2, Type, X, Pencil, Save, RotateCcw, ShieldCheck, Boxes, MessageCircle, Truck, UserRound, Eye, MapPin, Mail, Printer } from "lucide-react";
 import { products as catalogProducts } from "@/lib/catalog";
 
 type Color = { name: string; hex: string };
@@ -891,6 +891,9 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
                         >
                           View <Eye size={13} />
                         </button>
+                        <Link href={`/order-confirmation/${order.reference}`} className="admin-text-link" target="_blank" style={{ color: '#38bdf8' }}>
+                          Receipt <Printer size={13} />
+                        </Link>
                         <Link href={`/track-order?ref=${order.reference}`} className="admin-text-link" target="_blank">
                           Track <ArrowUpRight size={13} />
                         </Link>
@@ -1195,6 +1198,14 @@ function OrderDetailsModal({
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
           >
             Live Tracking View <ExternalLink size={13} />
+          </Link>
+          <Link
+            href={`/order-confirmation/${order.reference}`}
+            target="_blank"
+            className="admin-button"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', background: '#22c55e', color: '#000', fontWeight: 700 }}
+          >
+            View / Print Receipt <Printer size={13} />
           </Link>
         </div>
       </div>

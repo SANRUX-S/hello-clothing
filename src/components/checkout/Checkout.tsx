@@ -12,8 +12,17 @@ import {
   Truck,
   ShoppingBag,
   Printer,
-  Sparkles
+  Sparkles,
+  Copy,
+  Mail,
+  ExternalLink,
+  ShieldCheck,
+  Phone,
+  MapPin,
+  MessageCircle,
+  FileText
 } from 'lucide-react';
+
 import { useStore } from '@/store/store';
 import { cartSubtotal } from '@/lib/cart';
 import { products, money } from '@/lib/catalog';
@@ -105,6 +114,10 @@ export default function Checkout() {
         total: result.preview.subtotal + deliveryFee,
         paymentMethod,
         deliveryMethod,
+        status: result.preview.status || 'processing',
+        courier: result.preview.courier || 'PromptX Logistics',
+        tracking_number: result.preview.trackingNumber || `PX-${result.preview.reference.replace(/[^a-zA-Z0-9]/g, '').slice(-6)}`,
+        trackingNumber: result.preview.trackingNumber || `PX-${result.preview.reference.replace(/[^a-zA-Z0-9]/g, '').slice(-6)}`,
         createdAt: new Date().toISOString(),
         customer: customerData,
         items: (result.preview.items as Array<{
@@ -459,9 +472,11 @@ export function OrderConfirmation({ reference }: { reference: string }) {
   useSyncExternalStore(subscribePreview, previewSnapshot, () => '');
   const localOrder = getStoredOrder(reference);
   const [dbOrder, setDbOrder] = useState<StoredOrder | null>(null);
+  const [copiedRef, setCopiedRef] = useState(false);
+  const [isEmailing, setIsEmailing] = useState(false);
+  const [emailNotice, setEmailNotice] = useState('');
 
   useEffect(() => {
-    if (localOrder) return;
     let active = true;
     fetch(`/api/orders/track?ref=${encodeURIComponent(reference)}`)
       .then((r) => r.json())
@@ -475,7 +490,10 @@ export function OrderConfirmation({ reference }: { reference: string }) {
             total: d.order.total,
             paymentMethod: d.order.payment_method || 'cod',
             deliveryMethod: 'standard',
-            createdAt: d.order.created_at,
+            status: d.order.status || 'processing',
+            courier: d.order.courier || 'PromptX Logistics',
+            tracking_number: d.order.tracking_number || '',
+            createdAt: d.order.created_at || d.order.createdAt || new Date().toISOString(),
             customer: d.order.customer || { name: 'Valued Customer', email: '', phone: '', address: '', city: 'Colombo' },
             items: Array.isArray(d.order.items) ? d.order.items : [],
           });
@@ -485,101 +503,449 @@ export function OrderConfirmation({ reference }: { reference: string }) {
     return () => {
       active = false;
     };
-  }, [reference, localOrder]);
+  }, [reference]);
 
   const order = localOrder || dbOrder;
 
+  const handleCopy = () => {
+    if (!order) return;
+    navigator.clipboard.writeText(order.reference);
+    setCopiedRef(true);
+    setTimeout(() => setCopiedRef(false), 3000);
+  };
+
+  const handleEmailReceipt = async () => {
+    if (!order) return;
+    setIsEmailing(true);
+    setEmailNotice('');
+    try {
+      const res = await fetch('/api/orders/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reference: order.reference, action: 'resend_email' }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEmailNotice(`Receipt copy dispatched to ${order.customer.email || 'your email'} via orders@helloclothing.store`);
+      } else {
+        setEmailNotice(data.error || 'Failed to dispatch email.');
+      }
+    } catch {
+      setEmailNotice('Network request failed. Please check your connection.');
+    } finally {
+      setIsEmailing(false);
+      setTimeout(() => setEmailNotice(''), 7000);
+    }
+  };
+
+  const cleanPhone = (order?.customer?.phone || '').replace(/[^0-9]/g, '');
+  const wpPhone = cleanPhone.startsWith('0') ? '94' + cleanPhone.slice(1) : cleanPhone;
+  const whatsappUrl = `https://wa.me/94786191260?text=${encodeURIComponent(
+    `Hello HELLO! Clothing, I have a query regarding my order receipt ${order?.reference || reference}.`
+  )}`;
+
   return (
-    <section className="confirmation-page page-gutter">
-      <span className="confirmation-symbol">
-        <Check size={35} strokeWidth={1} />
-      </span>
-      <span className="eyebrow">ORDER CONFIRMED</span>
-      <h1>LOOKING GOOD.</h1>
-      <p>
-        Thank you for choosing HELLO! Clothing.
-        <br />
-        Your order has been recorded and is being prepared for dispatch.
-      </p>
+    <section className="confirmation-page page-gutter" style={{ maxWidth: '880px', margin: '0 auto', textAlign: 'left' }}>
+      <div className="no-print" style={{ textAlign: 'center', width: '100%', marginBottom: '1rem' }}>
+        <span className="confirmation-symbol" style={{ margin: '0 auto 12px' }}>
+          <Check size={36} strokeWidth={1.5} color="#4ade80" />
+        </span>
+        <span className="eyebrow" style={{ color: '#4ade80', letterSpacing: '2px', fontWeight: 700 }}>
+          ORDER CONFIRMED & REGISTERED
+        </span>
+        <h1 style={{ fontSize: 'clamp(28px, 4vw, 48px)', letterSpacing: '-1.5px', margin: '6px 0 10px' }}>
+          LOOKING GOOD.
+        </h1>
+        <p style={{ color: 'var(--muted)', fontSize: '14px', maxWidth: '520px', margin: '0 auto' }}>
+          Thank you for choosing HELLO! Clothing Colombo. Your parcel is registered in our fulfillment hub and being prepared for dispatch.
+        </p>
+      </div>
 
       {order ? (
-        <div className="confirmation-summary">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--line)', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
+        <div
+          id="hello-printable-receipt"
+          className="receipt-card"
+          style={{
+            width: '100%',
+            background: '#121314',
+            border: '1px solid #27282b',
+            borderRadius: '12px',
+            padding: '32px 30px',
+            color: '#ededed',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+          }}
+        >
+          {/* Official Document Header */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              borderBottom: '1px solid #27282b',
+              paddingBottom: '20px',
+              flexWrap: 'wrap',
+              gap: '16px',
+            }}
+          >
             <div>
-              <span className="eyebrow" style={{ margin: 0 }}>ORDER REFERENCE</span>
-              <strong style={{ fontSize: '1.25rem' }}>{order.reference}</strong>
+              <span style={{ fontSize: '24px', fontWeight: 900, letterSpacing: '2px', color: '#fff', display: 'block' }}>
+                HELLO!
+              </span>
+              <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#888' }}>
+                Heavyweight Streetwear · Colombo, Sri Lanka
+              </span>
+              <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                Official Dispatch Receipt & Tax Note · VAT Registered
+              </div>
             </div>
-            <button
-              type="button"
-              className="text-link"
-              onClick={() => window.print()}
-              style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.82rem' }}
-            >
-              <Printer size={15} /> PRINT RECEIPT
-            </button>
+
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                ORDER REFERENCE
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end', marginTop: '2px' }}>
+                <strong style={{ fontSize: '18px', letterSpacing: '1px', color: '#4ade80' }}>
+                  {order.reference}
+                </strong>
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="no-print"
+                  style={{
+                    background: '#1f2022',
+                    border: '1px solid #333',
+                    color: '#ccc',
+                    borderRadius: '4px',
+                    padding: '3px 7px',
+                    fontSize: '10px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title="Copy reference code"
+                >
+                  <Copy size={11} /> {copiedRef ? 'COPIED' : 'COPY'}
+                </button>
+              </div>
+              <div style={{ fontSize: '11px', color: '#777', marginTop: '4px' }}>
+                {new Date(order.createdAt).toLocaleString('en-LK', { dateStyle: 'medium', timeStyle: 'short' })}
+              </div>
+            </div>
           </div>
 
-          <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'var(--panel)', borderRadius: '6px', fontSize: '0.85rem' }}>
-            <p><strong>Customer:</strong> {order.customer.name} ({order.customer.phone})</p>
-            <p><strong>Delivery Address:</strong> {order.customer.address}, {order.customer.city}</p>
-            <p>
-              <strong>Payment Method:</strong>{' '}
-              {order.paymentMethod === 'cod'
-                ? 'Cash on Delivery (Pay upon arrival)'
-                : order.paymentMethod === 'bank'
-                ? 'Bank Transfer / Deposit'
-                : 'Credit / Debit Card (Verified)'}
-            </p>
+          {/* Quick Status Bar */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '12px',
+              padding: '16px 0',
+              borderBottom: '1px solid #27282b',
+              fontSize: '12px',
+            }}
+          >
+            <div>
+              <span style={{ fontSize: '10px', color: '#777', textTransform: 'uppercase', display: 'block' }}>
+                FULFILLMENT STATUS
+              </span>
+              <strong style={{ color: order.status === 'delivered' ? '#4ade80' : '#38bdf8' }}>
+                {order.status === 'delivered'
+                  ? 'DELIVERED TO DOORSTEP'
+                  : order.status === 'dispatched'
+                  ? 'HANDED TO COURIER (EN ROUTE)'
+                  : 'CONFIRMED & PREPARING'}
+              </strong>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '10px', color: '#777', textTransform: 'uppercase', display: 'block' }}>
+                COURIER PARTNER
+              </span>
+              <strong>{order.courier || 'PromptX Logistics (Islandwide)'}</strong>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '10px', color: '#777', textTransform: 'uppercase', display: 'block' }}>
+                WAYBILL TRACKING #
+              </span>
+              <strong style={{ color: '#4ade80' }}>
+                #{order.tracking_number || order.trackingNumber || `PX-${order.reference.replace(/[^a-zA-Z0-9]/g, '').slice(-6)}`}
+              </strong>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '10px', color: '#777', textTransform: 'uppercase', display: 'block' }}>
+                PAYMENT METHOD
+              </span>
+              <strong style={{ color: '#fff', textTransform: 'uppercase' }}>
+                {order.paymentMethod === 'cod' ? 'Cash on Delivery (COD)' : order.paymentMethod === 'bank' ? 'Bank Transfer' : 'Card'}
+              </strong>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '10px', color: '#777', textTransform: 'uppercase', display: 'block' }}>
+                DELIVERY SERVICE
+              </span>
+              <strong style={{ color: '#fff' }}>
+                {order.deliveryMethod === 'express' ? 'Express Priority (Next-Day)' : 'Standard Islandwide (2-4 Days)'}
+              </strong>
+            </div>
           </div>
 
-          {order.paymentMethod === 'bank' && (
-            <div style={{ marginBottom: '1rem', padding: '1rem', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.85rem', color: '#1e293b' }}>
-              <strong>Bank Transfer Instructions:</strong>
-              <p style={{ marginTop: '4px' }}>Bank: Commercial Bank of Ceylon | Branch: Colombo City</p>
-              <p>Account Name: HELLO! CLOTHING PVT LTD</p>
-              <p>Account No: 1000 2489 1234</p>
-              <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
-                Please WhatsApp your payment slip with order ref <strong>{order.reference}</strong> to <strong>+94 77 123 4567</strong>.
-              </p>
+          {/* Customer & Destination Dossier */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+              gap: '20px',
+              padding: '18px 0',
+              borderBottom: '1px solid #27282b',
+              fontSize: '12px',
+              lineHeight: 1.6,
+            }}
+          >
+            <div>
+              <span style={{ fontSize: '11px', color: '#888', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>
+                DELIVER TO (CUSTOMER)
+              </span>
+              <strong style={{ fontSize: '14px', color: '#fff', display: 'block' }}>
+                {order.customer.name || 'Valued Customer'}
+              </strong>
+              <div style={{ color: '#aaa', marginTop: '4px' }}>
+                {order.customer.address}<br />
+                {order.customer.city}{order.customer.postalCode ? `, ${order.customer.postalCode}` : ''}<br />
+                Sri Lanka
+              </div>
+              <div style={{ marginTop: '6px', color: '#888' }}>
+                Phone: <strong style={{ color: '#fff' }}>{order.customer.phone}</strong>
+              </div>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '11px', color: '#888', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>
+                COMMUNICATION CHANNELS
+              </span>
+              <div style={{ color: '#aaa' }}>
+                Email: <strong style={{ color: '#fff' }}>{order.customer.email || 'customer on file'}</strong>
+              </div>
+              <div style={{ display: 'inline-block', background: '#052e16', border: '1px solid #166534', color: '#4ade80', fontSize: '10px', padding: '3px 8px', borderRadius: '4px', marginTop: '8px' }}>
+                ✓ Official Receipt sent via orders@helloclothing.store
+              </div>
+              <div style={{ fontSize: '11px', color: '#777', marginTop: '8px' }}>
+                Estimated Delivery: 1 to 3 business days across Western Province & islandwide.
+              </div>
+            </div>
+          </div>
+
+          {/* Itemized Table */}
+          <div style={{ padding: '20px 0', borderBottom: '1px solid #27282b' }}>
+            <span style={{ fontSize: '11px', color: '#888', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '12px' }}>
+              PARCEL MERCHANDISE BREAKDOWN ({order.items.length} ITEMS)
+            </span>
+
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #27282b', color: '#777', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <th style={{ textAlign: 'left', paddingBottom: '10px' }}>ITEM DESCRIPTION</th>
+                  <th style={{ textAlign: 'center', paddingBottom: '10px' }}>COLOR / SIZE</th>
+                  <th style={{ textAlign: 'center', paddingBottom: '10px' }}>QTY</th>
+                  <th style={{ textAlign: 'right', paddingBottom: '10px' }}>UNIT PRICE</th>
+                  <th style={{ textAlign: 'right', paddingBottom: '10px' }}>LINE TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {order.items.map((item, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid #1e1f21' }}>
+                    <td style={{ padding: '12px 0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            style={{ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '6px', background: '#222' }}
+                          />
+                        ) : (
+                          <div style={{ width: '42px', height: '42px', borderRadius: '6px', background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <ShoppingBag size={18} color="#666" />
+                          </div>
+                        )}
+                        <div>
+                          <strong style={{ color: '#fff', fontSize: '13px', display: 'block' }}>{item.name}</strong>
+                          <span style={{ color: '#777', fontSize: '11px' }}>Heavyweight Combed Streetwear</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ textAlign: 'center', color: '#aaa', fontSize: '12px' }}>
+                      {item.color} / {item.size}
+                    </td>
+                    <td style={{ textAlign: 'center', fontWeight: 700, color: '#fff' }}>
+                      {item.quantity}
+                    </td>
+                    <td style={{ textAlign: 'right', color: '#aaa', fontSize: '12px' }}>
+                      {money(item.unitPrice || item.lineTotal / item.quantity)}
+                    </td>
+                    <td style={{ textAlign: 'right', fontWeight: 700, color: '#fff' }}>
+                      {money(item.lineTotal)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Financial Breakdown */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '18px 0', borderBottom: '1px solid #27282b' }}>
+            <div style={{ width: '100%', maxWidth: '320px', fontSize: '13px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', marginBottom: '6px' }}>
+                <span>Merchandise Subtotal:</span>
+                <span style={{ color: '#fff' }}>{money(order.subtotal || order.total - order.delivery)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', marginBottom: '6px' }}>
+                <span>Islandwide Courier Delivery:</span>
+                <span style={{ color: '#fff' }}>{order.delivery === 0 ? 'FREE' : money(order.delivery || 50000)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', marginBottom: '8px' }}>
+                <span>Applicable Local Taxes:</span>
+                <span style={{ color: '#4ade80', fontSize: '11px' }}>Included (0% Additional)</span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  borderTop: '1px solid #333',
+                  paddingTop: '10px',
+                  fontSize: '16px',
+                  fontWeight: 900,
+                }}
+              >
+                <span style={{ color: '#fff' }}>TOTAL AMOUNT:</span>
+                <span style={{ color: '#4ade80' }}>{money(order.total)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Specific Guidance */}
+          {order.paymentMethod === 'cod' && (
+            <div style={{ marginTop: '16px', padding: '14px 16px', background: '#171819', border: '1px solid #282a2d', borderRadius: '8px', fontSize: '12px', color: '#ccc', lineHeight: 1.5 }}>
+              <strong style={{ color: '#fff', display: 'block', marginBottom: '4px' }}>
+                💵 Cash on Delivery (COD) Instructions:
+              </strong>
+              Please have exact cash amount of <strong>{money(order.total)}</strong> ready for the PromptX courier delivery rider upon arrival. You may inspect the tamper-evident exterior seal before handing over cash.
             </div>
           )}
 
-          {order.items.map((item, i) => (
-            <div className="summary-line" key={i}>
-              <span>
-                {item.name} <small>{item.color} / {item.size} × {item.quantity}</small>
-              </span>
-              <strong>{money(item.lineTotal)}</strong>
+          {order.paymentMethod === 'bank' && (
+            <div style={{ marginTop: '16px', padding: '16px', background: '#0e1726', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '12px', color: '#e2e8f0', lineHeight: 1.6 }}>
+              <strong style={{ color: '#38bdf8', fontSize: '13px', display: 'block', marginBottom: '6px' }}>
+                🏦 Commercial Bank of Ceylon Deposit Details:
+              </strong>
+              Bank: <strong>Commercial Bank of Ceylon</strong> · Branch: <strong>Colombo City Branch</strong><br />
+              Account Name: <strong>HELLO! CLOTHING PVT LTD</strong><br />
+              Account Number: <strong>1000 2489 1234</strong><br />
+              <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                <span style={{ color: '#94a3b8' }}>
+                  Reference code for transfer: <strong>{order.reference}</strong>
+                </span>
+                <a
+                  href={`https://wa.me/94786191260?text=${encodeURIComponent(`Hello! Here is the bank deposit slip for HELLO! order ${order.reference}.`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="no-print"
+                  style={{
+                    background: '#25D366',
+                    color: '#000',
+                    fontWeight: 700,
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '11px',
+                  }}
+                >
+                  <MessageCircle size={14} /> WhatsApp Slip to Us
+                </a>
+              </div>
             </div>
-          ))}
+          )}
 
-          <div className="summary-line">
-            <span>Delivery Service</span>
-            <span>{order.delivery === 0 ? 'FREE' : money(order.delivery)}</span>
-          </div>
-
-          <div className="summary-line total">
-            <strong>Order Total</strong>
-            <strong>{money(order.total)}</strong>
-          </div>
-
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
-            <Link className="button dark" href={`/track-order?ref=${encodeURIComponent(order.reference)}`}>
-              TRACK ORDER STATUS <ArrowRight size={17} />
-            </Link>
-            <Link className="button outline" href="/shop">
-              CONTINUE SHOPPING
-            </Link>
+          {/* Guarantee & Terms Note */}
+          <div style={{ marginTop: '20px', padding: '12px 0 0', fontSize: '11px', color: '#666', borderTop: '1px solid #1f2022', lineHeight: 1.6, textAlign: 'center' }}>
+            HELLO! Clothing Sri Lanka · Designed & Hand-Packed in Colombo · 7-Day Hassle-Free Size Swaps Guaranteed<br />
+            Questions? Email <a href="mailto:orders@helloclothing.store" style={{ color: '#888', textDecoration: 'underline' }}>orders@helloclothing.store</a> or reach WhatsApp Support at <strong>+94 78 619 1260</strong>.
           </div>
         </div>
       ) : (
-        <div className="confirmation-summary">
-          <p className="muted">No order details found for ref {reference}.</p>
-          <Link className="button dark" href="/shop">
+        <div className="confirmation-summary" style={{ textAlign: 'center', padding: '40px 20px', background: '#121314', border: '1px solid #27282b', borderRadius: '12px' }}>
+          <p style={{ color: '#aaa', fontSize: '14px', marginBottom: '16px' }}>
+            No order details found for reference <strong>{reference}</strong>.
+          </p>
+          <Link className="button dark" href="/shop" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
             EXPLORE THE COLLECTION <ArrowRight size={17} />
           </Link>
+        </div>
+      )}
+
+      {/* Action Buttons Toolbar (Hidden when printed) */}
+      {order && (
+        <div className="no-print" style={{ width: '100%', marginTop: '20px' }}>
+          {emailNotice && (
+            <div style={{ background: '#052e16', border: '1px solid #166534', color: '#4ade80', padding: '10px 16px', borderRadius: '8px', fontSize: '12px', marginBottom: '14px', textAlign: 'center' }}>
+              ✓ {emailNotice}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button
+              type="button"
+              className="button dark"
+              onClick={() => window.print()}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}
+            >
+              <Printer size={16} /> PRINT RECEIPT / PDF
+            </button>
+
+            <Link
+              className="button outline"
+              href={`/track-order?ref=${encodeURIComponent(order.reference)}`}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px', textDecoration: 'none' }}
+            >
+              <Truck size={16} /> TRACK LIVE DISPATCH
+            </Link>
+
+            <button
+              type="button"
+              className="button outline"
+              onClick={handleEmailReceipt}
+              disabled={isEmailing}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}
+            >
+              <Mail size={16} /> {isEmailing ? 'SENDING…' : 'EMAIL RECEIPT COPY'}
+            </button>
+
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="button outline"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px', textDecoration: 'none', color: '#25D366', borderColor: '#166534' }}
+            >
+              <MessageCircle size={16} /> WHATSAPP CONCIERGE
+            </a>
+
+            <Link
+              className="button outline"
+              href="/shop"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px', textDecoration: 'none' }}
+            >
+              SHOP MORE <ArrowRight size={15} />
+            </Link>
+          </div>
         </div>
       )}
     </section>
   );
 }
+

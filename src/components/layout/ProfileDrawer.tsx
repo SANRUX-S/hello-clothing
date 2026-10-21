@@ -423,6 +423,15 @@ export default function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
                 >
                   View full dispatch timeline <ArrowUpRight size={14} />
                 </Link>
+
+                <Link
+                  href={`/order-confirmation/${trackingResult.reference}`}
+                  className="track-full-page-link"
+                  onClick={onClose}
+                  style={{ marginTop: '4px', opacity: 0.85 }}
+                >
+                  View printable receipt & tax invoice <ArrowUpRight size={14} />
+                </Link>
               </div>
             )}
           </div>
@@ -571,19 +580,29 @@ export default function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
                       ))}
                     </div>
 
-                    <div className="order-card-footer">
+                    <div className="order-card-footer" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                       <strong className="order-card-total">{money(order.total)}</strong>
-                      <button
-                        type="button"
-                        className="order-track-btn"
-                        onClick={() => {
-                          setTrackRef(order.reference);
-                          setActiveTab('track');
-                          void handleTrackSubmit(undefined, order.reference);
-                        }}
-                      >
-                        Track Shipment <ArrowRight size={13} />
-                      </button>
+                      <div style={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
+                        <Link
+                          href={`/order-confirmation/${order.reference}`}
+                          onClick={onClose}
+                          className="order-track-btn"
+                          style={{ background: 'transparent', border: '1px solid #444', color: '#ccc', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          Receipt
+                        </Link>
+                        <button
+                          type="button"
+                          className="order-track-btn"
+                          onClick={() => {
+                            setTrackRef(order.reference);
+                            setActiveTab('track');
+                            void handleTrackSubmit(undefined, order.reference);
+                          }}
+                        >
+                          Track <ArrowRight size={13} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

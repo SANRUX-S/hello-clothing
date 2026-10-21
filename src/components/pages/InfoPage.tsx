@@ -19,6 +19,7 @@ import {
   MapPin,
   ExternalLink,
   Sparkles,
+  Printer,
 } from 'lucide-react';
 import { money } from '@/lib/catalog';
 import type { StoredOrder } from '@/components/checkout/Checkout';
@@ -742,6 +743,21 @@ export default function InfoPage({ kind }: { kind: string }) {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Direct Official Receipt Access */}
+            <div style={{ borderTop: '1px solid var(--line)', paddingTop: '1.25rem', marginTop: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: 'var(--muted)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Official Tax Document</span>
+                <strong style={{ fontSize: '0.92rem' }}>Order Receipt & Dispatch Invoice</strong>
+              </div>
+              <Link
+                href={`/order-confirmation/${encodeURIComponent(activeTrackingOrder.reference)}`}
+                className="button dark"
+                style={{ fontSize: '0.78rem', padding: '0 18px', minHeight: '38px', gap: '10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
+              >
+                VIEW & PRINT RECEIPT <Printer size={14} />
+              </Link>
             </div>
           </div>
         ) : (
