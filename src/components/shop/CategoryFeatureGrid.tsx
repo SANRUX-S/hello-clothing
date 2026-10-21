@@ -1,0 +1,8 @@
+import Link from 'next/link';
+import {ArrowDown,ArrowUpRight} from 'lucide-react';
+import {categories,products} from '@/lib/catalog';
+import './category-feature-grid.css';
+
+export default function CategoryFeatureGrid({showProductsLink=false}:{showProductsLink?:boolean}){
+ return <section className="category-feature-section page-gutter" aria-labelledby="category-feature-title"><div className="category-feature-intro"><div><span className="eyebrow">HELLO! STREETWEAR</span><h1 id="category-feature-title">SHOP THE<br/><span>COLLECTIONS.</span></h1></div><div><p>Heavyweight fabrics, boxy cuts, and street essentials.<br/>Built for the island heat and daily rotation.</p>{showProductsLink&&<a className="text-link" href="#all-pieces">VIEW ALL PIECES <ArrowDown size={15}/></a>}</div></div><div className="category-feature-grid">{categories.map((category,index)=>{const count=products.filter(product=>product.category===category.slug&&product.status==='published').length;return <Link key={category.slug} className={`category-feature-card category-feature-${category.slug}`} href={`/collections/${category.slug}`}><div className="category-feature-frame"><img src={category.image} width={1200} height={600} loading={index<2?'eager':'lazy'} alt={`${category.name} editorial campaign concept, full image`}/><span className="category-feature-number">0{index+1} / 04</span></div><div className="category-feature-caption"><div><span>{category.caption}</span><h2>{category.name}</h2></div><div className="category-feature-action"><span>{count} {count===1?'PIECE':'PIECES'}</span><span className="category-feature-arrow"><ArrowUpRight size={24} strokeWidth={1.25}/></span></div></div></Link>;})}</div></section>;
+}

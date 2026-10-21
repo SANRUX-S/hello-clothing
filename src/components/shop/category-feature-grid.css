@@ -1,0 +1,26 @@
+.category-feature-section{padding-top:57px;padding-bottom:52px;background:#f4f1ea}
+.category-feature-intro{display:flex;align-items:end;justify-content:space-between;gap:40px;margin-bottom:36px}
+.category-feature-intro .eyebrow{font-size:9px;letter-spacing:2px;color:#8c8781;margin-bottom:21px}
+.category-feature-intro h1{font-size:clamp(42px,5vw,77px);font-weight:750;letter-spacing:-3px;line-height:.92;color:#171917}
+.category-feature-intro h1>span{color:#8c8781}
+.category-feature-intro>div:last-child{padding-bottom:3px;max-width:340px}
+.category-feature-intro p{font-size:12px;line-height:1.85;color:#76736c;letter-spacing:.1px}
+.category-feature-intro .text-link{margin-top:23px;font-size:9px;gap:17px}
+.category-feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:34px 26px}
+.category-feature-card{display:block;min-width:0;outline-offset:7px!important}
+.category-feature-frame{position:relative;width:100%;aspect-ratio:16/10;overflow:hidden;background:#d4cbbb;display:flex;align-items:center;justify-content:center;border:1px solid #c8bda94d}
+.category-feature-frame>img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%;transition:filter .55s ease;filter:saturate(.8)}
+.category-feature-card:hover .category-feature-frame>img,.category-feature-card:focus-visible .category-feature-frame>img{filter:saturate(1.05)}
+.category-feature-number{position:absolute;top:17px;left:18px;z-index:1;font-size:8px;letter-spacing:1.4px;color:#fff;background:#16191580;backdrop-filter:blur(4px);padding:6px 8px}
+.category-feature-caption{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:23px 1px 0}
+.category-feature-caption>div:first-child>span{font-size:8px;letter-spacing:1.15px;color:#8c8781;text-transform:uppercase}
+.category-feature-caption h2{font-size:clamp(23px,2.4vw,36px);font-weight:650;letter-spacing:-1px;line-height:1.15;text-transform:uppercase;margin-top:7px}
+.category-feature-action{display:flex;align-items:center;gap:22px}
+.category-feature-action>span:first-child{font-size:8px;letter-spacing:1px;color:#969087;white-space:nowrap}
+.category-feature-arrow{display:grid;place-items:center;width:45px;height:45px;border:1px solid #c7c1b6;border-radius:50%;transition:background .25s ease,color .25s ease,transform .25s ease}
+.category-feature-card:hover .category-feature-arrow,.category-feature-card:focus-visible .category-feature-arrow{background:#171917;color:#f4f1ea;border-color:#171917;transform:rotate(45deg)}
+#all-pieces{scroll-margin-top:110px}
+@media(min-width:1700px){.category-feature-grid{gap:43px 32px}.category-feature-section{padding-top:72px;padding-bottom:65px}}
+@media(max-width:1000px){.category-feature-intro h1{font-size:54px;letter-spacing:-2.5px}.category-feature-intro{gap:25px}.category-feature-intro p{font-size:10px}.category-feature-intro>div:last-child{max-width:260px}.category-feature-grid{gap:30px 20px}.category-feature-action{gap:12px}.category-feature-arrow{width:36px;height:36px}.category-feature-arrow svg{width:20px}.category-feature-action>span:first-child{font-size:6px}.category-feature-caption>div:first-child>span{font-size:6px;letter-spacing:.8px}.category-feature-caption{padding-top:19px}}
+@media(max-width:600px){.category-feature-section{padding-top:37px;padding-bottom:35px}.category-feature-intro{display:block;margin-bottom:28px}.category-feature-intro .eyebrow{font-size:6px;letter-spacing:1.3px;margin-bottom:18px}.category-feature-intro h1{font-size:clamp(40px,9.8vw,58px);letter-spacing:-2px}.category-feature-intro>div:last-child{margin-top:23px;max-width:none;display:flex;align-items:end;justify-content:space-between;gap:20px}.category-feature-intro p{font-size:9px;line-height:1.75}.category-feature-intro .text-link{font-size:6px;gap:8px;margin:0 0 3px;white-space:nowrap}.category-feature-intro .text-link svg{width:12px}.category-feature-grid{grid-template-columns:1fr;gap:30px}.category-feature-frame{aspect-ratio:16/10}.category-feature-caption{padding-top:17px}.category-feature-caption h2{font-size:27px;margin-top:6px}.category-feature-caption>div:first-child>span{font-size:7px;letter-spacing:1px}.category-feature-action>span:first-child{font-size:7px}.category-feature-action{gap:15px}.category-feature-arrow{width:39px;height:39px}.category-feature-number{font-size:7px;left:13px;top:12px;padding:5px 7px}#all-pieces{scroll-margin-top:90px}}
+@media(prefers-reduced-motion:reduce){.category-feature-card *{transition:none!important}}
