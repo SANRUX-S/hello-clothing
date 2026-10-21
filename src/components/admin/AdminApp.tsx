@@ -3,11 +3,32 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, Check, CheckCircle2, ExternalLink, ImagePlus, Images, LayoutDashboard, Menu, Package, Plus, Search, Settings2, ShoppingBag, SlidersHorizontal, Tags, Trash2, Type, X, Pencil, Save, RotateCcw, ShieldCheck, Boxes } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, Check, CheckCircle2, Copy, ExternalLink, ImagePlus, Images, LayoutDashboard, Menu, Package, Plus, Search, Settings2, ShoppingBag, SlidersHorizontal, Tags, Trash2, Type, X, Pencil, Save, RotateCcw, ShieldCheck, Boxes } from "lucide-react";
 import { products as catalogProducts } from "@/lib/catalog";
 
 type Color = { name: string; hex: string };
-type Product = { id: string; slug: string; name: string; price: number; category: string; image: string; stock: number; colors: Color[]; sizes: string[]; description: string; status: string; isDemo: boolean };
+type Product = {
+  id: string;
+  slug: string;
+  name: string;
+  price: number;
+  category: string;
+  image: string;
+  gallery?: string[];
+  stock: number;
+  colors: Color[];
+  sizes: string[];
+  description: string;
+  status: string;
+  isDemo: boolean;
+  gender?: string;
+  fabricDetails?: {
+    fit?: string;
+    gsm?: string;
+    care?: string;
+    composition?: string;
+  };
+};
 type Category = { slug: string; name: string; description: string };
 type Content = { announcement: string; heroTitle: string; heroSubtitle: string; aboutText: string };
 type Settings = { storeName: string; email: string; currency: string; deliveryFee: number; logoMotion: boolean };
@@ -64,12 +85,399 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   return <div className="admin-modal-backdrop" onClick={event => { if (event.target === event.currentTarget) onClose(); }}><div ref={ref} className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="admin-dialog-title"><div className="admin-modal-heading"><h2 id="admin-dialog-title">{title}</h2><button className="admin-icon-button" onClick={onClose} aria-label="Close dialog"><X size={20} /></button></div>{children}</div></div>;
 }
 
+const PRESET_SIZES = ['S', 'M', 'L', 'XL', 'XXL', 'One Size'];
+
+const PRESET_COLORS = [
+  { name: 'Black', hex: '#181918' },
+  { name: 'Off White', hex: '#e7e3d9' },
+  { name: 'Ash', hex: '#85857f' },
+  { name: 'Beige', hex: '#d4c5b3' },
+  { name: 'Olive', hex: '#4b5320' },
+  { name: 'Navy', hex: '#1b263b' },
+  { name: 'Brown', hex: '#5c4033' },
+];
+
 function ProductEditor({ product, categories, onSave, onClose }: { product: Product | null; categories: Category[]; onSave: (p: Product) => void; onClose: () => void }) {
-  const [draft, setDraft] = useState<Product>(() => product || { id: `demo-${Date.now()}`, slug: "", name: "", price: 349000, category: categories[0]?.slug || "t-shirts", image: BASE_PRODUCTS[0]?.image || "", stock: 0, colors: [{ name: "Black", hex: "#171818" }], sizes: ["S", "M", "L", "XL"], description: "", status: "draft", isDemo: true });
-  const [colors, setColors] = useState(draft.colors.map(c => c.name).join(", "));
-  const [sizes, setSizes] = useState(draft.sizes.join(", "));
-  const submit = (event: FormEvent) => { event.preventDefault(); onSave({ ...draft, slug: slugify(draft.name), name: draft.name.trim(), colors: colors.split(",").map(c => c.trim()).filter(Boolean).map(name => ({ name, hex: draft.colors.find(color => color.name.toLowerCase() === name.toLowerCase())?.hex || HEXES[name.toLowerCase()] || "#787b74" })), sizes: sizes.split(",").map(s => s.trim()).filter(Boolean), isDemo: true }); };
-  return <Modal title={product ? "Edit product" : "A new everyday essential."} onClose={onClose}><form onSubmit={submit} className="admin-edit-form"><div className="admin-product-editor-preview">{draft.image && <img src={draft.image} alt={draft.name || "New product preview"} />}<div><span className="admin-eyebrow">BROWSER DEMO</span><p>Your changes are saved on this device.</p></div></div><label>Product name<input required maxLength={100} value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="e.g. Everyday oversized tee" /></label><div className="admin-form-grid"><label>Price (LKR)<input required min="0" step="1" type="number" value={draft.price / 100} onChange={e => setDraft({ ...draft, price: Math.round(Number(e.target.value) * 100) })} /></label><label>Stock units<input required min="0" step="1" type="number" value={draft.stock} onChange={e => setDraft({ ...draft, stock: Math.max(0, Math.floor(Number(e.target.value))) })} /></label><label>Category<select value={draft.category} onChange={e => setDraft({ ...draft, category: e.target.value })}>{categories.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}</select></label><label>Status<select value={draft.status} onChange={e => setDraft({ ...draft, status: e.target.value })}><option value="published">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select></label></div><label>Description<textarea rows={3} maxLength={2000} value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })} /></label><label>Image path or URL<input value={draft.image} onChange={e => setDraft({ ...draft, image: e.target.value })} placeholder="/images/product.webp" /></label><div className="admin-form-grid"><label>Colors <span>(comma separated)</span><input value={colors} onChange={e => setColors(e.target.value)} /></label><label>Sizes <span>(comma separated)</span><input value={sizes} onChange={e => setSizes(e.target.value)} /></label></div><div className="admin-modal-actions"><button type="button" className="admin-button admin-button-quiet" onClick={onClose}>Cancel</button><button className="admin-button" type="submit"><Check size={16} /> Save product</button></div></form></Modal>;
+  const [draft, setDraft] = useState<Product>(() => product || {
+    id: `prod-${Date.now()}`,
+    slug: "",
+    name: "",
+    price: 349000,
+    category: categories[0]?.slug || "t-shirts",
+    image: BASE_PRODUCTS[0]?.image || "/demo-products/essential-tee.webp",
+    gallery: [BASE_PRODUCTS[0]?.image || "/demo-products/essential-tee.webp"],
+    stock: 20,
+    colors: [{ name: "Black", hex: "#181918" }],
+    sizes: ["S", "M", "L", "XL"],
+    description: "",
+    status: "published",
+    isDemo: false,
+    gender: "unisex",
+    fabricDetails: {
+      fit: "Relaxed Boxy Drop-Shoulder",
+      gsm: "240 GSM Heavyweight",
+      care: "Machine wash cold with like colors. Hang dry.",
+      composition: "100% Combed Cotton"
+    }
+  });
+
+  const [galleryImages, setGalleryImages] = useState<string[]>(() => draft.gallery || [draft.image]);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>(() => draft.sizes && draft.sizes.length ? draft.sizes : ['S', 'M', 'L', 'XL']);
+  const [selectedColors, setSelectedColors] = useState<Color[]>(() => draft.colors && draft.colors.length ? draft.colors : [{ name: 'Black', hex: '#181918' }]);
+  const [customColorName, setCustomColorName] = useState("");
+  const [customColorHex, setCustomColorHex] = useState("#333333");
+
+  const mainImageInputRef = useRef<HTMLInputElement>(null);
+  const galleryImageInputRef = useRef<HTMLInputElement>(null);
+
+  // Toggle size
+  const toggleSize = (sz: string) => {
+    setSelectedSizes(prev => prev.includes(sz) ? (prev.length > 1 ? prev.filter(s => s !== sz) : prev) : [...prev, sz]);
+  };
+
+  // Toggle color
+  const toggleColor = (c: Color) => {
+    setSelectedColors(prev => {
+      const exists = prev.some(col => col.name.toLowerCase() === c.name.toLowerCase());
+      if (exists) {
+        return prev.length > 1 ? prev.filter(col => col.name.toLowerCase() !== c.name.toLowerCase()) : prev;
+      }
+      return [...prev, c];
+    });
+  };
+
+  // Add custom color
+  const addCustomColor = () => {
+    if (!customColorName.trim()) return;
+    const newCol = { name: customColorName.trim(), hex: customColorHex };
+    if (!selectedColors.some(c => c.name.toLowerCase() === newCol.name.toLowerCase())) {
+      setSelectedColors([...selectedColors, newCol]);
+    }
+    setCustomColorName("");
+  };
+
+  // Handle main image file upload
+  const handleMainPhotoUpload = (file: File | undefined) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (reader.result) {
+        const url = String(reader.result);
+        setDraft(d => ({ ...d, image: url }));
+        setGalleryImages(g => g.length > 0 ? [url, ...g.slice(1)] : [url]);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handle gallery photo upload
+  const handleGalleryPhotoUpload = (file: File | undefined) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (reader.result) {
+        const url = String(reader.result);
+        setGalleryImages(g => [...g, url]);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeGalleryImage = (idx: number) => {
+    setGalleryImages(g => g.filter((_, i) => i !== idx));
+  };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const finalSlug = draft.slug ? slugify(draft.slug) : slugify(draft.name);
+    onSave({
+      ...draft,
+      id: draft.id || `prod-${Date.now()}`,
+      slug: finalSlug,
+      name: draft.name.trim(),
+      image: draft.image || galleryImages[0] || "/demo-products/essential-tee.webp",
+      gallery: galleryImages.length > 0 ? galleryImages : [draft.image],
+      colors: selectedColors,
+      sizes: selectedSizes,
+      isDemo: false
+    });
+  };
+
+  return (
+    <Modal title={product ? `Edit "${product.name}"` : "Add New Streetwear Essential"} onClose={onClose}>
+      <form onSubmit={submit} className="admin-edit-form">
+        {/* Live sync banner */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#052e16', border: '1px solid #166534', borderRadius: '4px', color: '#86efac', fontSize: '10px' }}>
+          <ShieldCheck size={16} color="#4ade80" />
+          <span><strong>LIVE NEON POSTGRESQL SYNC:</strong> Saving here publishes immediately to www.helloclothing.store</span>
+        </div>
+
+        {/* Product photo upload section */}
+        <div>
+          <label style={{ marginBottom: '8px', display: 'block' }}>Primary Product Photo</label>
+          <div className="admin-photo-uploader">
+            <div className="admin-photo-preview-wrap">
+              {draft.image ? (
+                <img src={draft.image} alt={draft.name || "Preview"} />
+              ) : (
+                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888', fontSize: '9px' }}>No photo</div>
+              )}
+            </div>
+            <div className="admin-photo-upload-actions">
+              <input
+                ref={mainImageInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                style={{ display: 'none' }}
+                onChange={e => { handleMainPhotoUpload(e.target.files?.[0]); e.target.value = ""; }}
+              />
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="admin-button"
+                  style={{ minHeight: '32px', padding: '6px 12px', fontSize: '9px' }}
+                  onClick={() => mainImageInputRef.current?.click()}
+                >
+                  <ImagePlus size={14} /> Upload photo from device
+                </button>
+              </div>
+              <input
+                placeholder="Or paste image URL (e.g. /demo-products/essential-tee.webp)"
+                value={draft.image}
+                onChange={e => setDraft({ ...draft, image: e.target.value })}
+                style={{ fontSize: '10px', height: '32px' }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Gallery photos */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label>Additional Gallery Angles ({galleryImages.length})</label>
+            <button
+              type="button"
+              className="admin-button admin-button-quiet"
+              style={{ minHeight: '26px', padding: '3px 8px', fontSize: '8px' }}
+              onClick={() => galleryImageInputRef.current?.click()}
+            >
+              <Plus size={12} /> Add Angle Photo
+            </button>
+            <input
+              ref={galleryImageInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              style={{ display: 'none' }}
+              onChange={e => { handleGalleryPhotoUpload(e.target.files?.[0]); e.target.value = ""; }}
+            />
+          </div>
+          <div className="admin-gallery-editor-strip">
+            {galleryImages.map((src, idx) => (
+              <div key={idx} className="admin-gallery-thumb">
+                <img src={src} alt={`Angle ${idx + 1}`} />
+                {galleryImages.length > 1 && (
+                  <button type="button" onClick={() => removeGalleryImage(idx)}>
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Product Name */}
+        <label>
+          Product Name
+          <input
+            required
+            maxLength={100}
+            value={draft.name}
+            onChange={e => setDraft({ ...draft, name: e.target.value })}
+            placeholder="e.g. Acid Wash Heavyweight Oversized Tee"
+          />
+        </label>
+
+        {/* Price & Stock Grid */}
+        <div className="admin-form-grid">
+          <label>
+            Price in Sri Lankan Rupees (LKR)
+            <input
+              required
+              min="0"
+              step="1"
+              type="number"
+              value={Math.round(draft.price / 100)}
+              onChange={e => setDraft({ ...draft, price: Math.round(Number(e.target.value) * 100) })}
+              placeholder="e.g. 3490"
+            />
+            <small>Displayed on storefront as {money(draft.price)}</small>
+          </label>
+
+          <label>
+            Available Stock Units
+            <input
+              required
+              min="0"
+              step="1"
+              type="number"
+              value={draft.stock}
+              onChange={e => setDraft({ ...draft, stock: Math.max(0, Math.floor(Number(e.target.value))) })}
+            />
+            <div className="admin-stock-helpers">
+              <span style={{ fontSize: '8px', color: '#888', alignSelf: 'center' }}>Quick add:</span>
+              <button type="button" className="admin-stock-helper-btn" onClick={() => setDraft(d => ({ ...d, stock: d.stock + 5 }))}>+5</button>
+              <button type="button" className="admin-stock-helper-btn" onClick={() => setDraft(d => ({ ...d, stock: d.stock + 10 }))}>+10</button>
+              <button type="button" className="admin-stock-helper-btn" onClick={() => setDraft(d => ({ ...d, stock: d.stock + 25 }))}>+25</button>
+              <button type="button" className="admin-stock-helper-btn" onClick={() => setDraft(d => ({ ...d, stock: d.stock + 50 }))}>+50</button>
+            </div>
+          </label>
+
+          <label>
+            Category
+            <select value={draft.category} onChange={e => setDraft({ ...draft, category: e.target.value })}>
+              {categories.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+            </select>
+          </label>
+
+          <label>
+            Status
+            <select value={draft.status} onChange={e => setDraft({ ...draft, status: e.target.value })}>
+              <option value="published">Active & Published (Live in Store)</option>
+              <option value="draft">Draft (Hidden from Store)</option>
+              <option value="archived">Archived</option>
+            </select>
+          </label>
+        </div>
+
+        {/* Quick Sizes Selector */}
+        <div>
+          <label>Available Sizes (Click to toggle)</label>
+          <div className="admin-chip-group">
+            {PRESET_SIZES.map(sz => {
+              const active = selectedSizes.includes(sz);
+              return (
+                <button
+                  key={sz}
+                  type="button"
+                  className={`admin-size-chip ${active ? 'active' : ''}`}
+                  onClick={() => toggleSize(sz)}
+                >
+                  {sz} {active && '✓'}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Quick Colors Selector */}
+        <div>
+          <label>Available Streetwear Colors (Click to toggle)</label>
+          <div className="admin-chip-group">
+            {PRESET_COLORS.map(c => {
+              const active = selectedColors.some(col => col.name.toLowerCase() === c.name.toLowerCase());
+              return (
+                <button
+                  key={c.name}
+                  type="button"
+                  className={`admin-color-chip ${active ? 'active' : ''}`}
+                  onClick={() => toggleColor(c)}
+                >
+                  <span className="admin-color-dot" style={{ backgroundColor: c.hex }} />
+                  {c.name} {active && '✓'}
+                </button>
+              );
+            })}
+          </div>
+          {/* Custom color input */}
+          <div style={{ display: 'flex', gap: '8px', marginTop: '10px', alignItems: 'center' }}>
+            <input
+              type="color"
+              value={customColorHex}
+              onChange={e => setCustomColorHex(e.target.value)}
+              style={{ width: '32px', height: '32px', padding: 0, border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }}
+            />
+            <input
+              placeholder="Or enter custom color name (e.g. Sage Green)"
+              value={customColorName}
+              onChange={e => setCustomColorName(e.target.value)}
+              style={{ flex: 1, height: '32px', fontSize: '10px' }}
+            />
+            <button
+              type="button"
+              className="admin-button admin-button-quiet"
+              style={{ minHeight: '32px', padding: '4px 10px', fontSize: '9px' }}
+              onClick={addCustomColor}
+            >
+              Add Color
+            </button>
+          </div>
+        </div>
+
+        {/* Description */}
+        <label>
+          Product Description
+          <textarea
+            rows={3}
+            maxLength={2000}
+            value={draft.description}
+            onChange={e => setDraft({ ...draft, description: e.target.value })}
+            placeholder="Details about cut, weight, and Colombo streetwear inspiration..."
+          />
+        </label>
+
+        {/* Fabric & Fit Details */}
+        <div style={{ background: '#f5f7f0', padding: '14px', borderRadius: '6px', border: '1px solid #e2ebd8' }}>
+          <strong style={{ display: 'block', fontSize: '10px', color: '#445b37', marginBottom: '8px' }}>
+            Garment Specifications & Streetwear Fit
+          </strong>
+          <div className="admin-form-grid">
+            <label>
+              GSM / Fabric Weight
+              <input
+                value={draft.fabricDetails?.gsm || ""}
+                onChange={e => setDraft({ ...draft, fabricDetails: { ...draft.fabricDetails, gsm: e.target.value, fit: draft.fabricDetails?.fit || "", care: draft.fabricDetails?.care || "", composition: draft.fabricDetails?.composition || "" } })}
+                placeholder="e.g. 240 GSM Heavyweight"
+              />
+            </label>
+            <label>
+              Silhouette & Cut
+              <input
+                value={draft.fabricDetails?.fit || ""}
+                onChange={e => setDraft({ ...draft, fabricDetails: { ...draft.fabricDetails, fit: e.target.value, gsm: draft.fabricDetails?.gsm || "", care: draft.fabricDetails?.care || "", composition: draft.fabricDetails?.composition || "" } })}
+                placeholder="e.g. Relaxed Drop-Shoulder Boxy Fit"
+              />
+            </label>
+            <label>
+              Composition
+              <input
+                value={draft.fabricDetails?.composition || ""}
+                onChange={e => setDraft({ ...draft, fabricDetails: { ...draft.fabricDetails, composition: e.target.value, gsm: draft.fabricDetails?.gsm || "", fit: draft.fabricDetails?.fit || "", care: draft.fabricDetails?.care || "" } })}
+                placeholder="e.g. 100% Combed Compact Cotton"
+              />
+            </label>
+            <label>
+              Gender
+              <select value={draft.gender || "unisex"} onChange={e => setDraft({ ...draft, gender: e.target.value })}>
+                <option value="unisex">Unisex</option>
+                <option value="men">Men</option>
+                <option value="women">Women</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="admin-modal-actions">
+          <button type="button" className="admin-button admin-button-quiet" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="admin-button" type="submit" style={{ background: '#1e3a15' }}>
+            <Check size={16} /> Save & Publish to Store (Neon DB)
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
 }
 
 export function AdminDisabled() {
@@ -202,6 +610,19 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
     }
   };
 
+  const duplicateProduct = async (product: Product) => {
+    const cloneName = `${product.name} (Copy)`;
+    const cloneSlug = `${product.slug}-copy-${Date.now().toString().slice(-4)}`;
+    const cloned: Product = {
+      ...product,
+      id: `prod-${Date.now()}`,
+      name: cloneName,
+      slug: cloneSlug,
+      isDemo: false,
+    };
+    await saveProduct(cloned);
+  };
+
   const updateOrderStatus = async (reference: string, newStatus: string) => {
     setCustomerOrders(current => current.map(o => o.reference === reference ? { ...o, status: newStatus } : o));
     setNotice(`Updating order ${reference} status in Neon…`);
@@ -241,11 +662,11 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
     <div className="admin-sandbox-notice" style={{ background: '#052e16', borderColor: '#166534', color: '#86efac' }}><ShieldCheck size={15} strokeWidth={1.5} color="#4ade80" /><span>NEON POSTGRESQL CONNECTED · Live store operations, products, stock, and customer orders.</span></div>
     {section === "overview" && <>
       <div className="admin-metrics">{[{ title: "TOTAL REVENUE", value: customerOrders.length > 0 ? money(totalRevenue) : "LKR 0", icon: ArrowUpRight, note: customerOrders.length > 0 ? `${customerOrders.length} customer order${customerOrders.length === 1 ? '' : 's'}` : "No payments connected" }, { title: "ORDERS", value: String(customerOrders.length), icon: Package, note: customerOrders.length > 0 ? "Saved in browser history" : "Ready for your first order" }, { title: "CATALOG PIECES", value: String(products.length).padStart(2, "0"), icon: ShoppingBag, note: `${categories.length} curated categories` }, { title: "AVAILABLE UNITS", value: String(totalStock), icon: Boxes, note: `${products.filter(p => p.stock <= 5).length} products with low stock` }].map(item => <div className="admin-metric" key={item.title}><div><span>{item.title}</span><item.icon size={18} strokeWidth={1.4} /></div><strong>{item.value}</strong><small>{item.note}</small></div>)}</div>
-      <div className="admin-overview-row"><section className="admin-panel admin-inventory-panel"><div className="admin-panel-heading"><div><h2>Your collection, at a glance.</h2><p>Available stock across your categories</p></div><Link href="/admin/inventory" className="admin-text-link">Manage <ArrowUpRight size={15} /></Link></div><div className="admin-stock-chart">{categories.map(category => { const units = products.filter(p => p.category === category.slug).reduce((sum, p) => sum + p.stock, 0); return <div key={category.slug}><div><span>{category.name}</span><strong>{units}<small> units</small></strong></div><div className="admin-stock-track"><span style={{ width: `${totalStock ? Math.max(2, units / totalStock * 100) : 0}%` }} /></div></div>; })}</div><div className="admin-panel-foot"><span className="admin-status-dot" /> Sample catalog inventory <span>Updated in this browser</span></div></section><section className="admin-brand-panel"><div className="admin-brand-image">{products[0]?.image && <img src={products[0].image} alt="Hello clothing collection" />}<span className="admin-eyebrow">THE EVERYDAY COLLECTION</span><h2>Good clothes.<br />Better energy.</h2></div><div className="admin-brand-panel-bottom"><p>Your next chapter<br />starts with a simple Hello!</p><Link href="/" aria-label="Open your store"><ArrowUpRight size={24} /></Link></div></section></div>
-      <div className="admin-overview-bottom"><section className="admin-panel"><div className="admin-panel-heading"><div><h2>Recent activity</h2><p>The latest changes in this demo workspace</p></div><span className="admin-small-pill">LOCAL</span></div>{activity.length ? <div className="admin-activity-list">{activity.slice(0, 4).map(item => <div key={item.id}><span><Check size={15} /></span><p>{item.label}<small>{new Date(item.time).toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" })}</small></p></div>)}</div> : <div className="admin-activity-empty"><span><CheckCircle2 size={25} strokeWidth={1.3} /></span><p>A clean slate.<small>Your product and store updates will appear here.</small></p></div>}</section><section className="admin-panel admin-quick-actions"><div className="admin-panel-heading"><div><h2>A few good next steps.</h2><p>Build your store, one detail at a time.</p></div></div>{[{ label: "Add your next essential", subtitle: "Create a product in your demo catalog", to: "/admin/products", icon: ShoppingBag }, { label: "Make it sound like you", subtitle: "Edit your homepage copy", to: "/admin/content", icon: Type }, { label: "A little logo personality", subtitle: "Choose the navbar logo motion", to: "/admin/settings", icon: SlidersHorizontal }].map(action => <Link href={action.to} key={action.to}><action.icon size={19} strokeWidth={1.4} /><span>{action.label}<small>{action.subtitle}</small></span><ArrowRight size={17} /></Link>)}</section></div>
+      <div className="admin-overview-row"><section className="admin-panel admin-inventory-panel"><div className="admin-panel-heading"><div><h2>Your collection, at a glance.</h2><p>Available stock across your categories</p></div><Link href="/admin/inventory" className="admin-text-link">Manage <ArrowUpRight size={15} /></Link></div><div className="admin-stock-chart">{categories.map(category => { const units = products.filter(p => p.category === category.slug).reduce((sum, p) => sum + p.stock, 0); return <div key={category.slug}><div><span>{category.name}</span><strong>{units}<small> units</small></strong></div><div className="admin-stock-track"><span style={{ width: `${totalStock ? Math.max(2, units / totalStock * 100) : 0}%` }} /></div></div>; })}</div><div className="admin-panel-foot"><span className="admin-status-dot" style={{ background: '#16a34a' }} /> Collection inventory <span style={{ color: '#4ade80' }}>Synced live with Neon DB</span></div></section><section className="admin-brand-panel"><div className="admin-brand-image">{products[0]?.image && <img src={products[0].image} alt="Hello clothing collection" />}<span className="admin-eyebrow">THE EVERYDAY COLLECTION</span><h2>Good clothes.<br />Better energy.</h2></div><div className="admin-brand-panel-bottom"><p>Your next chapter<br />starts with a simple Hello!</p><Link href="/" aria-label="Open your store"><ArrowUpRight size={24} /></Link></div></section></div>
+      <div className="admin-overview-bottom"><section className="admin-panel"><div className="admin-panel-heading"><div><h2>Recent activity</h2><p>The latest changes in your store</p></div><span className="admin-small-pill" style={{ background: '#052e16', color: '#4ade80', borderColor: '#166534' }}>NEON DB</span></div>{activity.length ? <div className="admin-activity-list">{activity.slice(0, 4).map(item => <div key={item.id}><span><Check size={15} /></span><p>{item.label}<small>{new Date(item.time).toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" })}</small></p></div>)}</div> : <div className="admin-activity-empty"><span><CheckCircle2 size={25} strokeWidth={1.3} /></span><p>A clean slate.<small>Your product and store updates will appear here.</small></p></div>}</section><section className="admin-panel admin-quick-actions"><div className="admin-panel-heading"><div><h2>A few good next steps.</h2><p>Build your store, one detail at a time.</p></div></div>{[{ label: "Add your next essential", subtitle: "Create a product in your demo catalog", to: "/admin/products", icon: ShoppingBag }, { label: "Make it sound like you", subtitle: "Edit your homepage copy", to: "/admin/content", icon: Type }, { label: "A little logo personality", subtitle: "Choose the navbar logo motion", to: "/admin/settings", icon: SlidersHorizontal }].map(action => <Link href={action.to} key={action.to}><action.icon size={19} strokeWidth={1.4} /><span>{action.label}<small>{action.subtitle}</small></span><ArrowRight size={17} /></Link>)}</section></div>
     </>}
 
-    {section === "products" && <section className="admin-panel"><div className="admin-list-toolbar"><div className="admin-filter-tabs"><button className={statusFilter === "all" ? "admin-filter-active" : ""} onClick={() => setStatusFilter("all")}>All products <span>{products.length}</span></button><button className={statusFilter === "published" ? "admin-filter-active" : ""} onClick={() => setStatusFilter("published")}>Active</button><button className={statusFilter === "draft" ? "admin-filter-active" : ""} onClick={() => setStatusFilter("draft")}>Draft</button><button className={statusFilter === "low" ? "admin-filter-active" : ""} onClick={() => setStatusFilter("low")}>Low stock</button></div><label className="admin-search"><Search size={17} /><span className="admin-sr-only">Search products</span><input placeholder="Search your products…" value={query} onChange={event => setQuery(event.target.value)} /></label></div><div className="admin-table-scroll"><table className="admin-table"><thead><tr><th>PRODUCT</th><th>STATUS</th><th>INVENTORY <ArrowDown size={12} /></th><th>CATEGORY</th><th>PRICE</th><th><span className="admin-sr-only">Actions</span></th></tr></thead><tbody>{filteredProducts.map(product => <tr key={product.id}><td><button className="admin-product-cell" onClick={() => setEditor(product)}><img src={product.image} alt="" /><span>{product.name}<small>{product.sizes.join(" / ") || "One size"}</small></span></button></td><td><span className={`admin-status-pill admin-status-${product.status}`}><span />{titleCase(product.status)}</span></td><td><span className={product.stock <= 5 ? "admin-low-stock" : ""}>{product.stock} in stock</span></td><td>{categories.find(c => c.slug === product.category)?.name || titleCase(product.category)}</td><td className="admin-price-cell">{money(product.price)}</td><td><div className="admin-row-actions"><button className="admin-icon-button" onClick={() => setEditor(product)} aria-label={`Edit ${product.name}`}><Pencil size={15} /></button><button className="admin-icon-button" onClick={() => setDeleteProduct(product)} aria-label={`Delete ${product.name}`}><Trash2 size={15} /></button></div></td></tr>)}</tbody></table></div>{!filteredProducts.length && <div className="admin-empty"><Search size={30} strokeWidth={1.2} /><h3>No matching essentials.</h3><p>Try another name, category, or filter.</p><button className="admin-button admin-button-quiet" onClick={() => { setQuery(""); setStatusFilter("all"); }}>Clear filters</button></div>}<div className="admin-table-footer">{filteredProducts.length} of {products.length} products <span>All changes are local to this browser.</span></div></section>}
+    {section === "products" && <section className="admin-panel"><div className="admin-list-toolbar"><div className="admin-filter-tabs"><button className={statusFilter === "all" ? "admin-filter-active" : ""} onClick={() => setStatusFilter("all")}>All products <span>{products.length}</span></button><button className={statusFilter === "published" ? "admin-filter-active" : ""} onClick={() => setStatusFilter("published")}>Active</button><button className={statusFilter === "draft" ? "admin-filter-active" : ""} onClick={() => setStatusFilter("draft")}>Draft</button><button className={statusFilter === "low" ? "admin-filter-active" : ""} onClick={() => setStatusFilter("low")}>Low stock</button></div><label className="admin-search"><Search size={17} /><span className="admin-sr-only">Search products</span><input placeholder="Search your products…" value={query} onChange={event => setQuery(event.target.value)} /></label></div><div className="admin-table-scroll"><table className="admin-table"><thead><tr><th>PRODUCT</th><th>STATUS</th><th>INVENTORY <ArrowDown size={12} /></th><th>CATEGORY</th><th>PRICE</th><th><span className="admin-sr-only">Actions</span></th></tr></thead><tbody>{filteredProducts.map(product => <tr key={product.id}><td><button className="admin-product-cell" onClick={() => setEditor(product)}><img src={product.image} alt="" /><span>{product.name}<small>{product.sizes.join(" / ") || "One size"}</small></span></button></td><td><span className={`admin-status-pill admin-status-${product.status}`}><span />{titleCase(product.status)}</span></td><td><span className={product.stock <= 5 ? "admin-low-stock" : ""}>{product.stock} in stock</span></td><td>{categories.find(c => c.slug === product.category)?.name || titleCase(product.category)}</td><td className="admin-price-cell">{money(product.price)}</td><td><div className="admin-row-actions"><button className="admin-icon-button" onClick={() => setEditor(product)} title="Edit product" aria-label={`Edit ${product.name}`}><Pencil size={15} /></button><button className="admin-icon-button" onClick={() => duplicateProduct(product)} title="Duplicate / Copy this product" aria-label={`Duplicate ${product.name}`}><Copy size={15} /></button><button className="admin-icon-button" onClick={() => setDeleteProduct(product)} title="Delete product" aria-label={`Delete ${product.name}`}><Trash2 size={15} /></button></div></td></tr>)}</tbody></table></div>{!filteredProducts.length && <div className="admin-empty"><Search size={30} strokeWidth={1.2} /><h3>No matching essentials.</h3><p>Try another name, category, or filter.</p><button className="admin-button admin-button-quiet" onClick={() => { setQuery(""); setStatusFilter("all"); }}>Clear filters</button></div>}<div className="admin-table-footer">{filteredProducts.length} of {products.length} products <span style={{ color: '#4ade80' }}>Synced live with Neon PostgreSQL database</span></div></section>}
 
     {section === "inventory" && <section className="admin-panel"><div className="admin-panel-heading"><div><h2>Every variant, accounted for.</h2><p>Quantities are split across colors and sizes. Save to update the product’s total.</p></div><span className="admin-small-pill">{totalStock} UNITS</span></div><div className="admin-inventory-picker"><label>Choose a product<select value={selectedProduct?.id || ""} onChange={event => { setSelectedProductId(event.target.value); setVariantDrafts({}); }}>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</select></label>{selectedProduct && <div className="admin-inventory-selected"><img src={selectedProduct.image} alt="" /><div>{selectedProduct.name}<small>{selectedVariants.length} color and size variants</small></div></div>}</div>{selectedProduct ? <><div className="admin-table-scroll"><table className="admin-table admin-variant-table"><thead><tr><th>COLOR</th><th>SIZE</th><th>SKU</th><th>AVAILABLE UNITS</th></tr></thead><tbody>{selectedVariants.map(variant => <tr key={variant.key}><td><span className="admin-color-name"><span style={{ backgroundColor: variant.color.hex }} />{variant.color.name}</span></td><td>{variant.size}</td><td className="admin-muted">{selectedProduct.slug.slice(0, 16).toUpperCase()}-{variant.color.name.slice(0, 2).toUpperCase()}-{variant.size}</td><td><input type="number" aria-label={`${selectedProduct.name}, ${variant.color.name}, ${variant.size} stock`} className="admin-stock-input" min="0" max="100000" step="1" value={variantDrafts[variant.key] ?? inventory[variant.key] ?? variant.initial} onChange={event => setVariantDrafts(current => ({ ...current, [variant.key]: Math.max(0, Math.floor(Number(event.target.value))) }))} /></td></tr>)}</tbody></table></div><div className="admin-form-footer"><p>Total: <strong>{selectedVariants.reduce((sum, v) => sum + (variantDrafts[v.key] ?? inventory[v.key] ?? v.initial), 0)} units</strong></p><button className="admin-button" onClick={async () => { const next = Object.fromEntries(selectedVariants.map(v => [v.key, variantDrafts[v.key] ?? inventory[v.key] ?? v.initial])); setInventory(current => ({ ...current, ...next })); const updatedStock = Object.values(next).reduce((sum, value) => sum + value, 0); const updatedProd = { ...selectedProduct, stock: updatedStock }; setProducts(current => current.map(p => p.id === selectedProduct.id ? updatedProd : p)); setVariantDrafts({}); setNotice("Saving inventory to Neon DB…"); try { await fetch('/api/admin/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedProd) }); setNotice(`Inventory saved: ${updatedStock} units in Neon DB.`); log(`Updated inventory for ${selectedProduct.name} to ${updatedStock} units`); } catch { setNotice("Inventory saved locally."); } }}><Save size={16} /> Save inventory</button></div></> : <div className="admin-empty"><Boxes size={34} strokeWidth={1.2} /><h3>Add an essential first.</h3><p>Your product variants will appear here.</p><Link href="/admin/products" className="admin-button">Go to products <ArrowRight size={15} /></Link></div>}</section>}
 
