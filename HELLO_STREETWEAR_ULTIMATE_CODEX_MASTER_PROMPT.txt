@@ -1,0 +1,387 @@
+HELLO! STREETWEAR — ULTIMATE ALL-IN-ONE CODEX MASTER PROMPT
+Version: 1.0 | Existing website upgrade | Upload required: ORIGINAL HELLO! logo ONLY
+
+ROLE
+You are the lead creative developer, interaction designer, motion designer, senior Next.js/TypeScript engineer, and QA engineer upgrading my EXISTING HELLO! streetwear e-commerce website. Implement the changes in the actual local repository, rather than merely describing a design, outputting mockups, or pasting unused example code.
+
+FIRST READ THESE NON-NEGOTIABLE RULES
+1. This is an IN-PLACE UPGRADE, not a new website. Inspect the current repository, routes, components, images, styles, package.json, and existing backend/checkout functionality before editing. Preserve working parts, customer data, existing content, and the established brand direction.
+2. I will upload ONE brand asset only: the original HELLO! logo. DO NOT require me to upload eight model photos, product images, category pictures, masks, or 3D models before starting. Use what is already in the repository, and create clearly marked temporary demo assets or graceful fallbacks where needed. Every temporary item must be simple to replace later.
+3. DO NOT create a full-screen logo loading screen or intro overlay. The navigation logo remains centered; ONLY the exclamation mark (!) makes playful hops inside/near the navbar.
+4. The homepage FIRST SCREEN should contain a striking interactive, smoothly moving 8-spoke outfit-selection wheel near the CENTER, with the existing two models shown to the RIGHT. The wheel should feel premium and almost 3D. The selected look needs to VISIBLY CHANGE WHAT THE MODELS ARE WEARING, not just update a number or label.
+5. The wheel has EIGHT clickable ball-like handles. Clicking any handle selects a corresponding look; manually dragging the wheel should also select a new look when the rotation settles at a spoke/detent. Gentle automatic idle rotation by itself must NOT repeatedly change outfits.
+6. MOVE the four category photo cards presently shown immediately below the hero (T-SHIRTS, PANTS, HOODIES, ACCESSORIES) OFF the homepage and ONTO the SECOND PAGE: the dedicated Shop/Collections page. There the cards must show properly framed, FULL, attractive images, not the chopped or cramped crops in the original strip. Preserve the existing /shop or /collections route conventions if already established.
+7. Preserve the feel of the current site: high-end minimalist streetwear, cinematic models, black/charcoal/off-white palette, warm concrete imagery, bold typography, handwritten HELLO! brand mark, real shopping functionality.
+8. All buttons, links, interactions, routes and data flows must work, be accessible, and respond correctly on both desktop and touch devices.
+9. Be honest about technical limits: a still photograph plus a logo cannot be transformed into eight photorealistically different real outfits using only CSS/GSAP. Build an ACTUAL working visual outfit-change DEMO now using consistent available imagery, layered garment assets, stylized avatars, or locally created demo assets; provide a clean upgrade path to eight production photographs or proper rigged 3D characters/garments when available. Do not pretend static image crossfades are real-time cloth simulation.
+10. Never wipe or overwrite working project files arbitrarily, install random heavy libraries unnecessarily, alter checkout/payment credentials, fabricate live inventory, or make fake payment-completion claims.
+
+============================================================
+SECTION A — UNDERSTAND THE EXISTING HELLO! SITE
+============================================================
+- This existing website is for HELLO!, a modern clothing/streetwear label.
+- The CURRENT hero includes a large 'SAY Hello! TO YOUR STYLE.' fashion campaign, two models, a dark concrete background, centered nav logo, Shop/New Arrivals/Collections navigation, and icon controls at the right.
+- Immediately below the hero there is currently a row of four photo category cards: T-shirts, Pants, Hoodies, Accessories. I want that row moved to the second Shop/Collections page, not retained directly under the homepage hero.
+- The current dark fashion photography looks good: DO NOT arbitrarily remove, replace, or distort it. If background photography and editable models are merged into one flattened image, acknowledge that and create a layered outfit preview region with its own clearly identified demo figures rather than claiming an impossible photo edit.
+- The homepage is an existing production-style frontend. Protect responsive header, checkout, cart, product routes, auth, admin, data models, and functional UI outside the requested areas.
+- Build on existing installed libraries and conventions. Only add carefully justified dependencies.
+
+REPOSITORY AUDIT BEFORE ANY IMPLEMENTATION
+1. Identify framework/router (Next.js App Router or Pages Router), TypeScript settings, Tailwind version, current animations, and image handling.
+2. Identify existing nav/logo component, hero component, image sources, category strip/card component, /shop or /collections route, checkout/cart, and any Supabase configuration.
+3. Determine whether supplied HELLO! logo is raster or vector. Keep the exact strokes, proportions, and lettering; don't replace it with a vaguely similar cursive font.
+4. Check available existing model photos, existing product photos, and assets that could populate temporary looks.
+5. Create a SHORT implementation plan and a list of files expected to change, then actually implement the complete requested features in logical stages, performing checks between stages.
+
+============================================================
+SECTION B — DESIGN SYSTEM AND VISUAL DIRECTION
+============================================================
+Aesthetic: premium contemporary streetwear, not a plain template, childish gaming dashboard, pirate theme, or cluttered neon landing page.
+- Palette: charcoal #111111, off-white #F4F1EA, warm medium gray #8C8781, pure white #FFFFFF; subtle metallic/silver detail on wheel. Use existing CSS tokens if present.
+- Typeface: retain current strong editorial heading typography and legible UI fonts; logo uses ORIGINAL uploaded graphic.
+- Layout: big editorial photo / dark negative space / confident typographic scale / precise spacing / fashion-commerce utility.
+- Motion: polished, purposeful, smooth, modern, generally 60fps where device performance permits. Never sacrifice usability or legibility for animation.
+- Photography: preserve real existing site photos; temporary replacement imagery must be properly licensed or locally generated where tooling permits, and be marked demo-only, not presented as authentic HELLO! inventory.
+- Product previews should feel expensive and subtle, with soft lighting and realistic garment detail, not 2D clip-art floating on a photo.
+- Preserve logo position at the CENTER of the navbar on desktop. Search/account/cart remain usable.
+- In mobile navbar, adapt intelligently while retaining visual brand hierarchy and clear touch targets.
+
+============================================================
+SECTION C — NAVBAR LOGO: PLAYFUL BOUNCING EXCLAMATION MARK
+============================================================
+THIS IS NOT A LOADING SCREEN. The homepage must render normally from the start.
+
+REQUIRED VISUAL STORY
+1. The HELLO! wordmark is centered in the existing navbar and appears fully formed immediately.
+2. The letters 'Hello' stay completely fixed at all times; ONLY the final exclamation mark (!) behaves like a playful little character.
+3. The mark jumps slightly UP, moves a short distance to the RIGHT in a smooth arc, lands, bounces, then playfully hops LEFT and RIGHT in a small area close to the end of 'Hello'.
+4. Horizontal travel is approximately 3cm in physical-feel terms on desktop, but implement in responsive CSS pixels (a restrained ~65–110px total travel range depending on layout; much less on mobile). Keep the mark visible and avoid collisions with navbar icons, headings, and window edges.
+5. Use several lively hops with natural ease-in/ease-out, tiny rotation, convincing rise/fall gravity, gentle squash/stretch upon landing, and a tiny overshoot before settling. It must feel polished, charming, with a subtle desk-lamp-like personality (inspiration ONLY; DO NOT use a lamp or Pixar copyrighted graphics).
+6. It finishes EXACTLY at the end of the word, aligning pixel-perfectly to the original logo without a doubled !, seams, jumps, or misalignment.
+7. The normal 'Hello!' graphic remains a logo link; ensure the interaction still navigates to / and is keyboard usable.
+8. Suggested motion sequence lasts about 2–3s after the navbar is ready, with an optional replay on hover/focus or a modest cooldown (never looping constantly).
+9. Respect prefers-reduced-motion: display the static complete logo and skip bouncing entirely.
+
+ASSET EXTRACTION / MASKING
+- Prefer original vector layers if the provided logo is truly separable; otherwise use the same logo PNG/WebP as precisely aligned masked layers for static word and moving '!'.
+- Use calibrated, NON-DESTRUCTIVE clip paths or generate carefully cropped transparent variants; no generic font substitutes.
+- On static word layer, mask out the exclamation point cleanly (including the dot); on moving layer include both the vertical stroke and dot.
+- Avoid showing any duplicate stationary exclamation underneath the animated one.
+- Do not destroy the original uploaded asset; keep it in public/branding/hello-original.* and store any derivatives separately.
+- If the uploaded logo quality is low, preserve original shape and be transparent about raster sharpness. A larger file or vector trace is not guaranteed to restore lost fine detail. Use best available output without falsely claiming true vector perfection.
+
+TECHNICAL TARGET
+- Reusable <AnimatedHelloLogo /> component (or appropriate project convention).
+- GSAP timeline if GSAP already exists, otherwise an equivalent small accessible animation solution; transform + opacity-based properties where feasible.
+- Use responsive measurements/ResizeObserver if needed, lifecycle cleanup, and SSR-safe client-only animation initialization.
+- No full viewport overlay, black screen, welcome text, blocking loader, curtain, door effect, or screen-splitting animation.
+
+============================================================
+SECTION D — FIRST HOMEPAGE SCREEN: HERO COMPOSITION
+============================================================
+GOAL: create a premium STREETWEAR FIT-EXPLORER hero while preserving recognizable HELLO! identity.
+
+DESKTOP COMPOSITION
+- Navbar unchanged in core structure, centered HELLO! logo.
+- Main hero fills most of the viewport below nav, without ugly overflows or chopping off vital content.
+- Left: concise existing hero headline/tagline/SHOP NOW action, tightened where required. Respect existing 'SAY Hello! TO YOUR STYLE.' copy (may reflow to make room for wheel).
+- Center or slightly left-of-center: LARGE premium 8-spoke 3D-LOOK outfit wheel. This is the interactive focal point, clearly visible, not a tiny icon.
+- Right: two models posed together in a full, elegant fashion composition, as much of both bodies and clothing visible as the layout permits.
+- Suggested large-screen proportions: headline area ~20–25%, wheel ~25–32%, models ~45–55%. This is a guide; tune for actual viewport and source photography.
+- Use subtle light/shadow separation so text, wheel and figures are readable without fake stock gradients covering everything.
+- No wheel overlapping faces, no cropped logo, no layout shift after load, no unwanted horizontal scroll.
+
+TABLET/MOBILE
+- Adapt order: logo/navigation, short copy, prominent preview figures, compact wheel and look controls, or a carefully balanced responsive arrangement. Main wheel must remain discoverable and touch-friendly without huge page height.
+- Use min/max/clamp fluid sizing. Maintain large enough points for touch input. Do not stretch or squash photography.
+- Keep actual shop CTAs visible and primary conversion actions accessible.
+
+VISUAL STORY
+'CHOOSE YOUR FIT' near wheel, 'ROTATE OR TAP TO EXPLORE', 'LOOK 01 / 08', current look name, optional 'SHOP THIS LOOK' linked to a real product only when known. Avoid invented stock urgency or false discounts.
+
+============================================================
+SECTION E — HIGH-END 3D-STYLE EIGHT-SPOKE WHEEL
+============================================================
+Create a CUSTOM eight-spoke ship-steering-wheel-inspired fashion selector. NOT a stock image and NOT a literal rustic wooden pirate wheel. Stylize it for HELLO! streetwear.
+
+GEOMETRY & MATERIALS
+- Exactly 8 evenly spaced spokes, separated by 45 degrees, with 8 visibly round ball/grip handles at the ends.
+- Outer ring, beveled metal edges, center hub, light-catching rim, depth/shading, gentle metallic highlights, realistic cast shadow, restrained ambient occlusion.
+- A physically plausible 3D LOOK is required. Approaches: lightweight Three.js/WebGL if already available and sensible, or carefully layered SVG/CSS perspective with gradients, shadow and specular highlights. Prefer a well-rendered, fast 3D LOOK to a heavy broken 3D engine.
+- Wheel must be drawn from actual components/geometry, NOT baked into a decorative hero background; points must be separately interactive.
+- Rotate as an integrated body (outer ring + spokes + handles + hub) with believable depth and motion.
+- Use subtle wheel rotation inertia, snap-to-detent ease, and tactile selection feedback, but no uncontrolled spinning.
+- A small directional highlight may move with the wheel; avoid flashing red glows, particle explosions or casino-style effects.
+
+IDLE AUTOROTATION
+- On desktop, rotate very slowly and continuously while user is idle. Approximately one revolution per 20–35 seconds or a similarly calm premium pace, configurable.
+- Idle motion NEVER automatically switches model looks.
+- Pause idle rotation on hover, pointer down, touch, focus-within, or manual interaction. Never fight the user's drag.
+- After inactivity, optionally ease back into idle rotation WITHOUT changing selected outfit.
+- Pause/stop if document is hidden, if reduced-motion is enabled, or if intersection-observed wheel leaves viewport.
+
+POINTER / TOUCH / KEYBOARD INPUT
+- Mouse drag: wheel rotates naturally with angular delta around wheel center; release invokes gentle inertia and snaps to the nearest 45-degree spoke position.
+- Touch drag: same behavior, careful touch-action handling, prevent scroll only during a confirmed active wheel gesture. Still allow normal scroll outside the control.
+- Balls: all eight endpoint balls remain individually selectable with clear hover/focus/selected states and sufficiently large hit areas. Clicking ball N selects look N, regardless of where wheel is currently rotated.
+- Manual wheel turning: when user rotates wheel across a detent and releases/snaps, update selected look to that spoke's look; don't require only ball clicks. Outfit transition triggers ONCE per settled manual selection rather than on every animation frame.
+- Buttons/keys: arrow keys step through looks (or rotate wheel), Enter/Space select focused ball, wheel container announces role and active look to screen readers.
+- Avoid pointer vs click conflicts; dragging should not accidentally activate a ball.
+- Respect keyboard focus, tab order and input accessibility; mouse wheel scrolling should not trap normal page scrolling.
+
+STATE MODEL AND MATH
+- Represent look selection separately from decorative idle angle; idle angle cannot inadvertently update selected look.
+- Suggested state: selectedLookIndex (0..7), wheelRotationDeg (visual angle), isDragging, dragStartAngle, manualBaseAngle, isIdleRotating.
+- Eight spokes = 45° each. Use atan2(pointer.y-centerY, pointer.x-centerX) to calculate drag angle. Normalize negative/over-360 rotations, handle wrap-around cleanly, snap on release, and derive selected index deterministically.
+- If a user clicks ball N while the wheel is moving, stop idle rotation, rotate gently to bring N to the top/selection marker if helpful, then select outfit N. Make final state consistent.
+- Provide UI feedback: look number 01–08, look title, highlighted selected ball or selected spoke, maybe a very subtle click sound ONLY if explicitly opted in (default muted).
+
+============================================================
+SECTION F — MODEL OUTFIT CHANGER (IMPORTANT: NOT JUST TEXT OR IMAGE SWAP)
+============================================================
+This feature is the essence of the site: a customer rotates the wheel manually or clicks a ball to try different HELLO! streetwear outfits on TWO visible model figures. We want the perception that THEIR CLOTHES are changing while the fashion scene remains grounded and cohesive. The selection must visibly change garments, not merely the caption.
+
+DESIRED PREMIUM EXPERIENCE
+- Keep the two model figures anchored to approximately the same position, scale and pose between looks.
+- An outfit selection triggers a sophisticated visual garment-change transition (300–650ms): previous apparel soft-masks away, new apparel materializes with a controlled cloth-like displacement/crossfade and subtle depth/lighting. Faces/hair/body poses stay stable if consistent asset data permits.
+- Coordinate both figures' looks; changing a wheel point updates the outfits of BOTH models (or a curated coordinated set).
+- Wheel click, settled manual drag, and next/previous keyboard buttons all share a single selectLook(index) handler.
+- Prevent race conditions: rapid selection cancels prior transitions and resolves to the latest look, with no flashing or blank frames.
+- Preload the next/selected image layers if available; keep a fallback visible until loaded.
+- Keep the surrounding homepage photography and interface stable; no full-page transitions.
+
+CRUCIAL ASSET LIMITATION / HONEST IMPLEMENTATION
+Only the original HELLO! logo will be uploaded. Existing repository images may include ONE flattened hero with TWO models. One flat hero JPG cannot produce photorealistic, accurately different garments for eight looks without additional edited same-pose photo sets, layered garment renders, or true rigged 3D assets. DO NOT invent such assets or claim that GSAP/Three.js can magically re-dress a photo.
+
+DELIVER A WORKING DEMO RIGHT NOW WITH AN HONEST FALLBACK HIERARCHY:
+A. If existing repo contains several suitable same-figure fashion/outfit assets with usable rights, make eight coherent temporary look scenes by composing available assets; use mask/layer garment transitions where assets line up. Keep two models visually consistent wherever possible.
+B. If programmatic/local image-generation tooling is explicitly available within the working environment, make eight CLEARLY DEMO-ONLY, consistent-pose look visuals for the same two adult fashion models and store them locally. Do not rely on nonexistent tools or external paid APIs.
+C. If neither A nor B is possible, build an attractive, clearly labeled DEMO 'virtual styling' preview: two consistent fashion silhouettes/mannequin figures or editable layered garment figures with distinct shirts/hoodies/pants/accessories. Create eight actual outfit configurations with different garment shape, color, pattern and layering, so changing look CLEARLY changes the visible clothing. Use CSS/SVG layering and masks with subtle 3D shading and depth. Keep existing hero photograph as a tastefully integrated backdrop or adjacent photography, but do not fake re-dressing its existing uneditable photo subjects.
+D. A simple crossfade between identical hero photos is NOT an acceptable 'working outfit changer'. If temporary looks reuse one hero image, add a clearly functional visible garment demo region. A blank broken-image box is unacceptable.
+E. When the brand later supplies eight photographs of the same two models in comparable framing, switch the preview to masked/registered image transitions using the same wheel behavior. If proper 3D rigged figures and garment meshes are later supplied, support swapping garment materials/meshes in a 3D viewer. Keep this future upgrade modular.
+
+REALISM TARGET
+- The wheel itself should feel three-dimensional now.
+- The clothes-preview scene should feel visually polished now. Use depth, subtle motion, parallax, garment motion and art direction; do NOT falsely imply it is photoreal live 3D cloth simulation when the assets don't support that.
+- Prioritize high-quality functional demo over impossible promises or a fake static showcase.
+
+EIGHT TEMPORARY LOOKS
+01 — ESSENTIAL OVERSIZED TEE: relaxed black tee, dark pants, clean monochrome set.
+02 — GRAPHIC STREET TEE: strong cream/white graphic tee, black trousers, street accessories.
+03 — CARGO FIT: oversized muted tee, olive/charcoal cargo pants.
+04 — HOODIE DROP: gray/black hoodie look, relaxed trousers.
+05 — MONOCHROME SET: tonal black-and-charcoal fit.
+06 — RELAXED DENIM: off-white tee, loose dark/washed denim.
+07 — URBAN LAYERS: layered overshirt, tee, baggy pants.
+08 — HELLO! SIGNATURE: featured brand-marked outfit, premium standout combination.
+
+Each look object should include:
+- id, name, description (optional), imageLayer URLs or figure configs, maleLook assets/config, femaleLook assets/config, selected product ids if real, position/crop information, palette, optional availability flag.
+- Provide look 01 through 08 with actual functioning distinct demo presentation. Never invent live prices or actual sale stock if not available.
+- Store configuration in e.g. src/data/helloLooks.ts, and assets in public/images/looks/ or public/demo/looks/. Keep filenames predictable.
+- Document exact replacement steps so later uploading look-01.webp through look-08.webp (ideally consistent pose/composition) can upgrade the scene without rewriting the wheel.
+
+DEMO IMPLEMENTATION OPTIONS
+- 2D layered garment figure: clothing/body/face/garments as separate SVG layers, shaped accurately, with gradient highlights and mild cloth folds. Switch actual shirt/hoodie/pants layers and appearance configs. This is HONEST stylized visualization rather than claiming photo editing.
+- If existing branded source has compatible individual model cutouts and actual apparel variant layers, use aligned 2D/2.5D garment compositing; preserve model face and pose across looks. Only do so when alignment is visually plausible.
+- A 3D library is optional, NOT mandatory. Do not deliver a slow, broken half-finished model viewer just to say '3D'. A convincingly shaded wheel + clean look changer is better.
+
+============================================================
+SECTION G — MOVE CATEGORY STRIP TO THE SECOND PAGE
+============================================================
+The current screenshot shows a four-wide row directly below the homepage hero: T-SHIRTS, PANTS, HOODIES, ACCESSORIES. The images look compressed/cut because the visible strip is short. I do NOT want that category strip remaining in the same place on the homepage.
+
+REQUIRED CHANGE
+1. Remove/move this entire four-category SECTION from immediately beneath the homepage hero. Preserve the component's route destinations, accessibility labels and cards; do not accidentally delete product data.
+2. Put these four categories prominently on the SECOND PAGE, reached by SHOP / COLLECTIONS in the navbar. If an appropriate route already exists, enhance it. Otherwise create /shop as the primary destination, and make /collections link appropriately, preserving old routes as necessary.
+3. The second page starts with a strong but clean 'SHOP THE COLLECTIONS' headline/intro, followed by four large category IMAGE CARDS with plenty of space.
+4. Each card should display a complete, properly framed editorial image with an aspect ratio suited to the scene: around 3:4 or 4:5 for portrait images; choose 4:3 or 16:10 only for landscape source compositions. Do NOT force one crop that cuts models' heads, shoes or main garments. Use a deliberate focal point (object-position) per image; when a full garment/body absolutely must remain visible, use contain with tasteful backdrop rather than distorting image.
+5. Desktop: responsive two-column large portrait grid (or four across only if sufficient width/height to keep images immersive and readable). Tablet: two columns. Mobile: one or two columns depending on actual width and touch readability; prefer one large card when needed.
+6. Make each category fully clickable, with readable overlay or below-card label and a subtle premium hover/touch animation.
+7. When a category is opened, show its actual filtered listing (T-Shirts, Pants, Hoodies, Accessories). All Products remains available and search/filter/sort should continue working.
+8. If the original image assets exist, reuse them with correct cropping. If not, use well-chosen temporary fashion category imagery already in the project or visually refined labeled placeholders and explain replacement paths. Do NOT say client has supplied real catalog photography.
+9. Do NOT keep duplicate full category strips simultaneously on Home and Shop unless the owner explicitly approves.
+10. The homepage after hero can continue with New Arrivals, Latest Drop, promotional/editorial sections and footer, with strong spacing; the four categories are relocated to the dedicated second page.
+
+SHOP SECOND PAGE CONTENT (IN ORDER)
+- Consistent navigation.
+- Distinctive heading / intro: 'EXPLORE HELLO!' or 'SHOP THE COLLECTIONS'.
+- Four immersive, full-framed category cards, each linking to functional category pages/filters.
+- Product listing section with cards, product images, LKR price, available sizes/colors, favorites where applicable; no fake ratings or inventory.
+- Functional filters and sort if present or planned: category, size, color, available stock, price, newest; avoid pretending data exists if backend isn't connected.
+- Footer and policy links, matching the site theme.
+
+============================================================
+SECTION H — NAVBAR / RESPONSIVE MICRO-INTERACTIONS
+============================================================
+- Center brand logo on desktop (stationary Hello letters + animated !).
+- Keep SHOP, NEW ARRIVALS, COLLECTIONS (or existing equivalent) and right-side SEARCH, ACCOUNT, CART usable.
+- Use subtle glass/tinted gradient on scroll or over bright backgrounds so white icons/text are always readable.
+- Add restrained menu underline transitions and icon-hover feedback.
+- Search overlay/drawer must work and be keyboard escapable if such feature exists.
+- Cart count reflects actual cart data, never a fake permanent number.
+- Mobile nav is compact, accessible, and touch-friendly. No collisions between the animated exclamation and controls.
+- No flashing, mega cursors, fake loading bars, or unnecessary nav redesign.
+
+============================================================
+SECTION I — PRESERVE COMPLETE E-COMMERCE FUNCTIONALITY
+============================================================
+- Do not remove or break working Home, Shop, New Arrivals, category listings, Product Details, Search, Wishlist, Cart, Checkout, Orders, Account, Policies, Contact, or Admin routes.
+- Working product cards must link to details; Add to Cart and quantities must still function.
+- Keep prices in LKR if established, real stock and discount logic unchanged.
+- Admin CRUD, auth, database rules, delivery logic, and payment providers should not be altered except where essential for routing or displaying associated product data.
+- Don't create or simulate real completed payments and don't make server-side secrets available to clients.
+- If an optional 'SHOP THIS LOOK' button has no linked real product, provide a safe fallback to /shop or an accurately labeled demo state; never promise availability.
+- Ensure appropriate alt texts, screen-reader descriptions, semantic buttons and keyboard access.
+
+============================================================
+SECTION J — ARCHITECTURE & IMPLEMENTATION DETAILS
+============================================================
+Adapt to existing project structure rather than force these exact paths. Suggested:
+  components/branding/AnimatedHelloLogo.tsx
+  components/hero/OutfitWheel.tsx
+  components/hero/ModelOutfitShowcase.tsx
+  components/hero/StreetwearFitExplorer.tsx
+  components/shop/CategoryFeatureGrid.tsx
+  data/helloLooks.ts
+  public/branding/hello-original.png (or svg)
+  public/demo/looks/*
+
+WHEEL CONTRACT
+- OutfitWheel props: looks, selectedLookIndex, onSelectLook, autoRotate, disabled, ariaLabel.
+- Selection by click or settled drag calls onSelectLook(index).
+- Idle auto-rotation is only decorative; it never calls onSelectLook.
+- Wheel input must handle rapid clicks, pointer cancellation, mobile drag and animation interrupt cleanly.
+- Good unit tests for angle normalization, wrap-around, snap-to-45-degree mapping, and 0..7 indexing.
+
+SHOWCASE CONTRACT
+- ModelOutfitShowcase props: activeLook, transitionType, demoMode.
+- If coherent layered model data exists, swap only garment layers and keep stable body/environment.
+- If using eight consistent same-model image assets later, crossfade masked clothing zones when mask data is available; otherwise use a tasteful whole-image transition clearly framed as prerecorded looks.
+- On current no-image build, use a visibly distinct demo garments solution, not blank placeholders.
+- Preload visuals as possible and show reliable fallback states.
+
+NAV LOGO CONTRACT
+- Keep static Hello letters in a stable raster/vector layer, separate moving exclamation layer.
+- Animation never changes layout dimensions or pushes nearby nav links.
+- GSAP or Web Animations API, proper cleanup, reduced-motion and mobile scale.
+
+ANIMATION & PERFORMANCE
+- Favor transforms/opacity over expensive reflows, use requestAnimationFrame judiciously, avoid excessive global listeners.
+- Lazy load any noncritical heavier 3D bundle; don't block the homepage or checkout.
+- DevicePixelRatio caps if using WebGL, IntersectionObserver visibility pausing, no runaway animation on hidden tabs.
+- Do not use random external assets that intermittently fail, hotlink unauthorized images, or depend on hidden proprietary paid APIs.
+
+============================================================
+SECTION K — EXACT INTERACTION / STATE RULES
+============================================================
+INITIAL LOAD
+- Existing homepage loads directly; there is NO intro/loading overlay.
+- HELLO! centered navbar logo renders immediately.
+- The exclamation mark performs its short playful hop animation once, then stops fully aligned.
+- The hero wheel gently rotates automatically.
+- Initial selected outfit is LOOK 01.
+- The two-model outfit showcase displays corresponding LOOK 01 garments/demo styling.
+
+WHEEL AUTO-ROTATES
+- Wheel visual angle changes slowly.
+- Selected look stays LOOK 01 (no auto image change).
+- No distracting page rerenders and no phantom tap events.
+
+USER TAPS BALL 05
+- Pause wheel.
+- Ball 05 becomes active; wheel rotates/snaps suitably.
+- SelectedLookIndex updates to 4 (zero-based).
+- BOTH visible outfit figures visibly change to LOOK 05 clothing with a polished animation.
+- Label becomes LOOK 05 / 08; a live shopping action follows actual linked data.
+- No change to people/environment if consistent assets permit.
+
+USER DRAGS WHEEL ~ONE SPOKE
+- Drag rotates wheel smoothly by ~45 degrees.
+- On release wheel snaps into detent.
+- Outfit changes to the neighboring look exactly once; title/index sync.
+- This must work with touch and mouse, without requiring a separate click.
+
+USER RAPIDLY SELECTS 02, 07, 03
+- Interrupt incomplete animations safely; final active look is 03.
+- No flashing image, stuck spinner, unhandled promise, or stale asset.
+
+USER OPENS SHOP SECOND PAGE
+- The four original category cards appear HERE, large and properly framed.
+- The homepage does not retain the cramped original four-card strip directly below hero.
+- Tapping a card navigates to filtered live Shop results where available.
+
+============================================================
+SECTION L — TESTING / QA / ACCEPTANCE CRITERIA
+============================================================
+Run appropriate checks for the detected project (npm scripts/build/typecheck/lint/test). Fix failures caused by your modifications.
+
+DESKTOP QA at ~1440, 1366, 1024 widths:
+[ ] Centered logo retains correct graphic and only ! hops.
+[ ] Exclamation performs playful hops near end of Hello, with no double !.
+[ ] NO loading screen, black fullscreen intro, door, curtain, panel wipe.
+[ ] Hero headline, wheel, both models, shop CTA all remain legible.
+[ ] Wheel is actually 3D-looking with eight clickable ball handles.
+[ ] Auto wheel rotation is calm and NEVER changes looks by itself.
+[ ] Clicking ball 1..8 changes visible clothing/figure outfits, not only labels.
+[ ] Manual drag and snap also change selected outfit.
+[ ] Rapid input and interrupted transitions work correctly.
+[ ] All 8 looks produce distinguishable demo outfits.
+[ ] Existing hero imagery isn't grotesquely cropped or stretched.
+[ ] Category strip moved from Home to a functional second Shop/Collections page.
+[ ] Four category images on Shop are spacious, full, correctly proportioned and link to respective categories.
+[ ] Existing cart/checkout and route behavior preserved.
+
+MOBILE QA at ~390, 430, 768 widths:
+[ ] Animated ! doesn't overlap mobile navbar controls.
+[ ] Hero layout fits, no horizontal overflow.
+[ ] Wheel and balls are easy to tap/drag; surrounding scroll works normally.
+[ ] Outfit change visible and does not cause browser stalls.
+[ ] Category cards don't clip heads/garments, labels readable.
+[ ] Reduced motion disables autoplay/bounce/continuous spins but preserves selection.
+[ ] Loading failures show attractive fallback rather than broken icons.
+
+ACCESSIBILITY / RELIABILITY
+[ ] Buttons have labels, keyboard operation and visible focus.
+[ ] Animation paused on hidden tab / page transition cleanup.
+[ ] Client hydration works without console errors.
+[ ] SVG/Canvas visually crisp on high DPI and resized devices.
+[ ] Real payments and secrets untouched.
+[ ] Real store product data is not silently overwritten with fake demo listings.
+
+============================================================
+SECTION M — DELIVERY / REPORTING / NEXT STEPS
+============================================================
+DO ALL IMPLEMENTATION IN THE EXISTING REPOSITORY.
+
+Your final development report must include:
+1. Brief summary of what actually changed (not speculative claims).
+2. Modified/new file paths with their purpose.
+3. Which existing assets were reused and which visuals are demo placeholders.
+4. Exact path where the uploaded original HELLO! logo is used and how '!' was isolated.
+5. Wheel interaction controls: click, drag, touch, keyboard; logic for idle rotation vs manual selection.
+6. How each of the 8 current outfit states VISIBLY differs, and which approach you used for present no-photo demo.
+7. How to replace temporary look assets with eight real corresponding model photographs/garment renders later.
+8. Confirmation that category cards are removed from Home and now appear on the second Shop/Collections page with proper full-image framing.
+9. Commands executed and whether build/typecheck/lint/tests passed, including any remaining issues honestly.
+10. Preview instructions (e.g. npm run dev and local URL), without assuming a launch/deployment happened.
+
+PRIORITIES IF THE TASK IS TOO LARGE FOR ONE PASS
+Priority 1: inspect and preserve repository; center logo and isolate/playful ! animation.
+Priority 2: first-screen responsive layout and beautiful 3D-like functional eight-point wheel.
+Priority 3: eight genuinely different temporary outfit appearances, click and drag selection, transition polish.
+Priority 4: move category cards to Shop second page; correct full image display and routing.
+Priority 5: performance/accessibility/QA and documentation.
+Keep working through these priorities; do not stop after producing a design mockup. Do not claim all features are done until code and tests actually support the claim.
+
+FINAL DEFINITION OF DONE
+- User enters an already-rendered HELLO! homepage: NO splash/loading screen.
+- Center navbar Hello stays still, the original ! playfully jumps left/right ~3cm, then returns precisely next to Hello.
+- A premium 3D-looking eight-spoke wheel visually anchors the first-screen center, calmly auto-rotating.
+- Two fashion figures are presented on the right, wearing coherent streetwear styling.
+- Auto rotation alone does not choose outfits. CLICK on one of the eight ball handles OR manually ROTATE AND RELEASE at a spoke to choose one of eight looks.
+- Each choice VISIBLY CHANGES the garments of the two figures with a refined animation. With no actual client look photos, this is a fully functioning, honest, stylized or layered demo—not fake photoreal live outfit replacement.
+- The four category cards formerly visible as a compressed homepage strip are relocated to the second Shop/Collections page, shown as properly proportioned full fashion cards.
+- Everything remains responsive, accessible, polished, fast, and integrated into the current e-commerce app.
+
+BEGIN NOW: inspect the existing repository, make a short plan, then implement and test these exact changes end-to-end. Remember I am uploading ONLY the original HELLO! logo. Do not ask for the other assets to begin.
