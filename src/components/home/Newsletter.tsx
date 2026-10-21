@@ -23,6 +23,13 @@ export default function Newsletter() {
           localStorage.setItem('hello-newsletter-list', JSON.stringify(saved));
         }
       } catch {}
+
+      // Trigger server-side welcome & drop confirmation via drops@helloclothing.store
+      fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      }).catch(err => console.error('Newsletter subscribe error:', err));
     }
     setSubmitted(true);
     event.currentTarget.reset();

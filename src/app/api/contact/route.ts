@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { privateHeaders, RequestError, requireSameOrigin } from "@/lib/server/http";
+import { sendContactInquiryEmails } from "@/lib/server/mail";
 
 export async function POST(request: Request) {
   try {
@@ -25,6 +26,15 @@ export async function POST(request: Request) {
     }
 
     const reference = `HL-INQ-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    // Asynchronously dispatch Resend emails from support@helloclothing.store
+    sendContactInquiryEmails({
+      name,
+      email,
+      message,
+      reference,
+    }).catch(err => console.error("[Resend] Contact email dispatch error:", err));
+
     return NextResponse.json({
       success: true,
       sent: true,
@@ -36,4 +46,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request payload." }, { status: 400, headers: privateHeaders });
   }
 }
+
 

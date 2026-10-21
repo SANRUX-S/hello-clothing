@@ -924,7 +924,7 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
 
     {section === "media" && <><input ref={uploadRef} className="admin-sr-only" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Upload a local image" onChange={event => { void upload(event.target.files?.[0]); event.target.value = ""; }} /><div className="admin-media-note"><Images size={18} strokeWidth={1.5} /><p>{allMedia.length} images in your library <span>JPG, PNG & WebP · up to 2 MB · local browser previews</span></p></div>{mediaError && <p className="admin-error" role="alert">{mediaError}</p>}<div className="admin-media-grid"><button className="admin-media-upload" onClick={() => uploadRef.current?.click()}><ImagePlus size={28} strokeWidth={1.2} /><strong>Drop a little personality.</strong><span>Choose an image</span></button>{allMedia.map(item => <figure className="admin-media-card" key={item.id}><div><img src={item.src} alt={item.name} />{item.uploaded && <button className="admin-icon-button" aria-label={`Remove local image ${item.name}`} onClick={() => { const next = media.filter(m => m.id !== item.id); try { localStorage.setItem(KEYS.media, JSON.stringify(next)); setMedia(next); setNotice("Local image removed."); } catch { setNotice("Could not update browser storage."); } }}><Trash2 size={16} /></button>}</div><figcaption><strong>{item.name}</strong><span>{item.uploaded ? "LOCAL UPLOAD" : "CATALOG IMAGE"}</span></figcaption></figure>)}</div></>}
 
-    {section === "settings" && <form onSubmit={event => { event.preventDefault(); saveLocal(KEYS.settings, settings, "Demo settings saved in your browser."); }} className="admin-settings-layout"><div><section className="admin-panel admin-form-panel"><div className="admin-panel-heading"><div><h2>The everyday details.</h2><p>Your demo store’s name, contact, and preferences.</p></div></div><div className="admin-fields"><label>Store name<input maxLength={100} required value={settings.storeName} onChange={e => setSettings({ ...settings, storeName: e.target.value })} /></label><label>Public contact email <span>(optional)</span><input type="email" maxLength={150} placeholder="hello@yourstore.com" value={settings.email} onChange={e => setSettings({ ...settings, email: e.target.value })} /><small>Use a business address. This demo never sends email.</small></label><div className="admin-form-grid"><label>Currency<select value={settings.currency} onChange={e => setSettings({ ...settings, currency: e.target.value })}><option value="LKR">LKR — Sri Lankan Rupee</option></select></label><label>Planning delivery fee (LKR)<input required type="number" min="0" step="1" value={settings.deliveryFee} onChange={e => setSettings({ ...settings, deliveryFee: Math.max(0, Math.round(Number(e.target.value))) })} /><small>Planning only. Demo checkout uses a fixed LKR 500 sample fee.</small></label></div></div></section><section className="admin-panel admin-form-panel"><div className="admin-panel-heading"><div><h2>A playful little Hello!</h2><p>Only the original logo’s exclamation mark moves. The store opens directly.</p></div><span className="admin-small-pill">LOGO MOTION</span></div><div className="admin-radio-options"><label className={settings.logoMotion ? "admin-radio-selected" : ""}><input type="radio" name="logo-motion" checked={settings.logoMotion} onChange={()=>setSettings({...settings,logoMotion:true})}/><span><strong>A little personality</strong><small>Play a short navbar hop, with a calm cooldown on hover or keyboard focus.</small></span></label><label className={!settings.logoMotion ? "admin-radio-selected" : ""}><input type="radio" name="logo-motion" checked={!settings.logoMotion} onChange={()=>setSettings({...settings,logoMotion:false})}/><span><strong>Keep it still</strong><small>Show the exact original logo without animation.</small></span></label></div><p className="admin-reduced-motion-note">Reduced-motion preferences always keep the logo still. This setting affects only this browser.</p></section><div className="admin-settings-save"><button className="admin-button" type="submit"><Check size={17} /> Save settings</button></div></div><aside><section className="admin-panel admin-mode-card"><ShieldCheck size={26} strokeWidth={1.2} /><h2>A little room to experiment.</h2><p>This is a live management workspace connected to Neon PostgreSQL database.</p><div><span>Store mode</span><strong><span className="admin-status-dot" style={{ background: '#16a34a' }} /> LIVE NEON DB</strong></div><div><span>Payment processing</span><strong>Cash on Delivery (COD) & Bank Transfer</strong></div><div><span>Database engine</span><strong>Neon PostgreSQL 18</strong></div></section><section className="admin-panel admin-reset-card"><h3>A fresh start?</h3><p>Reset admin products, uploads, and preferences to the sample collection.</p><button type="button" className="admin-button admin-button-quiet" onClick={() => setResetOpen(true)}><RotateCcw size={15} /> Reset demo workspace</button></section></aside></form>}
+    {section === "settings" && <form onSubmit={event => { event.preventDefault(); saveLocal(KEYS.settings, settings, "Settings saved in your browser."); }} className="admin-settings-layout"><div><section className="admin-panel admin-form-panel"><div className="admin-panel-heading"><div><h2>Domain Email Channels</h2><p>Automated Resend transactional identities configured for helloclothing.store</p></div><span className="admin-small-pill" style={{ background: '#052e16', color: '#4ade80', border: '1px solid #166534' }}>VERIFIED DOMAIN</span></div><div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}><div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#121215', padding: '12px 14px', borderRadius: '8px', border: '1px solid #27272a' }}><Mail size={18} color="#4ade80" style={{ marginTop: '2px', flexShrink: 0 }} /><div><strong style={{ fontSize: '13px', color: '#ffffff', display: 'block' }}>orders@helloclothing.store</strong><p style={{ margin: '2px 0 0', fontSize: '11px', color: '#a1a1aa', lineHeight: 1.5 }}>Automated customer receipts, fulfillment status updates (confirmed, promptX courier tracking #, delivered), and admin new-order alerts.</p></div></div><div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#121215', padding: '12px 14px', borderRadius: '8px', border: '1px solid #27272a' }}><Mail size={18} color="#38bdf8" style={{ marginTop: '2px', flexShrink: 0 }} /><div><strong style={{ fontSize: '13px', color: '#ffffff', display: 'block' }}>support@helloclothing.store</strong><p style={{ margin: '2px 0 0', fontSize: '11px', color: '#a1a1aa', lineHeight: 1.5 }}>Storefront customer inquiries, support concierge auto-replies, and forward to management team.</p></div></div><div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#121215', padding: '12px 14px', borderRadius: '8px', border: '1px solid #27272a' }}><Mail size={18} color="#fbbf24" style={{ marginTop: '2px', flexShrink: 0 }} /><div><strong style={{ fontSize: '13px', color: '#ffffff', display: 'block' }}>drops@helloclothing.store</strong><p style={{ margin: '2px 0 0', fontSize: '11px', color: '#a1a1aa', lineHeight: 1.5 }}>VIP drop announcements, exclusive member early access, secret restocks, and welcome discount code (HELLO10).</p></div></div></div></section><section className="admin-panel admin-form-panel"><div className="admin-panel-heading"><div><h2>The everyday details.</h2><p>Your store’s name, contact, and preferences.</p></div></div><div className="admin-fields"><label>Store name<input maxLength={100} required value={settings.storeName} onChange={e => setSettings({ ...settings, storeName: e.target.value })} /></label><label>Public contact email <span>(optional)</span><input type="email" maxLength={150} placeholder="orders@helloclothing.store" value={settings.email} onChange={e => setSettings({ ...settings, email: e.target.value })} /><small>Business address for customer receipts and notifications.</small></label><div className="admin-form-grid"><label>Currency<select value={settings.currency} onChange={e => setSettings({ ...settings, currency: e.target.value })}><option value="LKR">LKR — Sri Lankan Rupee</option></select></label><label>Planning delivery fee (LKR)<input required type="number" min="0" step="1" value={settings.deliveryFee} onChange={e => setSettings({ ...settings, deliveryFee: Math.max(0, Math.round(Number(e.target.value))) })} /><small>Planning only. Standard checkout uses LKR 500 islandwide fee (Free over LKR 10,000).</small></label></div></div></section><section className="admin-panel admin-form-panel"><div className="admin-panel-heading"><div><h2>A playful little Hello!</h2><p>Only the original logo’s exclamation mark moves. The store opens directly.</p></div><span className="admin-small-pill">LOGO MOTION</span></div><div className="admin-radio-options"><label className={settings.logoMotion ? "admin-radio-selected" : ""}><input type="radio" name="logo-motion" checked={settings.logoMotion} onChange={()=>setSettings({...settings,logoMotion:true})}/><span><strong>A little personality</strong><small>Play a short navbar hop, with a calm cooldown on hover or keyboard focus.</small></span></label><label className={!settings.logoMotion ? "admin-radio-selected" : ""}><input type="radio" name="logo-motion" checked={!settings.logoMotion} onChange={()=>setSettings({...settings,logoMotion:false})}/><span><strong>Keep it still</strong><small>Show the exact original logo without animation.</small></span></label></div><p className="admin-reduced-motion-note">Reduced-motion preferences always keep the logo still. This setting affects only this browser.</p></section><div className="admin-settings-save"><button className="admin-button" type="submit"><Check size={17} /> Save settings</button></div></div><aside><section className="admin-panel admin-mode-card"><ShieldCheck size={26} strokeWidth={1.2} /><h2>A little room to experiment.</h2><p>This is a live management workspace connected to Neon PostgreSQL database.</p><div><span>Store mode</span><strong><span className="admin-status-dot" style={{ background: '#16a34a' }} /> LIVE NEON DB</strong></div><div><span>Payment processing</span><strong>Cash on Delivery (COD) & Bank Transfer</strong></div><div><span>Database engine</span><strong>Neon PostgreSQL 18</strong></div><div><span>Resend Email</span><strong>Active Domain</strong></div></section><section className="admin-panel admin-reset-card"><h3>A fresh start?</h3><p>Reset admin products, uploads, and preferences to the sample collection.</p><button type="button" className="admin-button admin-button-quiet" onClick={() => setResetOpen(true)}><RotateCcw size={15} /> Reset demo workspace</button></section></aside></form>}
 
     <footer className="admin-footer"><span className="admin-brand">Hello!</span><p>Heavyweight streetwear · Colombo</p><span>HELLO! CLOTHING · ALL-IN-ONE ADMIN PANEL · {new Date().getFullYear()}</span></footer>
     </main></div>
@@ -957,6 +957,8 @@ function OrderDetailsModal({
   const [courier, setCourier] = useState(order.courier || 'PromptX Logistics');
   const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || '');
   const [saved, setSaved] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [resendNotice, setResendNotice] = useState('');
 
   const phone = (order.customer?.phone || '').replace(/[^0-9]/g, '');
   const customerName = order.customer?.name || 'Customer';
@@ -969,6 +971,29 @@ function OrderDetailsModal({
     onUpdateStatus(order.reference, status, courier, trackingNumber);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleResendReceipt = async () => {
+    setIsResending(true);
+    setResendNotice('');
+    try {
+      const res = await fetch('/api/admin/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reference: order.reference, action: 'resend_confirmation' }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setResendNotice(`Confirmation sent to ${order.customer?.email || 'customer'} via orders@helloclothing.store`);
+      } else {
+        setResendNotice(data.error || 'Failed to dispatch email.');
+      }
+    } catch {
+      setResendNotice('Delivery request failed');
+    } finally {
+      setIsResending(false);
+      setTimeout(() => setResendNotice(''), 6000);
+    }
   };
 
   return (
@@ -994,28 +1019,56 @@ function OrderDetailsModal({
             <strong style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <UserRound size={15} color="#4ade80" /> Customer Information
             </strong>
-            {whatsappUrl && (
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+              {whatsappUrl && (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#25D366',
+                    color: '#000',
+                    padding: '5px 10px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                  }}
+                >
+                  <MessageCircle size={14} /> WhatsApp Customer
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={handleResendReceipt}
+                disabled={isResending}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  background: '#25D366',
-                  color: '#000',
+                  background: '#1c1d1d',
+                  color: '#fff',
+                  border: '1px solid #333',
                   padding: '5px 10px',
                   borderRadius: '6px',
                   fontSize: '11px',
-                  fontWeight: 700,
-                  textDecoration: 'none',
+                  fontWeight: 600,
+                  cursor: isResending ? 'not-allowed' : 'pointer',
                 }}
               >
-                <MessageCircle size={14} /> WhatsApp Customer
-              </a>
-            )}
+                <Mail size={13} color="#4ade80" /> {isResending ? 'Sending…' : 'Resend Receipt Email'}
+              </button>
+            </div>
           </div>
+
+          {resendNotice && (
+            <div style={{ background: '#052e16', border: '1px solid #166534', color: '#4ade80', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', marginBottom: '10px' }}>
+              ✓ {resendNotice}
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', fontSize: '12px' }}>
             <div><span style={{ color: '#71717a', display: 'block', fontSize: '11px' }}>Full Name</span><strong>{order.customer?.name || 'N/A'}</strong></div>
@@ -1071,9 +1124,12 @@ function OrderDetailsModal({
 
         {/* Fulfillment & Courier Controls */}
         <div style={{ background: '#121215', border: '1px solid #27272a', borderRadius: '8px', padding: '14px' }}>
-          <strong style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+          <strong style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
             <Truck size={15} color="#4ade80" /> Courier & Fulfillment Management
           </strong>
+          <p style={{ fontSize: '11px', color: '#888', margin: '0 0 12px 0' }}>
+            Updating status automatically dispatches a branded email notification with tracking link to the customer via <strong style={{ color: '#fff' }}>orders@helloclothing.store</strong>.
+          </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
             <label style={{ fontSize: '11px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -1084,11 +1140,11 @@ function OrderDetailsModal({
                 style={{ padding: '8px 10px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px', fontSize: '12px' }}
               >
                 <option value="processing">Processing</option>
-                <option value="confirmed">Confirmed</option>
+                <option value="confirmed">Confirmed (Email sent to customer)</option>
                 <option value="production">In Production</option>
-                <option value="dispatched">Handed to Courier</option>
+                <option value="dispatched">Handed to Courier (Email sent with Waybill)</option>
                 <option value="out_for_delivery">Out for Delivery</option>
-                <option value="delivered">Delivered</option>
+                <option value="delivered">Delivered (Thank-you email sent)</option>
                 <option value="cancelled">Cancelled</option>
               </select>
             </label>
@@ -1123,7 +1179,7 @@ function OrderDetailsModal({
               onClick={handleSave}
               style={{ background: saved ? '#16a34a' : '#fff', color: saved ? '#fff' : '#000', fontSize: '12px', padding: '6px 14px' }}
             >
-              <Save size={14} /> {saved ? 'Updated in Neon DB!' : 'Save Fulfillment Updates'}
+              <Save size={14} /> {saved ? 'Updated & Email Sent!' : 'Save Fulfillment & Notify Customer'}
             </button>
           </div>
         </div>

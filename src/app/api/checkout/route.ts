@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { getProductsFromDb, createOrderInDb, updateProductStockInDb } from "@/lib/server/db";
+import { sendOrderConfirmationEmail, sendAdminNewOrderAlert } from "@/lib/server/mail";
 import { calculateDemoCheckout, CommerceError } from "@/lib/server/commerce";
 import { allowDemoRequest, privateHeaders, readJsonBody, RequestError, requireSameOrigin } from "@/lib/server/http";
 
@@ -64,6 +65,26 @@ export async function POST(request: Request) {
           await updateProductStockInDb(prod.id, Math.max(0, prod.stock - item.quantity)).catch(() => {});
         }
       }
+
+      // Automatically send Resend emails (Customer Confirmation & Store Admin Notification)
+      Promise.allSettled([
+        sendOrderConfirmationEmail({
+          reference,
+          customer,
+          items: preview.items,
+          subtotal: preview.subtotal,
+          delivery: preview.delivery,
+          total: preview.total,
+          paymentMethod,
+        }),
+        sendAdminNewOrderAlert({
+          reference,
+          customer,
+          items: preview.items,
+          total: preview.total,
+          paymentMethod,
+        }),
+      ]).catch((err) => console.error("Email sending error:", err));
     } catch (dbErr) {
       console.error("Failed to persist order to Neon:", dbErr);
     }
