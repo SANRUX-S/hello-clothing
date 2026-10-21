@@ -128,7 +128,7 @@ export default function LegalPageLayout({
 
         <div className="legal-contact-grid">
           <a
-            href="https://wa.me/94771234567"
+            href="https://wa.me/94786191260"
             target="_blank"
             rel="noopener noreferrer"
             className="legal-contact-item"
@@ -136,16 +136,16 @@ export default function LegalPageLayout({
             <MessageCircle size={18} color="#25D366" />
             <div>
               <strong>WhatsApp Concierge</strong>
-              <span>+94 77 123 4567</span>
+              <span>+94 78 619 1260</span>
             </div>
             <ExternalLink size={13} style={{ marginLeft: 'auto', opacity: 0.6 }} />
           </a>
 
-          <a href="tel:0112345678" className="legal-contact-item">
+          <a href="tel:0786191260" className="legal-contact-item">
             <Phone size={18} />
             <div>
               <strong>Support Hotline</strong>
-              <span>011 234 5678</span>
+              <span>078 619 1260</span>
             </div>
           </a>
 

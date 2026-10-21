@@ -1,39 +1,24 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import LegalPageLayout from '@/components/legal/LegalPageLayout';
-import { ShieldCheck, Lock, Database, Cookie, UserCheck } from 'lucide-react';
+import { Lock, ShieldCheck, Database, KeyRound, Cookie, FileText } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy | HELLO! Streetwear Sri Lanka',
   description:
-    'Official Privacy Policy for HELLO! Streetwear (www.helloclothing.store). Explains how personal data is collected, order fulfillment, secure PayHere card processing, and customer rights in Sri Lanka.',
+    'Official Privacy Policy for HELLO! Clothing (www.helloclothing.store). Information collection, Firebase Authentication, data retention, security, and customer privacy rights.',
 };
 
-/*
- * ============================================================================
- * MERCHANT REVIEW NOTES (PayHere Pre-Activation Checklist)
- * ============================================================================
- * 1. Business Legal Entity: Drafted under the trade name HELLO! Clothing Sri Lanka.
- *    If registered under a distinct formal business name (e.g. PV / Sole Proprietorship),
- *    this can be inserted prior to live merchant onboarding.
- * 2. Payment Gateway Status: Reflects active PayHere integration for card payments
- *    (PayHere Private Limited - CBSL Authorized). Confirms zero storage of card numbers.
- * 3. Data Retention Period: Set as up to 5 years in line with standard Sri Lankan
- *    statutory and commercial tax record-keeping requirements.
- * ============================================================================
- */
-
 const tocItems = [
-  { id: 'introduction', title: 'Introduction & Site Operator' },
-  { id: 'data-collected', title: 'Information We Collect' },
-  { id: 'how-we-use', title: 'How We Use Your Personal Data' },
-  { id: 'payments-security', title: 'Payments & Card Security (PayHere)' },
-  { id: 'service-providers', title: 'Service Providers & Data Sharing' },
-  { id: 'storage-security', title: 'Data Storage & Security Safeguards' },
-  { id: 'cookies-storage', title: 'Cookies & Browser Local Storage' },
-  { id: 'data-retention', title: 'Data Retention Periods' },
-  { id: 'customer-rights', title: 'Your Rights & Privacy Choices' },
-  { id: 'changes-contact', title: 'Policy Updates & Contact Information' },
+  { id: 'info-collected', title: '2.1. Information We Collect' },
+  { id: 'how-we-use', title: '2.2. How We Use Information' },
+  { id: 'where-stored', title: '2.3. Where Information Is Stored' },
+  { id: 'sharing-info', title: '2.4. Sharing Information' },
+  { id: 'data-retention', title: '2.5. Data Retention' },
+  { id: 'security', title: '2.6. Security' },
+  { id: 'cookies-storage', title: '2.7. Cookies and Local Storage' },
+  { id: 'customer-requests', title: '2.8. Customer Requests' },
+  { id: 'policy-changes', title: '2.9. Policy Changes' },
 ];
 
 export default function PrivacyPolicyPage() {
@@ -41,261 +26,185 @@ export default function PrivacyPolicyPage() {
     <LegalPageLayout
       currentPath="/privacy-policy"
       title="Privacy Policy"
-      subtitle="HELLO! STORE POLICIES · DATA PROTECTION"
-      lastUpdated="October 21, 2026"
+      subtitle="HELLO! STORE POLICIES · DATA & PRIVACY"
+      lastUpdated="21 October 2026"
       tocItems={tocItems}
     >
-      {/* 01. Introduction */}
-      <section id="introduction" className="legal-section">
-        <div className="legal-section-header">
-          <span className="legal-section-number">01</span>
-          <h2>Introduction & Site Operator</h2>
+      <div className="legal-callout legal-callout-info" style={{ marginBottom: '2.5rem' }}>
+        <ShieldCheck size={20} />
+        <div>
+          <strong>Privacy Commitment</strong>
+          <p>
+            HELLO! Clothing respects the privacy of customers using{' '}
+            <Link href="/">https://www.helloclothing.store</Link>. We collect and use personal information only where reasonably
+            needed to operate the website, manage accounts where offered, process orders, provide delivery support, and meet applicable
+            legal obligations. <strong>We do not sell customer personal information to advertisers or data brokers.</strong>
+          </p>
         </div>
-        <p>
-          Welcome to <strong>HELLO!</strong> (<Link href="/">www.helloclothing.store</Link>). We are an online streetwear clothing
-          retailer operating in Sri Lanka and dispatching nationwide from our Colombo fulfillment hub.
-        </p>
-        <p>
-          HELLO! is committed to safeguarding the privacy and security of every customer who visits our store, subscribes to our
-          drops, or purchases our heavyweight garments. This Privacy Policy transparently explains what personal information we
-          collect, why we collect it, how it is handled, and your rights concerning your personal data.
-        </p>
-        <p>
-          By accessing <Link href="/">www.helloclothing.store</Link> or placing an order through our checkout, you acknowledge the
-          practices described in this policy.
-        </p>
-      </section>
+      </div>
 
-      {/* 02. Information We Collect */}
-      <section id="data-collected" className="legal-section">
+      {/* 2.1. INFORMATION WE COLLECT */}
+      <section id="info-collected" className="legal-section">
         <div className="legal-section-header">
-          <span className="legal-section-number">02</span>
+          <span className="legal-section-number">2.1</span>
           <h2>Information We Collect</h2>
         </div>
-        <p>
-          We only collect personal information that is reasonably necessary to fulfill your streetwear orders, communicate dispatch updates,
-          and maintain site security. This includes:
-        </p>
-        <ul>
+        <p>When a customer places an order, we may collect:</p>
+        <ul className="legal-list">
+          <li><strong>Full name.</strong></li>
+          <li><strong>Delivery address and city or postal details</strong> needed for order fulfillment.</li>
+          <li><strong>Contact telephone number</strong> for delivery updates and courier dispatch.</li>
+          <li><strong>Email address</strong>, where requested in checkout or used for order communication.</li>
           <li>
-            <strong>Contact & Delivery Information:</strong> Full name, delivery street address, city, optional postal code, primary mobile telephone number, and email address provided during checkout or customer inquiry.
-          </li>
-          <li>
-            <strong>Order & Transaction Records:</strong> Garments ordered, specific sizes, colorways, quantities, calculated order totals, delivery method, chosen payment method, order reference codes (e.g. <code>HL-XXXXXX</code>), and courier tracking numbers.
-          </li>
-          <li>
-            <strong>Customer Service Communications:</strong> Records of inquiries, size exchange requests, feedback, or support messages submitted via our online contact form (<Link href="/contact">/contact</Link>) or our WhatsApp concierge (+94 77 123 4567).
-          </li>
-          <li>
-            <strong>Technical Log Data:</strong> Standard server logs including IP addresses, browser types, operating systems, and access timestamps collected automatically to protect against cyber attacks, automated bot abuse, and checkout fraud.
+            <strong>Order information</strong>, including products purchased, quantities, prices, order reference, payment method,
+            and delivery or order status.
           </li>
         </ul>
+        <p>
+          If a customer chooses <strong>Google Sign-In</strong> when this feature is available, <strong>Firebase Authentication</strong>,
+          a Google service, may process account information such as the customer&apos;s name, email address, Google profile photo, unique
+          user identifier, and authentication/session information.
+        </p>
+        <p>
+          The website may also process limited technical information needed to operate and protect the service, such as browser or
+          device details, basic server logs, essential cookies, and browser local storage for carts or saved checkout details. These
+          are not used to create or sell advertising profiles.
+        </p>
       </section>
 
-      {/* 03. How We Use Data */}
+      {/* 2.2. HOW WE USE INFORMATION */}
       <section id="how-we-use" className="legal-section">
         <div className="legal-section-header">
-          <span className="legal-section-number">03</span>
-          <h2>How We Use Your Personal Data</h2>
+          <span className="legal-section-number">2.2</span>
+          <h2>How We Use Information</h2>
         </div>
-        <p>
-          We process personal customer data strictly for legitimate operational purposes:
-        </p>
-        <ul>
-          <li>
-            <strong>Order Processing & Fulfillment:</strong> Verifying order details, preparing garments at our fulfillment hub, generating shipping waybills, and dispatching parcels to your doorstep.
-          </li>
-          <li>
-            <strong>Delivery & Courier Notifications:</strong> Providing your phone number and address to our courier partners (PromptX Logistics and Domex Courier) so they can reach you and transmit live SMS tracking updates.
-          </li>
-          <li>
-            <strong>Customer Service & Exchanges:</strong> Assisting you with size swaps, address amendments, delivery tracking inquiries, and managing returns under our <Link href="/refund-policy">Refund Policy</Link>.
-          </li>
-          <li>
-            <strong>Platform Security & Fraud Prevention:</strong> Validating origin headers, rate-limiting checkout requests, preventing automated scalper bots, and ensuring server stability.
-          </li>
-          <li>
-            <strong>Optional Newsletters:</strong> If you explicitly opt in to our VIP Drop list, we may send email announcements regarding new garment drops and exclusive exhibitions. You can unsubscribe at any time.
-          </li>
+        <p>We use relevant information to:</p>
+        <ul className="legal-list">
+          <li>Confirm, prepare, and fulfil customer orders.</li>
+          <li>Arrange delivery and contact customers when necessary about an order.</li>
+          <li>Provide customer service, order tracking, returns, refunds, and after-sales support.</li>
+          <li>Allow Google account sign-in and basic account functionality where enabled.</li>
+          <li>Maintain the security and reliability of our website, prevent misuse, and meet legal obligations.</li>
         </ul>
+        <p>
+          We do not use order contact information for unrelated advertising campaigns without an appropriate legal basis or permission.
+        </p>
       </section>
 
-      {/* 04. Payments & Card Security */}
-      <section id="payments-security" className="legal-section">
+      {/* 2.3. WHERE INFORMATION IS STORED */}
+      <section id="where-stored" className="legal-section">
         <div className="legal-section-header">
-          <span className="legal-section-number">04</span>
-          <h2>Payments & Card Security (PayHere Gateway)</h2>
+          <span className="legal-section-number">2.3</span>
+          <h2>Where Information Is Stored</h2>
         </div>
         <p>
-          Payment security is our highest priority. We offer three primary payment options at checkout:
+          Order details required for fulfilment may be saved in our order management database. Certain cart, order-history, or
+          delivery-profile details may also be saved locally in the customer&apos;s browser to support website functionality.
+          Authentication information for Google Sign-In is handled through Firebase Authentication when that feature is enabled.
         </p>
-        <ul>
-          <li><strong>Cash on Delivery (COD):</strong> Payment is collected in cash by our courier partner upon parcel delivery.</li>
-          <li><strong>Direct Bank Transfer / Deposit:</strong> Payment is remitted directly to our designated commercial bank account.</li>
-          <li><strong>Online Credit / Debit Card Payments (Visa, Mastercard, American Express):</strong> Processed securely via PayHere.</li>
-        </ul>
-
-        <div className="legal-callout">
-          <Lock className="legal-callout-icon" size={22} />
-          <div className="legal-callout-content">
-            <strong>Zero Card Data Stored on HELLO! Servers</strong>
-            HELLO! does <strong>NOT</strong> collect, view, process, or store credit or debit card numbers, expiration dates, or CVV/CVC security codes on our servers. All card transactions are redirected to and processed directly by the <strong>PayHere Payment Gateway</strong> (PayHere Private Limited), a Payment Service Provider monitored by the Central Bank of Sri Lanka (CBSL) operating under full PCI-DSS Level 1 compliance with 256-bit SSL encryption.
+        <div className="legal-callout legal-callout-warning">
+          <Lock size={20} />
+          <div>
+            <strong>Payment Card Data Protection</strong>
+            <p>
+              HELLO! Clothing does not intentionally collect or store full payment card numbers or card security codes in its own order
+              database. If an online payment option is introduced, card transactions will be handled through the payment provider&apos;s
+              approved system, and this policy will be updated as necessary.
+            </p>
           </div>
         </div>
-
-        <p>
-          When paying online, your card details are transmitted directly and securely from your browser to PayHere.
-          HELLO! only receives a secure transaction verification token, authorization status, and payment timestamp to confirm that your order has been funded.
-        </p>
       </section>
 
-      {/* 05. Service Providers */}
-      <section id="service-providers" className="legal-section">
+      {/* 2.4. SHARING INFORMATION */}
+      <section id="sharing-info" className="legal-section">
         <div className="legal-section-header">
-          <span className="legal-section-number">05</span>
-          <h2>Service Providers & Data Sharing</h2>
+          <span className="legal-section-number">2.4</span>
+          <h2>Sharing Information</h2>
         </div>
         <p>
-          We do <strong>NOT</strong> sell, rent, monetize, or trade your personal information with third-party advertisers, data brokers, or marketing networks.
+          We share only the information reasonably required with service providers that help us operate the website, host order data,
+          provide authentication, process an available payment method, or deliver purchases. For example, a courier partner may need a
+          recipient&apos;s name, telephone number, and delivery address.
         </p>
         <p>
-          To operate our online store, we partner with reputable service providers who process data strictly under our instructions:
-        </p>
-        <ul>
-          <li>
-            <strong>Payment Service Provider (PayHere):</strong> Processes online card transactions through bank-grade encrypted channels.
-          </li>
-          <li>
-            <strong>Courier & Logistics Partners (PromptX Logistics, Domex Courier):</strong> Provided with recipient name, delivery address, phone number, and parcel order reference to execute islandwide doorstep delivery and send tracking SMS notifications.
-          </li>
-          <li>
-            <strong>Cloud Hosting & Edge Infrastructure (Vercel Inc.):</strong> Hosts our web storefront and edge APIs with enterprise-level encryption and high-speed uptime.
-          </li>
-          <li>
-            <strong>Serverless Database (Neon Database Inc.):</strong> Secure PostgreSQL cloud database located in encrypted AWS infrastructure, storing order records, inventory states, and catalog information.
-          </li>
-          <li>
-            <strong>Legal & Regulatory Authorities:</strong> We may disclose information if required by applicable Sri Lankan law, court order, or official law enforcement investigation.
-          </li>
-        </ul>
-      </section>
-
-      {/* 06. Storage & Security */}
-      <section id="storage-security" className="legal-section">
-        <div className="legal-section-header">
-          <span className="legal-section-number">06</span>
-          <h2>Data Storage & Security Safeguards</h2>
-        </div>
-        <p>
-          We implement technical and organizational measures to safeguard your personal data against unauthorized access, loss, misuse, or alteration:
-        </p>
-        <ul>
-          <li>
-            <strong>End-to-End Encryption:</strong> All communication between your device and <Link href="/">www.helloclothing.store</Link> is secured using industry-standard TLS/SSL (HTTPS) encryption.
-          </li>
-          <li>
-            <strong>Access Restrictions:</strong> Access to customer order records is restricted to authorized fulfillment and support staff with unique credentials and multi-factor authentication.
-          </li>
-          <li>
-            <strong>Secure API Architecture:</strong> Storefront endpoints enforce same-origin checks, request payload validation via Zod schemas, and rate-limiting to block brute-force attacks.
-          </li>
-        </ul>
-        <p>
-          While we maintain robust safeguards, no method of electronic storage or transmission over the internet is 100% impenetrable.
-          Customers are advised to maintain security on their personal devices and email accounts.
+          We may also disclose information where required by applicable law or a lawful request. <strong>We do not sell or rent
+          customer information to third-party advertisers.</strong>
         </p>
       </section>
 
-      {/* 07. Cookies & Local Storage */}
-      <section id="cookies-storage" className="legal-section">
-        <div className="legal-section-header">
-          <span className="legal-section-number">07</span>
-          <h2>Cookies & Browser Local Storage</h2>
-        </div>
-        <p>
-          We take a minimalist, privacy-first approach to web tracking:
-        </p>
-        <ul>
-          <li>
-            <strong>No Third-Party Ad Trackers:</strong> We do not employ third-party advertising cookies, cross-site trackers, or behavioral surveillance pixels on our website.
-          </li>
-          <li>
-            <strong>Essential Browser Local Storage:</strong> We use your browser&apos;s standard <code>localStorage</code> strictly for functional store purposes:
-            <ul style={{ marginTop: '8px' }}>
-              <li>Persisting items in your shopping bag so your selections are preserved as you browse products.</li>
-              <li>Optional customer convenience autofill (<code>hello-customer-profile</code>) to save you from re-typing your name, phone, and delivery address during subsequent checkouts.</li>
-            </ul>
-          </li>
-        </ul>
-        <p>
-          You can clear your browser storage or disable cookies at any time through your browser settings; however, doing so will clear your active shopping bag items.
-        </p>
-      </section>
-
-      {/* 08. Data Retention */}
+      {/* 2.5. DATA RETENTION */}
       <section id="data-retention" className="legal-section">
         <div className="legal-section-header">
-          <span className="legal-section-number">08</span>
-          <h2>Data Retention Periods</h2>
+          <span className="legal-section-number">2.5</span>
+          <h2>Data Retention</h2>
         </div>
         <p>
-          We retain personal data only for as long as necessary to fulfill the purposes outlined in this policy:
-        </p>
-        <ul>
-          <li>
-            <strong>Order Records:</strong> Retained for a period of up to <strong>5 years</strong> following order completion to comply with statutory commercial, accounting, tax, and auditing requirements under Sri Lankan business regulations.
-          </li>
-          <li>
-            <strong>Customer Inquiries & Concierge Logs:</strong> Retained for up to 12 months following resolution to assist with any follow-up warranty or exchange questions.
-          </li>
-          <li>
-            <strong>Server Security Logs:</strong> Automatically rotated and purged on a standard 30-day retention schedule.
-          </li>
-        </ul>
-      </section>
-
-      {/* 09. Customer Rights */}
-      <section id="customer-rights" className="legal-section">
-        <div className="legal-section-header">
-          <span className="legal-section-number">09</span>
-          <h2>Your Rights & Privacy Choices</h2>
-        </div>
-        <p>
-          You have full control over your personal data:
-        </p>
-        <ul>
-          <li><strong>Access & Correction:</strong> You may request a copy of the personal information we hold about you or request corrections to inaccurate details.</li>
-          <li><strong>Deletion (Right to be Forgotten):</strong> You may request that we delete your contact profile and non-essential records, subject to our legal obligations to maintain transaction records for tax compliance.</li>
-          <li><strong>Marketing Opt-Out:</strong> You may unsubscribe from our email drop announcements at any time using the unsubscribe link provided in the newsletter footer or by notifying our concierge.</li>
-        </ul>
-        <p>
-          To exercise any of these rights, contact us at <Link href="/contact">www.helloclothing.store/contact</Link> or message our WhatsApp concierge at +94 77 123 4567. We will respond within <strong>2 business days</strong>.
+          Order information is kept only for as long as reasonably necessary to complete purchases, support delivery and returns,
+          resolve disputes, maintain accurate business records, and meet applicable legal obligations. Customers may request
+          information about, correction of, or deletion of their personal data, subject to any information that we must retain by law.
         </p>
       </section>
 
-      {/* 10. Policy Updates & Contact */}
-      <section id="changes-contact" className="legal-section">
+      {/* 2.6. SECURITY */}
+      <section id="security" className="legal-section">
         <div className="legal-section-header">
-          <span className="legal-section-number">10</span>
-          <h2>Policy Updates & Contact Information</h2>
+          <span className="legal-section-number">2.6</span>
+          <h2>Security</h2>
         </div>
         <p>
-          We may periodically update this Privacy Policy to reflect changes in our store operations, new payment integrations, or relevant legislation.
-          The effective revision date at the top of this document will always indicate when updates were published.
+          We take reasonable steps to protect the personal information used by our store, including limiting access to authorised
+          personnel and using the security features available from our hosting, database, and authentication providers. No internet
+          service can guarantee absolute security.
         </p>
+      </section>
+
+      {/* 2.7. COOKIES AND LOCAL STORAGE */}
+      <section id="cookies-storage" className="legal-section">
+        <div className="legal-section-header">
+          <span className="legal-section-number">2.7</span>
+          <h2>Cookies and Local Storage</h2>
+        </div>
         <p>
-          For privacy questions, data requests, or compliance inquiries, reach out through our official channels:
+          Our website may use essential cookies and browser local storage for functions such as session management, shopping-cart
+          continuity, and remembering customer-entered details. Customers can manage these through their browser, but disabling them may
+          affect website functionality.
         </p>
-        <ul>
-          <li><strong>WhatsApp Concierge:</strong> +94 77 123 4567</li>
-          <li><strong>Direct Telephone Hotline:</strong> 011 234 5678 (Mon – Sat: 9:00 AM – 7:00 PM)</li>
-          <li><strong>Online Contact Form:</strong> <Link href="/contact">www.helloclothing.store/contact</Link></li>
-          <li><strong>Fulfillment & Dispatch Hub:</strong> Colombo 07, Sri Lanka</li>
+      </section>
+
+      {/* 2.8. CUSTOMER REQUESTS */}
+      <section id="customer-requests" className="legal-section">
+        <div className="legal-section-header">
+          <span className="legal-section-number">2.8</span>
+          <h2>Customer Requests</h2>
+        </div>
+        <p>
+          For questions about personal information or to request access, correction, or deletion where applicable, contact HELLO! Clothing
+          through:
+        </p>
+        <ul className="legal-list">
+          <li>
+            <strong>Online Contact Form:</strong>{' '}
+            <Link href="/contact">www.helloclothing.store/contact</Link>
+          </li>
+          <li>
+            <strong>WhatsApp Concierge:</strong>{' '}
+            <a href="https://wa.me/94786191260" target="_blank" rel="noopener noreferrer">
+              +94 78 619 1260 (078 619 1260)
+            </a>
+          </li>
         </ul>
-        <p style={{ marginTop: '20px', fontSize: '13px', color: 'var(--muted)' }}>
-          Related Documents: <Link href="/terms-and-conditions">Terms & Conditions</Link> ·{' '}
-          <Link href="/refund-policy">Refund & Return Policy</Link> ·{' '}
-          <Link href="/track-order">Order Tracking</Link>
+        <p>We will review all requests according to applicable requirements.</p>
+      </section>
+
+      {/* 2.9. POLICY CHANGES */}
+      <section id="policy-changes" className="legal-section">
+        <div className="legal-section-header">
+          <span className="legal-section-number">2.9</span>
+          <h2>Policy Changes</h2>
+        </div>
+        <p>
+          We may update this Privacy Policy when our business practices, website functionality, service providers, or legal
+          obligations change. The updated version and its effective date will be published on this page.
         </p>
       </section>
     </LegalPageLayout>

@@ -655,24 +655,27 @@ export default function InfoPage({ kind }: { kind: string }) {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', margin: '1.5rem 0' }}>
               <a
-                href="https://wa.me/94771234567"
+                href="https://wa.me/94786191260"
                 target="_blank"
                 rel="noreferrer"
                 style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: 'var(--fg)', fontSize: '0.9rem' }}
               >
                 <MessageCircle size={20} color="#25D366" />
                 <span>
-                  <strong>WhatsApp Concierge:</strong> +94 77 123 4567
+                  <strong>WhatsApp Concierge:</strong> +94 78 619 1260
                 </span>
                 <ExternalLink size={14} />
               </a>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem' }}>
+              <a
+                href="tel:0786191260"
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', color: 'var(--fg)', fontSize: '0.9rem' }}
+              >
                 <Phone size={20} />
                 <span>
-                  <strong>Direct Support Hotline:</strong> 011 234 5678
+                  <strong>Direct Support Hotline:</strong> 078 619 1260
                 </span>
-              </div>
+              </a>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem' }}>
                 <Clock size={20} />
