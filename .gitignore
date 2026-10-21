@@ -1,0 +1,15 @@
+node_modules/
+node_modules-d-cache/
+.next/
+.next-offdrive/
+out/
+dist/
+.env*
+!.env.example
+*.tsbuildinfo
+next-env.d.ts
+coverage/
+test-results/
+.DS_Store
+*.log
+.neon
