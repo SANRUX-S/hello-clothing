@@ -62,9 +62,12 @@ export function Footer() {
        <Link href="/collections/accessories">Accessories</Link>
        <Link href="/shop">All products</Link>
      </nav>
-     <nav className="footer-column" aria-label="Help links">
-       <h3>HELP</h3>
+     <nav className="footer-column" aria-label="Help and legal links">
+       <h3>HELP & LEGAL</h3>
        <Link href="/track-order">Track your order</Link>
+       <Link href="/refund-policy">Refund Policy</Link>
+       <Link href="/privacy-policy">Privacy Policy</Link>
+       <Link href="/terms-and-conditions">Terms & Conditions</Link>
        <Link href="/policies/returns">Returns & exchanges</Link>
        <Link href="/policies/shipping">Shipping information</Link>
        <Link href="/size-guide">Size guide</Link>
@@ -80,7 +83,7 @@ export function Footer() {
        <Link className="footer-contact-link" href="/contact">LET’S TALK <ArrowUpRight size={16}/></Link>
      </nav>
    </div>
-   <div className="footer-bottom"><span>© {new Date().getFullYear()} HELLO! CLOTHING. All rights reserved.</span><div><Link href="/policies/privacy">Privacy policy</Link><Link href="/terms">Terms of service</Link><Link href="/admin">Demo studio <ArrowUpRight size={12}/></Link></div></div>
+   <div className="footer-bottom"><span>© {new Date().getFullYear()} HELLO! CLOTHING. All rights reserved.</span><div><Link href="/refund-policy">Refund Policy</Link><Link href="/privacy-policy">Privacy Policy</Link><Link href="/terms-and-conditions">Terms & Conditions</Link><Link href="/admin">Demo studio <ArrowUpRight size={12}/></Link></div></div>
    <div className="preview-note"><span className="status-dot"/> STORE PREVIEW <span>Sample products and prices. No real orders or payments.</span></div>
  </footer>;
 }
