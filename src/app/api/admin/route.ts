@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { staffOnly } from "@/lib/firebase/server";
 import { getProductsFromDb, getOrdersFromDb, getCategoriesFromDb } from "@/lib/server/db";
 import { privateHeaders } from "@/lib/server/http";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const denied = await staffOnly();
+  if (denied) return denied;
   try {
     const [products, orders, categories] = await Promise.all([
       getProductsFromDb(),

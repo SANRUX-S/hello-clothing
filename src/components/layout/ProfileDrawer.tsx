@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, type FormEvent } from 'react';
+import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, type User } from 'firebase/auth';
+import { firebaseAuth } from '@/lib/firebase/client';
 import Link from 'next/link';
 import {
   UserRound,
@@ -46,6 +48,49 @@ export default function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
     city: ''
   });
   const [profileSaved, setProfileSaved] = useState(false);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const [googleError, setGoogleError] = useState('');
+
+  useEffect(() => onAuthStateChanged(firebaseAuth, setFirebaseUser), []);
+
+  async function handleGoogleLogin() {
+    setGoogleError('');
+    setGoogleBusy(true);
+    try {
+      const result = await signInWithPopup(firebaseAuth, new GoogleAuthProvider());
+      const res = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ idToken: await result.user.getIdToken() }),
+      });
+      if (!res.ok) throw new Error('Secure account session could not be created. Please try again.');
+      setActiveTab('profile');
+    } catch (error) {
+      setGoogleError(error instanceof Error ? error.message : 'Google sign-in failed. Please try again.');
+      await signOut(firebaseAuth).catch(() => {});
+    } finally {
+      setGoogleBusy(false);
+    }
+  }
+
+  async function handleGoogleLogout() {
+    setGoogleError('');
+    setGoogleBusy(true);
+    try {
+      const res = await fetch('/api/auth/session', { method: 'DELETE', credentials: 'same-origin' });
+      if (!res.ok) throw new Error('Could not end the server session.');
+      await signOut(firebaseAuth);
+      setOrders([]);
+      setProfile({ name: '', email: '', phone: '', address: '', city: '' });
+    } catch {
+      setGoogleError('Sign-out failed. Please retry.');
+    } finally {
+      setGoogleBusy(false);
+    }
+  }
+
 
   // Order history
   const [orders, setOrders] = useState<StoredOrder[]>([]);
@@ -54,7 +99,9 @@ export default function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
     if (!open) return;
     try {
       // Load saved customer profile
-      const savedProfile = localStorage.getItem('hello-customer-profile');
+      const profileKey = firebaseUser ? 'hello-customer-profile-' + firebaseUser.uid : 'hello-customer-profile-guest';
+      setProfile({ name: firebaseUser?.displayName || '', email: firebaseUser?.email || '', phone: '', address: '', city: '' });
+      const savedProfile = localStorage.getItem(profileKey);
       if (savedProfile) {
         setProfile(JSON.parse(savedProfile));
       }
@@ -64,7 +111,11 @@ export default function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
       if (savedOrders) {
         const parsed = JSON.parse(savedOrders);
         if (Array.isArray(parsed)) {
-          setOrders(parsed);
+          // Never show another customer’s locally cached orders after account switching.
+          const mine = firebaseUser?.email ? parsed.filter((o: StoredOrder) =>
+            o.customer?.email?.toLowerCase() === firebaseUser.email?.toLowerCase()
+          ) : [];
+          setOrders(mine);
           // If no search input, prefill with the latest order reference
           if (!trackRef && parsed.length > 0) {
             setTrackRef(parsed[0].reference);
@@ -72,7 +123,7 @@ export default function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
         }
       }
     } catch {}
-  }, [open]);
+  }, [open, firebaseUser]);
 
   // Handle live tracking lookup
   async function handleTrackSubmit(e?: FormEvent, directRef?: string) {
@@ -134,13 +185,13 @@ export default function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
   function handleSaveProfile(e: FormEvent) {
     e.preventDefault();
     try {
-      localStorage.setItem('hello-customer-profile', JSON.stringify(profile));
+      localStorage.setItem(firebaseUser ? 'hello-customer-profile-' + firebaseUser.uid : 'hello-customer-profile-guest', JSON.stringify(profile));
       setProfileSaved(true);
       setTimeout(() => setProfileSaved(false), 3000);
     } catch {}
   }
 
-  const isGuest = !profile.name.trim();
+  const isGuest = !firebaseUser;
 
   return (
     <Modal open={open} onClose={onClose} title="HELLO! Account" drawer>
@@ -148,19 +199,32 @@ export default function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
         {/* User Card */}
         <div className="profile-hero-card">
           <div className="profile-avatar">
-            {profile.name ? profile.name.slice(0, 2).toUpperCase() : <UserRound size={20} />}
+            {(firebaseUser?.displayName || profile.name) ? (firebaseUser?.displayName || profile.name).slice(0, 2).toUpperCase() : <UserRound size={20} />}
           </div>
           <div className="profile-info">
             <div className="profile-header-title">
-              <h3>{profile.name ? profile.name : 'Guest Explorer'}</h3>
+              <h3>{firebaseUser?.displayName || (firebaseUser ? 'HELLO! Member' : 'Guest Explorer')}</h3>
               <span className={`profile-badge ${isGuest ? 'guest' : 'member'}`}>
-                {isGuest ? 'GUEST' : 'VIP MEMBER'}
+                {isGuest ? 'GUEST' : 'MEMBER'}
               </span>
             </div>
             <p className="profile-email">
-              {profile.email || (isGuest ? 'Guest session · No account required' : 'Active Streetwear Profile')}
+              {firebaseUser?.email || (isGuest ? 'Sign in to save your account securely' : 'Active Streetwear Profile')}
             </p>
           </div>
+        </div>
+
+        <div className="profile-google-auth" style={{ display: 'grid', gap: 8 }}>
+          {firebaseUser ? (
+            <button type="button" className="profile-save-btn" onClick={handleGoogleLogout} disabled={googleBusy}>
+              {googleBusy ? 'SIGNING OUT…' : 'SIGN OUT'}
+            </button>
+          ) : (
+            <button type="button" className="profile-save-btn" onClick={handleGoogleLogin} disabled={googleBusy}>
+              {googleBusy ? 'CONNECTING…' : 'CONTINUE WITH GOOGLE'}
+            </button>
+          )}
+          {googleError && <p role="alert" style={{ color: '#b91c1c', fontSize: 12 }}>{googleError}</p>}
         </div>
 
         {/* Tab Switcher */}
@@ -481,7 +545,7 @@ export default function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
           <div className="drawer-sublinks">
             <Link href="/track-order" onClick={onClose}>Track Order Page</Link>
             <span>·</span>
-            <Link href="/admin" onClick={onClose}>Admin Studio</Link>
+            {/* Admin link is intentionally not exposed in the customer account drawer. */}
           </div>
         </div>
       </div>

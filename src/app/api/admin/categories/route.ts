@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
+import { staffOnly, isSameOrigin } from '@/lib/firebase/server';
 import { getCategoriesFromDb, saveCategoryToDb, deleteCategoryFromDb } from '@/lib/server/db';
 import { privateHeaders } from '@/lib/server/http';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const denied = await staffOnly();
+  if (denied) return denied;
+
   try {
     const categories = await getCategoriesFromDb();
     return NextResponse.json({ categories }, { headers: privateHeaders });
@@ -14,6 +18,10 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const denied = await staffOnly();
+  if (denied) return denied;
+  if (!isSameOrigin(req)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+
   try {
     const data = await req.json();
     if (!data.name || !data.slug) {
@@ -27,6 +35,10 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  const denied = await staffOnly();
+  if (denied) return denied;
+  if (!isSameOrigin(req)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+
   try {
     const { searchParams } = new URL(req.url);
     const slug = searchParams.get('slug');
