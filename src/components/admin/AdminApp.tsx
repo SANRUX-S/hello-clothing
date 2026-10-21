@@ -97,6 +97,52 @@ const PRESET_COLORS = [
   { name: 'Brown', hex: '#5c4033' },
 ];
 
+async function compressImage(file: File, maxDim = 1200, quality = 0.85): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read image file"));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Invalid image file format"));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(String(e.target?.result));
+          return;
+        }
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        try {
+          const webp = canvas.toDataURL("image/webp", quality);
+          if (webp.startsWith("data:image/webp")) {
+            resolve(webp);
+            return;
+          }
+        } catch {
+          // fallback
+        }
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = String(e.target?.result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function ProductEditor({ product, categories, onSave, onClose }: { product: Product | null; categories: Category[]; onSave: (p: Product) => void; onClose: () => void }) {
   const [draft, setDraft] = useState<Product>(() => product || {
     id: `prod-${Date.now()}`,
@@ -121,6 +167,8 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
     }
   });
 
+  const [priceRupees, setPriceRupees] = useState<string>(() => String(Math.round((product?.price ?? 349000) / 100)));
+  const [isUploading, setIsUploading] = useState(false);
   const [galleryImages, setGalleryImages] = useState<string[]>(() => draft.gallery || [draft.image]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>(() => draft.sizes && draft.sizes.length ? draft.sizes : ['S', 'M', 'L', 'XL']);
   const [selectedColors, setSelectedColors] = useState<Color[]>(() => draft.colors && draft.colors.length ? draft.colors : [{ name: 'Black', hex: '#181918' }]);
@@ -156,31 +204,33 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
     setCustomColorName("");
   };
 
-  // Handle main image file upload
-  const handleMainPhotoUpload = (file: File | undefined) => {
+  // Handle main image file upload with instant compression
+  const handleMainPhotoUpload = async (file: File | undefined) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (reader.result) {
-        const url = String(reader.result);
-        setDraft(d => ({ ...d, image: url }));
-        setGalleryImages(g => g.length > 0 ? [url, ...g.slice(1)] : [url]);
-      }
-    };
-    reader.readAsDataURL(file);
+    setIsUploading(true);
+    try {
+      const optimizedUrl = await compressImage(file, 1200, 0.85);
+      setDraft(d => ({ ...d, image: optimizedUrl }));
+      setGalleryImages(g => g.length > 0 ? [optimizedUrl, ...g.slice(1)] : [optimizedUrl]);
+    } catch (err: any) {
+      alert("Could not process image: " + (err.message || 'Unknown error'));
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  // Handle gallery photo upload
-  const handleGalleryPhotoUpload = (file: File | undefined) => {
+  // Handle gallery photo upload with instant compression
+  const handleGalleryPhotoUpload = async (file: File | undefined) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (reader.result) {
-        const url = String(reader.result);
-        setGalleryImages(g => [...g, url]);
-      }
-    };
-    reader.readAsDataURL(file);
+    setIsUploading(true);
+    try {
+      const optimizedUrl = await compressImage(file, 1200, 0.85);
+      setGalleryImages(g => [...g, optimizedUrl]);
+    } catch (err: any) {
+      alert("Could not process image: " + (err.message || 'Unknown error'));
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const removeGalleryImage = (idx: number) => {
@@ -190,11 +240,13 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const finalSlug = draft.slug ? slugify(draft.slug) : slugify(draft.name);
+    const parsedPrice = Math.round((Number(priceRupees) || (draft.price / 100)) * 100);
     onSave({
       ...draft,
       id: draft.id || `prod-${Date.now()}`,
       slug: finalSlug,
       name: draft.name.trim(),
+      price: parsedPrice,
       image: draft.image || galleryImages[0] || "/demo-products/essential-tee.webp",
       gallery: galleryImages.length > 0 ? galleryImages : [draft.image],
       colors: selectedColors,
@@ -214,7 +266,10 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
 
         {/* Product photo upload section */}
         <div>
-          <label style={{ marginBottom: '8px', display: 'block' }}>Primary Product Photo</label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <label style={{ margin: 0 }}>Primary Product Photo</label>
+            {isUploading && <span style={{ color: '#4ade80', fontSize: '9px', fontWeight: 600 }}>⚡ Optimizing photo...</span>}
+          </div>
           <div className="admin-photo-uploader">
             <div className="admin-photo-preview-wrap">
               {draft.image ? (
@@ -229,7 +284,7 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 style={{ display: 'none' }}
-                onChange={e => { handleMainPhotoUpload(e.target.files?.[0]); e.target.value = ""; }}
+                onChange={e => { void handleMainPhotoUpload(e.target.files?.[0]); e.target.value = ""; }}
               />
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button
@@ -237,8 +292,9 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
                   className="admin-button"
                   style={{ minHeight: '32px', padding: '6px 12px', fontSize: '9px' }}
                   onClick={() => mainImageInputRef.current?.click()}
+                  disabled={isUploading}
                 >
-                  <ImagePlus size={14} /> Upload photo from device
+                  <ImagePlus size={14} /> {isUploading ? 'Optimizing...' : 'Upload photo from device'}
                 </button>
               </div>
               <input
@@ -268,7 +324,7 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
               type="file"
               accept="image/jpeg,image/png,image/webp"
               style={{ display: 'none' }}
-              onChange={e => { handleGalleryPhotoUpload(e.target.files?.[0]); e.target.value = ""; }}
+              onChange={e => { void handleGalleryPhotoUpload(e.target.files?.[0]); e.target.value = ""; }}
             />
           </div>
           <div className="admin-gallery-editor-strip">
@@ -303,14 +359,21 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
             Price in Sri Lankan Rupees (LKR)
             <input
               required
-              min="0"
+              min="1"
               step="1"
               type="number"
-              value={Math.round(draft.price / 100)}
-              onChange={e => setDraft({ ...draft, price: Math.round(Number(e.target.value) * 100) })}
+              value={priceRupees}
+              onChange={e => {
+                const val = e.target.value;
+                setPriceRupees(val);
+                const num = Number(val);
+                if (!isNaN(num) && num >= 0) {
+                  setDraft(d => ({ ...d, price: Math.round(num * 100) }));
+                }
+              }}
               placeholder="e.g. 3490"
             />
-            <small>Displayed on storefront as {money(draft.price)}</small>
+            <small>Displayed on storefront as {money(Math.round((Number(priceRupees) || 0) * 100))}</small>
           </label>
 
           <label>
@@ -600,13 +663,14 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
         body: JSON.stringify(product),
       });
       if (res.ok) {
-        setNotice(previous ? `"${product.name}" updated in Neon DB.` : `"${product.name}" added to Neon DB.`);
+        setNotice(previous ? `"${product.name}" updated in Neon DB & Live Storefront!` : `"${product.name}" published to Neon DB & Live Storefront!`);
         log(`${previous ? "Updated" : "Added"} ${product.name} (Neon DB)`);
       } else {
-        setNotice("Product saved locally.");
+        const errJson = await res.json().catch(() => ({}));
+        setNotice(`Save failed: ${errJson.error || res.statusText || 'Database error'}`);
       }
-    } catch {
-      setNotice("Product saved locally.");
+    } catch (err: any) {
+      setNotice(`Network error: ${err.message || 'Could not connect to database'}`);
     }
   };
 

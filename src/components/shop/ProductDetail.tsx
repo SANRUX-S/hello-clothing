@@ -11,8 +11,8 @@ import { ProductCard } from './ProductCard';
 export default function ProductDetail({ product: p }: { product: Product }) {
   const store = useStore();
   const router = useRouter();
-  const [size, setSize] = useState(p.sizes.length === 1 ? p.sizes[0] : '');
-  const [color, setColor] = useState(p.colors[0].name);
+  const [size, setSize] = useState(p.sizes && p.sizes.length === 1 ? p.sizes[0] : '');
+  const [color, setColor] = useState(p.colors && p.colors[0] ? p.colors[0].name : 'Default');
   const [qty, setQty] = useState(1);
   const [error, setError] = useState('');
   const [zoom, setZoom] = useState(false);
@@ -23,11 +23,11 @@ export default function ProductDetail({ product: p }: { product: Product }) {
   const cat = categories.find((c) => c.slug === p.category) || {
     slug: p.category || 'all',
     name: p.category ? p.category.toUpperCase() : 'COLLECTION',
-    image: p.image,
+    image: p.image || '/demo-products/essential-tee.webp',
     caption: 'HELLO! Colombo',
     description: ''
   };
-  const gallery = useMemo(() => (p.gallery && p.gallery.length ? p.gallery : [p.image, cat.image]), [p.gallery, p.image, cat.image]);
+  const gallery = useMemo(() => (p.gallery && p.gallery.length ? p.gallery : [p.image || cat.image, cat.image]), [p.gallery, p.image, cat.image]);
   const related = products.filter((x) => x.id !== p.id).slice(0, 4);
   const saved = store.wishlist.includes(p.id);
 

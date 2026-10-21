@@ -1,9 +1,9 @@
 'use client';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { SlidersHorizontal, X, ArrowRight, ChevronDown, Search } from 'lucide-react';
-import { categories, products, money } from '@/lib/catalog';
+import { categories, products as fallbackProducts, money, type Product } from '@/lib/catalog';
 import { useStore } from '@/store/store';
 import { ProductCard } from './ProductCard';
 import CategoryFeatureGrid from './CategoryFeatureGrid';
@@ -13,16 +13,32 @@ export default function ShopListing({
   newOnly = false,
   wishlist = false,
   search = false,
+  initialProducts,
 }: {
   category?: string;
   newOnly?: boolean;
   wishlist?: boolean;
   search?: boolean;
+  initialProducts?: Product[];
 }) {
   const params = useSearchParams();
   const router = useRouter();
   const store = useStore();
   const [mobileFilters, setMobileFilters] = useState(false);
+  const [liveProducts, setLiveProducts] = useState<Product[]>(() =>
+    initialProducts && initialProducts.length > 0 ? initialProducts : fallbackProducts
+  );
+
+  useEffect(() => {
+    fetch('/api/products')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.products && Array.isArray(d.products) && d.products.length > 0) {
+          setLiveProducts(d.products);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const selectedCategory = category ?? params.get('category') ?? '';
   const size = params.get('size') ?? '';
@@ -41,7 +57,7 @@ export default function ShopListing({
   }
 
   const filtered = useMemo(() => {
-    let result = products.filter(
+    let result = liveProducts.filter(
       (p) =>
         p.status === 'published' &&
         (!selectedCategory || p.category === selectedCategory) &&
@@ -65,7 +81,7 @@ export default function ShopListing({
     if (sort === 'price-desc') result = result.toSorted((a, b) => b.price - a.price);
     if (sort === 'name') result = result.toSorted((a, b) => a.name.localeCompare(b.name));
     return result;
-  }, [selectedCategory, size, color, maxPrice, newOnly, wishlist, store.wishlist, query, sort, edit]);
+  }, [liveProducts, selectedCategory, size, color, maxPrice, newOnly, wishlist, store.wishlist, query, sort, edit]);
 
   const showCollections = !category && !newOnly && !wishlist && !search && !selectedCategory && !editTitle;
   const cat = categories.find((c) => c.slug === category);
@@ -88,7 +104,7 @@ export default function ShopListing({
       </div>
       <div className="category-filter">
         <Link className={!selectedCategory ? 'chosen' : ''} href="/shop">
-          All pieces <span>{products.length}</span>
+          All pieces <span>{liveProducts.length}</span>
         </Link>
         {categories.map((c) => (
           <Link
@@ -97,7 +113,7 @@ export default function ShopListing({
             href={`/collections/${c.slug}`}
           >
             {c.name}
-            <span>{products.filter((p) => p.category === c.slug).length}</span>
+            <span>{liveProducts.filter((p) => p.category === c.slug).length}</span>
           </Link>
         ))}
       </div>

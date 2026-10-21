@@ -23,8 +23,8 @@ export function ProductCard({
       <div className="product-visual">
         <Link href={`/products/${p.slug}`} prefetch={true} aria-label={`View ${p.name}`}>
           <img
-            src={p.image}
-            alt={`${p.name}, ${p.colors[0].name}, conceptual product photo`}
+            src={p.image || '/demo-products/essential-tee.webp'}
+            alt={`${p.name}, ${p.colors?.[0]?.name || ''}, streetwear product photo`}
             width={600}
             height={700}
             loading="lazy"
@@ -48,12 +48,12 @@ export function ProductCard({
           <h3>{p.name}</h3>
         </Link>
         <p>{money(p.price)}</p>
-        {showSizes && (
+        {showSizes && p.sizes && (
           <p className="product-card-sizes" aria-label={`Available sizes: ${p.sizes.join(', ')}`}>
             {p.sizes.join(' · ')}
           </p>
         )}
-        {showSwatches && (
+        {showSwatches && p.colors && p.colors.length > 0 && (
           <div className="mini-swatches" aria-label={`Available colors: ${p.colors.map((c) => c.name).join(', ')}`}>
             {p.colors.map((c) => (
               <span key={c.name} style={{ background: c.hex }} />
