@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { money } from '@/lib/catalog';
 import type { StoredOrder } from '@/components/checkout/Checkout';
+import { signInWithGoogle, logOut, onAuthChange, type User } from '@/lib/firebase';
 
 const policies: Record<string, { title: string; intro: string; sections: { title: string; copy: string }[] }> = {
   shipping: {
@@ -149,6 +150,25 @@ export default function InfoPage({ kind }: { kind: string }) {
   });
   const [orders, setOrders] = useState<StoredOrder[]>([]);
   const [profileSaved, setProfileSaved] = useState(false);
+
+  // Firebase Auth State
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [signingIn, setSigningIn] = useState(false);
+  const [authError, setAuthError] = useState('');
+
+  useEffect(() => {
+    const unsub = onAuthChange((user) => {
+      setFirebaseUser(user);
+      if (user) {
+        setProfile((prev) => ({
+          ...prev,
+          name: prev.name || user.displayName || '',
+          email: user.email || prev.email || '',
+        }));
+      }
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -334,6 +354,73 @@ export default function InfoPage({ kind }: { kind: string }) {
               <h2 style={{ margin: 0 }}>Your Profile & Orders</h2>
               <span style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>Manage your personal details and track purchases</span>
             </div>
+          </div>
+
+          {/* Google One-Tap / Sign-In Card */}
+          <div style={{ padding: '1.25rem', background: '#ffffff', border: '1px solid var(--line)', borderRadius: '6px', marginBottom: '1.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+            {firebaseUser ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {firebaseUser.photoURL ? (
+                    <img src={firebaseUser.photoURL} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--fg)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                      {firebaseUser.displayName?.charAt(0) || 'G'}
+                    </div>
+                  )}
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.95rem' }}>{firebaseUser.displayName || 'Google Member'}</strong>
+                    <span style={{ fontSize: '0.8rem', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      ● Verified ({firebaseUser.email})
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => { await logOut(); setFirebaseUser(null); }}
+                  className="button outline"
+                  style={{ padding: '6px 14px', fontSize: '0.75rem' }}
+                >
+                  SIGN OUT
+                </button>
+              </div>
+            ) : (
+              <div>
+                <span className="eyebrow" style={{ margin: '0 0 6px', display: 'block' }}>GOOGLE ACCOUNT</span>
+                <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: '0 0 12px', lineHeight: '1.5' }}>
+                  Connect your Google account to auto-fill delivery details and sync orders across all your devices.
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setSigningIn(true);
+                    setAuthError('');
+                    try {
+                      const u = await signInWithGoogle();
+                      setFirebaseUser(u);
+                    } catch (e: any) {
+                      if (e?.code !== 'auth/popup-closed-by-user') {
+                        setAuthError(e?.message || 'Could not connect with Google.');
+                      }
+                    } finally {
+                      setSigningIn(false);
+                    }
+                  }}
+                  disabled={signingIn}
+                  className="button"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: '#ffffff', color: '#141614', border: '1px solid #dcd9d0', padding: '10px 18px', fontSize: '0.82rem', fontWeight: 600, borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                  </svg>
+                  <span>{signingIn ? 'CONNECTING…' : 'CONTINUE WITH GOOGLE'}</span>
+                </button>
+                {authError && <p style={{ color: '#b91c1c', fontSize: '0.8rem', marginTop: '8px' }}>{authError}</p>}
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2.5rem' }}>

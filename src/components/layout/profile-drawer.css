@@ -656,3 +656,156 @@
 .concierge-btn:hover {
   background: #15803d;
 }
+
+/* Google Auth Integration */
+.profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-badge.verified {
+  background: #141614;
+  color: #fff;
+  border: 1px solid #141614;
+}
+
+.profile-logout-btn {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid #dcd9d0;
+  color: #72746c;
+  padding: 4px 8px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: auto;
+  align-self: flex-start;
+}
+
+.profile-logout-btn:hover {
+  border-color: #141614;
+  color: #141614;
+  background: #f4f2ec;
+}
+
+.google-auth-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.google-signin-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 16px;
+  background: #ffffff;
+  color: #141614;
+  border: 1px solid #dcd9d0;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.google-signin-btn:hover:not(:disabled) {
+  border-color: #141614;
+  background: #fbfbfa;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.google-signin-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.google-auth-error {
+  margin: 0;
+  font-size: 10px;
+  color: #b91c1c;
+  line-height: 1.4;
+  background: #fef2f2;
+  padding: 8px 10px;
+  border-radius: 3px;
+  border: 1px solid #fecaca;
+}
+
+.google-connected-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.google-connected-pill strong {
+  display: block;
+  color: #15803d;
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.google-connected-pill span {
+  display: block;
+  color: #166534;
+  font-size: 10px;
+}
+
+.google-connect-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 13px;
+  background: #ffffff;
+  border: 1px solid #e2e0d8;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.google-connect-prompt .prompt-text strong {
+  display: block;
+  font-size: 11px;
+  color: #141614;
+  margin-bottom: 2px;
+}
+
+.google-connect-prompt .prompt-text span {
+  display: block;
+  font-size: 10px;
+  color: #72746c;
+  line-height: 1.4;
+}
+
+.google-connect-btn {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  background: #141614;
+  color: #fff;
+  border: none;
+  padding: 6px 11px;
+  border-radius: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s ease;
+}
+
+.google-connect-btn:hover {
+  opacity: 0.85;
+}
+
