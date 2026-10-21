@@ -1,4 +1,4 @@
-.site-header .hello-brand-link{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:129px;height:56px;display:flex;align-items:center;justify-content:center;overflow:visible;isolation:isolate}
+.site-header .hello-brand-link{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:129px;height:56px;display:flex;align-items:center;justify-content:center;overflow:visible;isolation:isolate;z-index:50;cursor:pointer;pointer-events:auto;touch-action:manipulation}
 .site-header .hello-brand-link:focus-visible{outline-offset:7px}
 .hello-brand-link .hello-logo-art{display:block;position:relative;width:129px;aspect-ratio:2378/964;overflow:visible}
 .site-header .hello-brand-link .hello-logo-word,.site-header .hello-brand-link .hello-logo-mark img{display:block;position:absolute;inset:0;width:100%;height:100%;max-width:none;object-fit:contain}

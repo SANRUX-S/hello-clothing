@@ -34,5 +34,25 @@ export default function AnimatedHelloLogo(){
   anchor.addEventListener('pointerenter',play);anchor.addEventListener('focus',play);document.addEventListener('visibilitychange',visibility);motion.addEventListener('change',preference);
   return()=>{clearTimeout(startTimer);reset();anchor.removeEventListener('pointerenter',play);anchor.removeEventListener('focus',play);document.removeEventListener('visibilitychange',visibility);motion.removeEventListener('change',preference);};
  },[]);
- return <Link ref={link} className="brand-logo hello-brand-link" href="/" aria-label="HELLO! — home"><span className="hello-logo-art" aria-hidden="true"><img className="hello-logo-word" src="/branding/hello-word.webp" width={2378} height={964} alt="" fetchPriority="high"/><span className="hello-logo-mark" ref={mark}><img src="/branding/hello-mark.webp" width={2378} height={964} alt="" fetchPriority="high"/></span></span></Link>;
+  return (
+    <Link
+      ref={link}
+      className="brand-logo hello-brand-link"
+      href="/"
+      prefetch={true}
+      aria-label="HELLO! — home"
+      onClick={() => {
+        if (typeof window !== 'undefined' && window.location.pathname === '/') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }}
+    >
+      <span className="hello-logo-art" aria-hidden="true">
+        <img className="hello-logo-word" src="/branding/hello-word.webp" width={2378} height={964} alt="" fetchPriority="high" />
+        <span className="hello-logo-mark" ref={mark}>
+          <img src="/branding/hello-mark.webp" width={2378} height={964} alt="" fetchPriority="high" />
+        </span>
+      </span>
+    </Link>
+  );
 }

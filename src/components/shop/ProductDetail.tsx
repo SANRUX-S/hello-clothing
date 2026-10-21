@@ -20,7 +20,13 @@ export default function ProductDetail({ product: p }: { product: Product }) {
   const [guideUnit, setGuideUnit] = useState<'inches' | 'cm'>('inches');
   const [view, setView] = useState(0);
 
-  const cat = categories.find((c) => c.slug === p.category)!;
+  const cat = categories.find((c) => c.slug === p.category) || {
+    slug: p.category || 'all',
+    name: p.category ? p.category.toUpperCase() : 'COLLECTION',
+    image: p.image,
+    caption: 'HELLO! Colombo',
+    description: ''
+  };
   const gallery = useMemo(() => (p.gallery && p.gallery.length ? p.gallery : [p.image, cat.image]), [p.gallery, p.image, cat.image]);
   const related = products.filter((x) => x.id !== p.id).slice(0, 4);
   const saved = store.wishlist.includes(p.id);
