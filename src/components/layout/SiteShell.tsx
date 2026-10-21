@@ -8,6 +8,7 @@ import {lineKey,cartSubtotal} from '@/lib/cart';
 import {useStore} from '@/store/store';
 import {Modal} from '@/components/ui/Modal';
 import AnimatedHelloLogo from '@/components/branding/AnimatedHelloLogo';
+import ProfileDrawer from '@/components/layout/ProfileDrawer';
 import './site-shell.css';
 
 const primaryLinks = [
@@ -25,6 +26,7 @@ function Header() {
  const store=useStore();
  const [search,setSearch]=useState(false);
  const [menu,setMenu]=useState(false);
+ const [accountOpen, setAccountOpen]=useState(false);
  const [query,setQuery]=useState('');
  const count=store.cart.reduce((n,l)=>n+l.quantity,0);
  const suggestions=query.trim()?searchProducts(query):products.slice(0,3);
@@ -34,13 +36,14 @@ function Header() {
    <AnimatedHelloLogo/>
    <div className="header-actions">
      <button className="icon-button" aria-label="Search products" aria-haspopup="dialog" onClick={()=>setSearch(true)}><Search/></button>
-     <Link className="icon-button account-icon" href="/account" aria-label="Your account"><UserRound/></Link>
+     <button className="icon-button account-icon" aria-label="Your account" aria-haspopup="dialog" onClick={()=>setAccountOpen(true)}><UserRound/></button>
      <button className="icon-button bag-button" aria-label={`Open shopping bag, ${count} items`} aria-haspopup="dialog" onClick={()=>store.setCartOpen(true)}><ShoppingBag/><span className="bag-count">{count}</span></button>
    </div>
  </div></header>
- <Modal open={menu} onClose={()=>setMenu(false)} title="Explore Hello!" drawer><nav className="mobile-nav">{[['Shop all','/shop'],['New arrivals','/new-arrivals'],...categories.map(c=>[c.name,`/collections/${c.slug}`]),['Our story','/about'],['Wishlist','/wishlist'],['Your account','/account']].map(([name,href])=><Link key={href} href={href} onClick={()=>setMenu(false)}>{name}<ArrowUpRight size={21}/></Link>)}</nav><p className="drawer-note">MADE HEAVY. WORN DAILY.</p></Modal>
+ <Modal open={menu} onClose={()=>setMenu(false)} title="Explore Hello!" drawer><nav className="mobile-nav">{[['Shop all','/shop'],['New arrivals','/new-arrivals'],...categories.map(c=>[c.name,`/collections/${c.slug}`]),['Our story','/about'],['Wishlist','/wishlist']].map(([name,href])=><Link key={href} href={href} onClick={()=>setMenu(false)}>{name}<ArrowUpRight size={21}/></Link>)}<button className="mobile-nav-link-btn" onClick={()=>{setMenu(false);setAccountOpen(true);}}>Your account & Track order <ArrowUpRight size={21}/></button></nav><p className="drawer-note">MADE HEAVY. WORN DAILY.</p></Modal>
  <Modal open={search} onClose={()=>setSearch(false)} title="Search the collection"><form className="search-form" onSubmit={e=>{e.preventDefault();setSearch(false);router.push(`/search?q=${encodeURIComponent(query)}`);}}><Search size={20}/><input aria-label="Search the collection" placeholder="Try ‘heavy tee’, ‘hoodie’ or ‘cargo’" autoComplete="off" value={query} onChange={e=>setQuery(e.target.value)}/><button className="icon-button" aria-label="Submit search"><ArrowRight/></button></form><p className="eyebrow search-label">{query?'THE RESULTS':'POPULAR PIECES'}</p><div className="search-suggestions">{suggestions.length?suggestions.map(p=><Link key={p.id} href={`/products/${p.slug}`} onClick={()=>setSearch(false)}><img src={p.image} alt="" width={70} height={80}/><span>{p.name}<small>{money(p.price)}</small></span><ArrowUpRight size={18}/></Link>):<p>No matching pieces found. Try a different search.</p>}</div></Modal>
- <Modal open={store.cartOpen} onClose={()=>store.setCartOpen(false)} title={`Your bag (${count})`} drawer>{count?<><CartItems compact/><div className="drawer-bottom"><div className="summary-line"><span>Subtotal</span><strong>{money(cartSubtotal(store.cart))}</strong></div><p className="muted small">Shipping calculated in the demo checkout.</p><Link className="button dark" href="/checkout" onClick={()=>store.setCartOpen(false)}>CHECKOUT <ArrowRight size={17}/></Link><Link className="text-link view-bag" href="/cart" onClick={()=>store.setCartOpen(false)}>VIEW YOUR BAG</Link></div></>:<div className="empty-state"><ShoppingBag size={42} strokeWidth={1}/><h3>Your bag is empty.</h3><p>Time to add some heavyweight streetwear to your rotation.</p><Link className="button dark" href="/shop" onClick={()=>store.setCartOpen(false)}>SHOP THE COLLECTION <ArrowRight size={17}/></Link></div>}</Modal></>;
+ <Modal open={store.cartOpen} onClose={()=>store.setCartOpen(false)} title={`Your bag (${count})`} drawer>{count?<><CartItems compact/><div className="drawer-bottom"><div className="summary-line"><span>Subtotal</span><strong>{money(cartSubtotal(store.cart))}</strong></div><p className="muted small">Shipping calculated in the demo checkout.</p><Link className="button dark" href="/checkout" onClick={()=>store.setCartOpen(false)}>CHECKOUT <ArrowRight size={17}/></Link><Link className="text-link view-bag" href="/cart" onClick={()=>store.setCartOpen(false)}>VIEW YOUR BAG</Link></div></>:<div className="empty-state"><ShoppingBag size={42} strokeWidth={1}/><h3>Your bag is empty.</h3><p>Time to add some heavyweight streetwear to your rotation.</p><Link className="button dark" href="/shop" onClick={()=>store.setCartOpen(false)}>SHOP THE COLLECTION <ArrowRight size={17}/></Link></div>}</Modal>
+ <ProfileDrawer open={accountOpen} onClose={()=>setAccountOpen(false)} /></>;
 }
 export function Footer() {
  return <footer className="site-footer editorial-footer" role="contentinfo">

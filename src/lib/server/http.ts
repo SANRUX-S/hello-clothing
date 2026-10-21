@@ -61,3 +61,5 @@ export function allowDemoRequest(key: string, maximum = 60, now = Date.now()) {
 }
 
 export const privateHeaders = { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
+export const publicCacheHeaders = { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300", "X-Content-Type-Options": "nosniff" };
+

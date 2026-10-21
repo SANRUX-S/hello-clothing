@@ -253,9 +253,35 @@
   }
 }
 
+.mobile-nav-link-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #ffffff1a;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.editorial-header .account-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+}
+
 @media (max-width: 540px) {
-  .editorial-header .account-icon {
-    display: none;
+  .editorial-header .header-actions {
+    gap: 4px;
   }
 }
 

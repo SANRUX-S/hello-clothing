@@ -1,5 +1,21 @@
-import {notFound} from 'next/navigation';
-import {getProduct} from '@/lib/catalog';
+import { notFound } from 'next/navigation';
+import { getProductBySlugFromDb, getProductsFromDb } from '@/lib/server/db';
 import ProductDetail from '@/components/shop/ProductDetail';
-export async function generateMetadata({params}:{params:Promise<{slug:string}>}){const {slug}=await params;const p=getProduct(slug);return {title:p?.name??'Product',description:p?.description};}
-export default async function Page({params}:{params:Promise<{slug:string}>}){const {slug}=await params;const p=getProduct(slug);if(!p)notFound();return <ProductDetail product={p}/>;}
+
+export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const p = await getProductBySlugFromDb(slug);
+  return {
+    title: p?.name ? `${p.name} — HELLO!` : 'Product — HELLO!',
+    description: p?.description || 'Heavyweight streetwear designed in Colombo.',
+  };
+}
+
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const p = await getProductBySlugFromDb(slug);
+  if (!p) notFound();
+  return <ProductDetail product={p} />;
+}
