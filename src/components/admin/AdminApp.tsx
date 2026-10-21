@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, Check, CheckCircle2, Copy, ExternalLink, ImagePlus, Images, LayoutDashboard, Menu, Package, Plus, Search, Settings2, ShoppingBag, SlidersHorizontal, Tags, Trash2, Type, X, Pencil, Save, RotateCcw, ShieldCheck, Boxes } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, Check, CheckCircle2, Copy, ExternalLink, ImagePlus, Images, LayoutDashboard, Menu, Package, Plus, Search, Settings2, ShoppingBag, SlidersHorizontal, Tags, Trash2, Type, X, Pencil, Save, RotateCcw, ShieldCheck, Boxes, MessageCircle, Truck, UserRound, Eye, MapPin, Mail } from "lucide-react";
 import { products as catalogProducts } from "@/lib/catalog";
 
 type Color = { name: string; hex: string };
@@ -34,7 +34,20 @@ type Content = { announcement: string; heroTitle: string; heroSubtitle: string; 
 type Settings = { storeName: string; email: string; currency: string; deliveryFee: number; logoMotion: boolean };
 type MediaItem = { id: string; src: string; name: string; uploaded?: boolean };
 type Activity = { id: string; label: string; time: number };
-type AdminOrder = { reference: string; createdAt: string; customer?: { name?: string; phone?: string; city?: string }; items?: any[]; paymentMethod?: string; total?: number; status?: string; courier?: string; tracking_number?: string };
+type AdminOrder = {
+  reference: string;
+  createdAt: string;
+  customer?: { name?: string; phone?: string; email?: string; address?: string; city?: string; postalCode?: string };
+  items?: { productId?: string; name?: string; color?: string; size?: string; quantity?: number; unitPrice?: number; lineTotal?: number; image?: string }[];
+  paymentMethod?: string;
+  total?: number;
+  subtotal?: number;
+  delivery?: number;
+  status?: string;
+  courier?: string;
+  tracking_number?: string;
+  notes?: string;
+};
 export type AdminSection = "overview" | "products" | "inventory" | "orders" | "categories" | "content" | "media" | "settings";
 
 const NAV: { id: AdminSection; label: string; icon: typeof Package }[] = [
@@ -557,6 +570,7 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
   const [inventory, setInventory] = useState<Record<string, number>>({});
   const [activity, setActivity] = useState<Activity[]>([]);
   const [customerOrders, setCustomerOrders] = useState<AdminOrder[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
   const [ready, setReady] = useState(false);
   const [notice, setNotice] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -613,9 +627,12 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
             items: o.items,
             paymentMethod: o.payment_method || o.paymentMethod,
             total: o.total,
+            subtotal: o.subtotal,
+            delivery: o.delivery,
             status: o.status || 'processing',
             courier: o.courier || 'PromptX Logistics',
-            tracking_number: o.tracking_number || o.trackingNumber
+            tracking_number: o.tracking_number || o.trackingNumber,
+            notes: o.notes || '',
           })));
         }
       })
@@ -687,18 +704,29 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
     await saveProduct(cloned);
   };
 
-  const updateOrderStatus = async (reference: string, newStatus: string) => {
-    setCustomerOrders(current => current.map(o => o.reference === reference ? { ...o, status: newStatus } : o));
-    setNotice(`Updating order ${reference} status in Neon…`);
+  const updateOrderStatus = async (reference: string, newStatus: string, courier?: string, trackingNumber?: string) => {
+    setCustomerOrders(current => current.map(o => o.reference === reference ? {
+      ...o,
+      status: newStatus,
+      courier: courier !== undefined ? courier : o.courier,
+      tracking_number: trackingNumber !== undefined ? trackingNumber : o.tracking_number,
+    } : o));
+    setSelectedOrder(prev => (prev && prev.reference === reference ? {
+      ...prev,
+      status: newStatus,
+      courier: courier !== undefined ? courier : prev.courier,
+      tracking_number: trackingNumber !== undefined ? trackingNumber : prev.tracking_number,
+    } : prev));
+    setNotice(`Updating order ${reference} in Neon…`);
     try {
       const res = await fetch('/api/admin/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reference, status: newStatus })
+        body: JSON.stringify({ reference, status: newStatus, courier, trackingNumber })
       });
       if (res.ok) {
-        setNotice(`Order ${reference} is now "${newStatus}". (Neon DB synced)`);
-        log(`Order ${reference} status: ${newStatus}`);
+        setNotice(`Order ${reference} updated in Neon DB.`);
+        log(`Order ${reference}: ${newStatus}`);
       } else {
         setNotice("Order updated locally.");
       }
@@ -792,10 +820,19 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
               <tbody>
                 {customerOrders.map(order => (
                   <tr key={order.reference}>
-                    <td><strong style={{ letterSpacing: "0.5px" }}>{order.reference}</strong></td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOrder(order)}
+                        style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", font: "inherit", padding: 0, textAlign: "left" }}
+                        title="Click to view full order details"
+                      >
+                        <strong style={{ letterSpacing: "0.5px", color: "#4ade80", textDecoration: "underline" }}>{order.reference}</strong>
+                      </button>
+                    </td>
                     <td>{new Date(order.createdAt).toLocaleDateString("en-LK", { dateStyle: "medium" })}</td>
                     <td>
-                      <div>
+                      <div onClick={() => setSelectedOrder(order)} style={{ cursor: "pointer" }}>
                         <strong style={{ display: "block", fontSize: "10px" }}>{order.customer?.name || "Customer"}</strong>
                         <small style={{ color: "#888", fontSize: "8px" }}>{order.customer?.phone || ""}</small>
                       </div>
@@ -836,6 +873,24 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
                     </td>
                     <td>
                       <div className="admin-row-actions">
+                        <button
+                          type="button"
+                          className="admin-text-link"
+                          onClick={() => setSelectedOrder(order)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: 0,
+                            font: "inherit",
+                            color: "#4ade80",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                          }}
+                        >
+                          View <Eye size={13} />
+                        </button>
                         <Link href={`/track-order?ref=${order.reference}`} className="admin-text-link" target="_blank">
                           Track <ArrowUpRight size={13} />
                         </Link>
@@ -878,6 +933,7 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
     {deleteProduct && <Modal title="Remove this essential?" onClose={() => setDeleteProduct(null)}><div className="admin-confirm-content"><p><strong>{deleteProduct.name}</strong> will be removed from your catalog and database.</p><div className="admin-modal-actions"><button className="admin-button admin-button-quiet" onClick={() => setDeleteProduct(null)}>Keep product</button><button className="admin-button admin-button-danger" onClick={async () => { const prodToDelete = deleteProduct; setProducts(current => current.filter(p => p.id !== prodToDelete.id)); log(`Removed ${prodToDelete.name}`); setDeleteProduct(null); setNotice("Deleting from Neon DB…"); try { await fetch(`/api/admin/products?id=${encodeURIComponent(prodToDelete.id)}`, { method: 'DELETE' }); setNotice(`"${prodToDelete.name}" deleted from Neon DB.`); } catch { setNotice("Product removed locally."); } }}>Remove product</button></div></div></Modal>}
     {categoryEditor && <CategoryEditor category={categoryEditor === "new" ? null : categoryEditor} existing={categories} onClose={() => setCategoryEditor(null)} onSave={async category => { const previous = categoryEditor === "new" ? null : categoryEditor; setCategories(current => previous ? current.map(c => c.slug === previous.slug ? category : c) : [...current, category]); if (previous && previous.slug !== category.slug) setProducts(current => current.map(p => p.category === previous.slug ? { ...p, category: category.slug } : p)); setCategoryEditor(null); setNotice("Saving category to Neon DB…"); try { await fetch('/api/admin/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(category) }); setNotice(`Category "${category.name}" saved to Neon DB.`); log(`Saved category ${category.name}`); } catch { setNotice("Category saved locally."); } }} />}
     {resetOpen && <Modal title="Say Hello! to a fresh start." onClose={() => setResetOpen(false)}><div className="admin-confirm-content"><p>This removes this browser’s admin edits and local media uploads, and restores the sample catalog and settings.</p><div className="admin-modal-actions"><button className="admin-button admin-button-quiet" onClick={() => setResetOpen(false)}>Keep my changes</button><button className="admin-button" onClick={() => { try { Object.values(KEYS).forEach(key => localStorage.removeItem(key)); setProducts(BASE_PRODUCTS); setCategories(BASE_CATEGORIES); setContent(DEFAULT_CONTENT); setSettings(DEFAULT_SETTINGS); setMedia([]); setInventory({}); setActivity([]); setVariantDrafts({}); setResetOpen(false); setNotice("Fresh start. Your demo workspace has been reset."); window.dispatchEvent(new Event("hello:demo-settings")); } catch { setNotice("Could not reset browser storage."); } }}>Reset workspace</button></div></div></Modal>}
+    {selectedOrder && <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} onUpdateStatus={updateOrderStatus} />}
     </div>;
 }
 
@@ -886,6 +942,208 @@ function CategoryEditor({ category, existing, onClose, onSave }: { category: Cat
   const [description, setDescription] = useState(category?.description || "");
   const [error, setError] = useState("");
   return <Modal title={category ? "Edit category" : "A new way to explore."} onClose={onClose}><form className="admin-edit-form" onSubmit={event => { event.preventDefault(); const slug = slugify(name); if (!slug) { setError("Choose a name with letters or numbers."); return; } if (existing.some(c => c.slug === slug && c.slug !== category?.slug)) { setError("That category already exists. Choose another name."); return; } onSave({ name: name.trim(), description: description.trim(), slug }); }}><label>Category name<input required maxLength={60} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Everyday essentials" /></label><label>Description<textarea rows={3} maxLength={250} value={description} onChange={e => setDescription(e.target.value)} placeholder="A few words about this collection." /></label><span className="admin-muted">Category path: /{slugify(name) || "your-category"}</span>{error && <p className="admin-error" role="alert">{error}</p>}<div className="admin-modal-actions"><button type="button" className="admin-button admin-button-quiet" onClick={onClose}>Cancel</button><button className="admin-button"><Check size={16} /> Save category</button></div></form></Modal>;
+}
+
+function OrderDetailsModal({
+  order,
+  onClose,
+  onUpdateStatus,
+}: {
+  order: AdminOrder;
+  onClose: () => void;
+  onUpdateStatus: (reference: string, newStatus: string, courier?: string, trackingNumber?: string) => void;
+}) {
+  const [status, setStatus] = useState(order.status || 'processing');
+  const [courier, setCourier] = useState(order.courier || 'PromptX Logistics');
+  const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || '');
+  const [saved, setSaved] = useState(false);
+
+  const phone = (order.customer?.phone || '').replace(/[^0-9]/g, '');
+  const customerName = order.customer?.name || 'Customer';
+  const whatsappText = encodeURIComponent(
+    `Hello ${customerName}! This is HELLO! Clothing (https://www.helloclothing.store) regarding your order ${order.reference}.`
+  );
+  const whatsappUrl = phone ? `https://wa.me/${phone.startsWith('0') ? '94' + phone.slice(1) : phone}?text=${whatsappText}` : '';
+
+  const handleSave = () => {
+    onUpdateStatus(order.reference, status, courier, trackingNumber);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
+
+  return (
+    <Modal title={`Order Details: ${order.reference}`} onClose={onClose}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '78vh', overflowY: 'auto', paddingRight: '4px' }}>
+        {/* Status & Placement banner */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#09090b', padding: '12px 14px', borderRadius: '8px', border: '1px solid #27272a', flexWrap: 'wrap', gap: '8px' }}>
+          <div>
+            <span style={{ fontSize: '10px', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block' }}>PLACED ON</span>
+            <strong style={{ fontSize: '13px' }}>{new Date(order.createdAt).toLocaleString('en-LK', { dateStyle: 'medium', timeStyle: 'short' })}</strong>
+          </div>
+          <div>
+            <span style={{ fontSize: '10px', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block' }}>PAYMENT METHOD</span>
+            <strong style={{ fontSize: '13px', color: '#4ade80' }}>
+              {order.paymentMethod === 'cod' ? 'Cash on Delivery (COD)' : order.paymentMethod === 'bank' ? 'Bank Transfer' : 'Card'}
+            </strong>
+          </div>
+        </div>
+
+        {/* Customer Information Card */}
+        <div style={{ background: '#121215', border: '1px solid #27272a', borderRadius: '8px', padding: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+            <strong style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <UserRound size={15} color="#4ade80" /> Customer Information
+            </strong>
+            {whatsappUrl && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#25D366',
+                  color: '#000',
+                  padding: '5px 10px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                }}
+              >
+                <MessageCircle size={14} /> WhatsApp Customer
+              </a>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', fontSize: '12px' }}>
+            <div><span style={{ color: '#71717a', display: 'block', fontSize: '11px' }}>Full Name</span><strong>{order.customer?.name || 'N/A'}</strong></div>
+            <div><span style={{ color: '#71717a', display: 'block', fontSize: '11px' }}>Contact Phone</span><strong>{order.customer?.phone || 'N/A'}</strong></div>
+            <div><span style={{ color: '#71717a', display: 'block', fontSize: '11px' }}>Email Address</span><span>{order.customer?.email || 'N/A'}</span></div>
+            <div><span style={{ color: '#71717a', display: 'block', fontSize: '11px' }}>Destination City</span><strong>{order.customer?.city || 'N/A'}</strong></div>
+            <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#71717a', display: 'block', fontSize: '11px' }}>Street Delivery Address</span><strong>{order.customer?.address || 'N/A'}</strong></div>
+          </div>
+        </div>
+
+        {/* Purchased Items Breakdown */}
+        <div style={{ background: '#121215', border: '1px solid #27272a', borderRadius: '8px', padding: '14px' }}>
+          <strong style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+            <ShoppingBag size={15} color="#4ade80" /> Purchased Items ({(order.items || []).length})
+          </strong>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {(order.items || []).map((item: any, idx: number) => (
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: idx < (order.items?.length || 0) - 1 ? '1px solid #27272a' : 'none', fontSize: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {item.image ? (
+                    <img src={item.image} alt={item.name} style={{ width: '38px', height: '38px', objectFit: 'cover', borderRadius: '4px', background: '#222' }} />
+                  ) : (
+                    <div style={{ width: '38px', height: '38px', background: '#222', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Package size={16} /></div>
+                  )}
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '12px' }}>{item.name}</strong>
+                    <span style={{ color: '#a1a1aa', fontSize: '11px' }}>
+                      Color: {item.color} · Size: {item.size} · Quantity: {item.quantity}
+                    </span>
+                  </div>
+                </div>
+                <strong style={{ fontSize: '12px' }}>{money(item.lineTotal || (item.unitPrice * item.quantity))}</strong>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ borderTop: '1px solid #27272a', marginTop: '12px', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#a1a1aa' }}>
+              <span>Subtotal</span>
+              <span>{money(order.subtotal || ((order.total || 0) - (order.delivery || 50000)))}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#a1a1aa' }}>
+              <span>Delivery Fee</span>
+              <span>{order.delivery === 0 ? 'FREE' : money(order.delivery || 50000)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 700, marginTop: '4px', color: '#fff' }}>
+              <span>Order Total</span>
+              <span style={{ color: '#4ade80' }}>{money(order.total || 0)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Fulfillment & Courier Controls */}
+        <div style={{ background: '#121215', border: '1px solid #27272a', borderRadius: '8px', padding: '14px' }}>
+          <strong style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+            <Truck size={15} color="#4ade80" /> Courier & Fulfillment Management
+          </strong>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+            <label style={{ fontSize: '11px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              Order Status
+              <select
+                value={status}
+                onChange={e => setStatus(e.target.value)}
+                style={{ padding: '8px 10px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px', fontSize: '12px' }}
+              >
+                <option value="processing">Processing</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="production">In Production</option>
+                <option value="dispatched">Handed to Courier</option>
+                <option value="out_for_delivery">Out for Delivery</option>
+                <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </label>
+
+            <label style={{ fontSize: '11px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              Courier Partner
+              <input
+                type="text"
+                value={courier}
+                onChange={e => setCourier(e.target.value)}
+                placeholder="e.g. PromptX Logistics"
+                style={{ padding: '8px 10px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px', fontSize: '12px' }}
+              />
+            </label>
+
+            <label style={{ fontSize: '11px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              Waybill / Tracking No
+              <input
+                type="text"
+                value={trackingNumber}
+                onChange={e => setTrackingNumber(e.target.value)}
+                placeholder="e.g. PX-849201"
+                style={{ padding: '8px 10px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px', fontSize: '12px' }}
+              />
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
+            <button
+              type="button"
+              className="admin-button"
+              onClick={handleSave}
+              style={{ background: saved ? '#16a34a' : '#fff', color: saved ? '#fff' : '#000', fontSize: '12px', padding: '6px 14px' }}
+            >
+              <Save size={14} /> {saved ? 'Updated in Neon DB!' : 'Save Fulfillment Updates'}
+            </button>
+          </div>
+        </div>
+
+        <div className="admin-modal-actions">
+          <button type="button" className="admin-button admin-button-quiet" onClick={onClose}>
+            Close
+          </button>
+          <Link
+            href={`/track-order?ref=${order.reference}`}
+            target="_blank"
+            className="admin-button admin-button-quiet"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
+          >
+            Live Tracking View <ExternalLink size={13} />
+          </Link>
+        </div>
+      </div>
+    </Modal>
+  );
 }
 
 

@@ -139,6 +139,8 @@ export default function InfoPage({ kind }: { kind: string }) {
   const initialRef = searchParams.get('ref') || '';
   const [trackRefInput, setTrackRefInput] = useState(initialRef);
   const [activeTrackingOrder, setActiveTrackingOrder] = useState<StoredOrder | null>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [trackingError, setTrackingError] = useState('');
 
   // Account state
   const [profile, setProfile] = useState<{ name: string; email: string; phone: string; address: string; city: string }>({
@@ -180,7 +182,7 @@ export default function InfoPage({ kind }: { kind: string }) {
         if (Array.isArray(storedOrders)) {
           setOrders(storedOrders);
           if (initialRef) {
-            const match = storedOrders.find((o: StoredOrder) => o.reference === initialRef);
+            const match = storedOrders.find((o: StoredOrder) => o.reference.toUpperCase() === initialRef.toUpperCase());
             if (match) setActiveTrackingOrder(match);
           } else if (storedOrders.length > 0) {
             setActiveTrackingOrder(storedOrders[0]);
@@ -195,6 +197,37 @@ export default function InfoPage({ kind }: { kind: string }) {
         }
       } catch {}
     });
+
+    if (initialRef) {
+      setTrackingLoading(true);
+      fetch(`/api/orders/track?ref=${encodeURIComponent(initialRef)}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (active && d?.order) {
+            setActiveTrackingOrder({
+              reference: d.order.reference,
+              currency: 'LKR',
+              subtotal: d.order.subtotal,
+              delivery: d.order.delivery,
+              total: d.order.total,
+              paymentMethod: d.order.payment_method || 'cod',
+              deliveryMethod: 'standard',
+              createdAt: d.order.created_at,
+              status: d.order.status || 'processing',
+              courier: d.order.courier || 'PromptX Logistics',
+              tracking_number: d.order.tracking_number || '',
+              customer: d.order.customer || { name: 'Customer', phone: '', city: 'Colombo', address: '', email: '' },
+              items: Array.isArray(d.order.items) ? d.order.items : [],
+            });
+            setTrackingError('');
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (active) setTrackingLoading(false);
+        });
+    }
+
     return () => {
       active = false;
     };
@@ -236,44 +269,51 @@ export default function InfoPage({ kind }: { kind: string }) {
     } catch {}
   }
 
-  function handleSearchTracking(e: FormEvent) {
+  async function handleSearchTracking(e: FormEvent) {
     e.preventDefault();
     const query = trackRefInput.trim().toUpperCase();
     if (!query) return;
-    const found = orders.find((o) => o.reference.toUpperCase() === query);
-    if (found) {
-      setActiveTrackingOrder(found);
-    } else {
-      // Create a mock tracking preview for demonstration if reference is not in local storage
-      setActiveTrackingOrder({
-        reference: query,
-        currency: 'LKR',
-        subtotal: 698000,
-        delivery: 50000,
-        total: 748000,
-        paymentMethod: 'cod',
-        deliveryMethod: 'standard',
-        createdAt: new Date(Date.now() - 86400000).toISOString(),
-        customer: {
-          name: 'Valued Customer',
-          email: 'customer@example.com',
-          phone: '077 123 4567',
-          address: 'Delivery Address on File',
-          city: 'Colombo',
-        },
-        items: [
-          {
-            productId: 'essential-tee',
-            name: 'Essential Tee',
-            color: 'Black',
-            size: 'L',
-            quantity: 2,
-            unitPrice: 349000,
-            lineTotal: 698000,
-            image: '/demo-products/essential-tee.webp',
-          },
-        ],
-      });
+
+    setTrackingLoading(true);
+    setTrackingError('');
+
+    try {
+      const res = await fetch(`/api/orders/track?ref=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      if (res.ok && data?.order) {
+        setActiveTrackingOrder({
+          reference: data.order.reference,
+          currency: 'LKR',
+          subtotal: data.order.subtotal,
+          delivery: data.order.delivery,
+          total: data.order.total,
+          paymentMethod: data.order.payment_method || 'cod',
+          deliveryMethod: 'standard',
+          createdAt: data.order.created_at,
+          status: data.order.status || 'processing',
+          courier: data.order.courier || 'PromptX Logistics',
+          tracking_number: data.order.tracking_number || '',
+          customer: data.order.customer || { name: 'Customer', phone: '', city: 'Colombo', address: '', email: '' },
+          items: Array.isArray(data.order.items) ? data.order.items : [],
+        });
+      } else {
+        const found = orders.find((o) => o.reference.toUpperCase() === query);
+        if (found) {
+          setActiveTrackingOrder(found);
+        } else {
+          setActiveTrackingOrder(null);
+          setTrackingError(`No order found for reference "${query}". Please check the code on your receipt or SMS.`);
+        }
+      }
+    } catch {
+      const found = orders.find((o) => o.reference.toUpperCase() === query);
+      if (found) {
+        setActiveTrackingOrder(found);
+      } else {
+        setTrackingError('Unable to connect to tracking service. Please try again.');
+      }
+    } finally {
+      setTrackingLoading(false);
     }
   }
 
@@ -538,23 +578,85 @@ export default function InfoPage({ kind }: { kind: string }) {
 
   if (kind === 'track-order') {
     const isOrderReady = Boolean(activeTrackingOrder);
+    const orderStatus = activeTrackingOrder?.status || 'processing';
+    const isCancelled = orderStatus === 'cancelled';
+
+    const STATUS_RANKS: Record<string, number> = {
+      processing: 0,
+      confirmed: 1,
+      production: 2,
+      dispatched: 3,
+      out_for_delivery: 4,
+      delivered: 5,
+    };
+    const currentRank = STATUS_RANKS[orderStatus] ?? 0;
+
+    const timelineSteps = [
+      {
+        title: 'Order Placed & Processing',
+        desc: 'Order received at HELLO! fulfillment hub in Colombo',
+        icon: CheckCircle2,
+        status: isCancelled ? 'pending' : currentRank > 0 ? 'done' : currentRank === 0 ? 'current' : 'pending',
+      },
+      {
+        title: 'Order Confirmed & Stock Verified',
+        desc: 'Garments and sizes allocated for your parcel',
+        icon: ShieldCheck,
+        status: isCancelled ? 'pending' : currentRank > 1 ? 'done' : currentRank === 1 ? 'current' : 'pending',
+      },
+      {
+        title: 'Quality Checked & Prepared',
+        desc: 'Inspected for fabric consistency and sealed in branded dust bag',
+        icon: Sparkles,
+        status: isCancelled ? 'pending' : currentRank > 2 ? 'done' : currentRank === 2 ? 'current' : 'pending',
+      },
+      {
+        title: `Handed Over to ${activeTrackingOrder?.courier || 'PromptX Logistics'}`,
+        desc: activeTrackingOrder?.tracking_number
+          ? `Dispatched with Waybill #${activeTrackingOrder.tracking_number}`
+          : 'Handed to courier delivery team for transit',
+        icon: Truck,
+        status: isCancelled ? 'pending' : currentRank > 3 ? 'done' : currentRank === 3 ? 'current' : 'pending',
+      },
+      {
+        title: 'Out for Delivery to Your Doorstep',
+        desc: activeTrackingOrder?.customer?.city
+          ? `Courier rider dispatched for delivery in ${activeTrackingOrder.customer.city}`
+          : 'Courier rider assigned for doorstep delivery',
+        icon: Clock,
+        status: isCancelled ? 'pending' : currentRank > 4 ? 'done' : currentRank === 4 ? 'current' : 'pending',
+      },
+      {
+        title: 'Delivered Successfully',
+        desc: 'Recipient signature collected and parcel handed over',
+        icon: MapPin,
+        status: currentRank === 5 ? 'done' : 'pending',
+      },
+    ];
+
     return (
       <section className="info-page narrow-page page-gutter" style={{ maxWidth: '780px' }}>
         <span className="eyebrow">DISPATCH & COURIER TRACKING</span>
         <h1>FOLLOW YOUR PIECE.</h1>
 
-        <form onSubmit={handleSearchTracking} style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem' }}>
+        <form onSubmit={handleSearchTracking} style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
           <input
             value={trackRefInput}
             onChange={(e) => setTrackRefInput(e.target.value)}
-            placeholder="Enter Order Reference (e.g. HL-2026-XXXX)"
+            placeholder="Enter Order Reference (e.g. HL-XXXXXX)"
             required
             style={{ flex: 1, padding: '12px 16px', border: '1px solid var(--line)', borderRadius: '4px', fontSize: '0.95rem' }}
           />
-          <button type="submit" className="button dark">
-            TRACK
+          <button type="submit" className="button dark" disabled={trackingLoading}>
+            {trackingLoading ? 'SEARCHING…' : 'TRACK'}
           </button>
         </form>
+
+        {trackingError && (
+          <div style={{ padding: '0.9rem 1.2rem', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', color: '#991b1b', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+            {trackingError}
+          </div>
+        )}
 
         {isOrderReady && activeTrackingOrder ? (
           <div style={{ border: '1px solid var(--line)', borderRadius: '12px', padding: '1.5rem', background: 'var(--panel)' }}>
@@ -564,27 +666,46 @@ export default function InfoPage({ kind }: { kind: string }) {
                 <h2 style={{ fontSize: '1.35rem', margin: 0 }}>{activeTrackingOrder.reference}</h2>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--muted)', display: 'block' }}>Courier: PromptX Logistics</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#16a34a' }}>● Out for Delivery</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--muted)', display: 'block' }}>Courier: {activeTrackingOrder.courier || 'PromptX Logistics'}</span>
+                <span
+                  style={{
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    color: isCancelled ? '#ef4444' : orderStatus === 'delivered' ? '#16a34a' : '#2563eb',
+                  }}
+                >
+                  ● {isCancelled
+                    ? 'Cancelled'
+                    : orderStatus === 'delivered'
+                    ? 'Delivered'
+                    : orderStatus === 'out_for_delivery'
+                    ? 'Out for Delivery'
+                    : orderStatus === 'dispatched'
+                    ? 'Handed to Courier'
+                    : orderStatus === 'production'
+                    ? 'Quality Checked & Prepared'
+                    : orderStatus === 'confirmed'
+                    ? 'Confirmed'
+                    : 'Processing'}
+                </span>
+                {activeTrackingOrder.tracking_number && (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--muted)', display: 'block', marginTop: '2px' }}>
+                    Waybill: #{activeTrackingOrder.tracking_number}
+                  </span>
+                )}
               </div>
             </div>
 
             {/* Tracking Progress Timeline */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '2rem' }}>
-              {[
-                { title: 'Order Confirmed & Payment Verified', desc: 'Order received at HELLO! fulfillment hub', icon: CheckCircle2, status: 'done', time: 'Yesterday, 10:15 AM' },
-                { title: 'Quality Checked & Sealed in Dust Bag', desc: 'Inspected for fabric consistency and tag attachment', icon: ShieldCheck, status: 'done', time: 'Yesterday, 3:30 PM' },
-                { title: 'Handed Over to PromptX Logistics', desc: 'Dispatched from Colombo Sorting Center (Waybill #PX-849201)', icon: Truck, status: 'done', time: 'Today, 8:45 AM' },
-                { title: 'Out for Delivery to Your Doorstep', desc: 'Rider assigned · Expected arrival by 5:00 PM today', icon: Clock, status: 'current', time: 'In Progress' },
-                { title: 'Delivered', desc: 'Recipient signature and delivery confirmation', icon: MapPin, status: 'pending', time: 'Estimated 2-4 Hours' },
-              ].map((step, idx) => (
+              {timelineSteps.map((step, idx) => (
                 <div key={idx} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <step.icon
                       size={22}
                       color={step.status === 'done' ? '#16a34a' : step.status === 'current' ? '#2563eb' : 'var(--muted)'}
                     />
-                    {idx < 4 && (
+                    {idx < timelineSteps.length - 1 && (
                       <div
                         style={{
                           width: '2px',
@@ -600,7 +721,9 @@ export default function InfoPage({ kind }: { kind: string }) {
                       <strong style={{ fontSize: '0.92rem', color: step.status === 'pending' ? 'var(--muted)' : 'var(--fg)' }}>
                         {step.title}
                       </strong>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>({step.time})</span>
+                      {step.status === 'current' && (
+                        <span style={{ fontSize: '0.72rem', background: '#dbeafe', color: '#1d4ed8', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>CURRENT STEP</span>
+                      )}
                     </div>
                     <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: 'var(--muted)' }}>{step.desc}</p>
                   </div>

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useSyncExternalStore, type FormEvent } from 'react';
+import { useState, useEffect, useSyncExternalStore, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -30,6 +30,10 @@ export type StoredOrder = {
   paymentMethod: PaymentMethod;
   deliveryMethod: DeliveryMethod;
   createdAt: string;
+  status?: string;
+  courier?: string;
+  tracking_number?: string;
+  trackingNumber?: string;
   customer: {
     name: string;
     email: string;
@@ -85,6 +89,8 @@ export default function Checkout() {
           mode: 'demo',
           items: store.cart,
           customer: customerData,
+          paymentMethod,
+          deliveryMethod,
         }),
       });
 
@@ -451,7 +457,37 @@ function getStoredOrder(reference: string): StoredOrder | null {
 
 export function OrderConfirmation({ reference }: { reference: string }) {
   useSyncExternalStore(subscribePreview, previewSnapshot, () => '');
-  const order = getStoredOrder(reference);
+  const localOrder = getStoredOrder(reference);
+  const [dbOrder, setDbOrder] = useState<StoredOrder | null>(null);
+
+  useEffect(() => {
+    if (localOrder) return;
+    let active = true;
+    fetch(`/api/orders/track?ref=${encodeURIComponent(reference)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (active && d?.order) {
+          setDbOrder({
+            reference: d.order.reference,
+            currency: 'LKR',
+            subtotal: d.order.subtotal,
+            delivery: d.order.delivery,
+            total: d.order.total,
+            paymentMethod: d.order.payment_method || 'cod',
+            deliveryMethod: 'standard',
+            createdAt: d.order.created_at,
+            customer: d.order.customer || { name: 'Valued Customer', email: '', phone: '', address: '', city: 'Colombo' },
+            items: Array.isArray(d.order.items) ? d.order.items : [],
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [reference, localOrder]);
+
+  const order = localOrder || dbOrder;
 
   return (
     <section className="confirmation-page page-gutter">

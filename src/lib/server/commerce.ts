@@ -15,6 +15,8 @@ const cartLineSchema = z.object({
 export const checkoutSchema = z.object({
   mode: z.literal("demo").optional(),
   items: z.array(cartLineSchema).min(1).max(MAX_CART_LINES),
+  paymentMethod: z.enum(["cod", "bank", "card"]).optional(),
+  deliveryMethod: z.enum(["standard", "express"]).optional(),
   customer: z.object({
     name: z.string().trim().min(2).max(120),
     email: z.string().trim().email().max(254),
@@ -107,8 +109,9 @@ export function calculateDemoCheckout(input: unknown, catalog: readonly Checkout
   }
 
   const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
-  const total = subtotal + DEMO_DELIVERY_MINOR;
+  const delivery = parsed.deliveryMethod === 'express' ? 75_000 : subtotal >= 1_000_000 ? 0 : DEMO_DELIVERY_MINOR;
+  const total = subtotal + delivery;
   if (!Number.isSafeInteger(total)) throw new CommerceError("amount_limit", "The bag total exceeds the supported amount.");
-  return { currency: "LKR" as const, items, subtotal, delivery: DEMO_DELIVERY_MINOR, total,
+  return { currency: "LKR" as const, items, subtotal, delivery, total,
     deliveryIsDemo: true as const };
 }
