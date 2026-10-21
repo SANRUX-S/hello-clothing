@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
+import { staffOnly, isSameOrigin } from '@/lib/firebase/server';
 import { getOrdersFromDb, updateOrderStatusInDb } from '@/lib/server/db';
 import { privateHeaders } from '@/lib/server/http';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const denied = await staffOnly();
+  if (denied) return denied;
+
   try {
     const orders = await getOrdersFromDb();
     return NextResponse.json({ orders }, { headers: privateHeaders });
@@ -14,6 +18,10 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
+  const denied = await staffOnly();
+  if (denied) return denied;
+  if (!isSameOrigin(req)) return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
+
   try {
     const data = await req.json();
     const { reference, status, courier, trackingNumber } = data;
