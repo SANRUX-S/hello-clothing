@@ -20,8 +20,10 @@ import {
   Phone,
   MapPin,
   MessageCircle,
-  FileText
+  FileText,
+  PackageCheck
 } from 'lucide-react';
+import './receipt.css';
 
 import { useStore } from '@/store/store';
 import { cartSubtotal } from '@/lib/cart';
@@ -547,332 +549,253 @@ export function OrderConfirmation({ reference }: { reference: string }) {
     `Hello HELLO! Clothing, I have a query regarding my order receipt ${order?.reference || reference}.`
   )}`;
 
+  const isDelivered = order?.status === 'delivered';
+  const isDispatched = order?.status === 'dispatched' || isDelivered;
+  const trackingCode = order ? (order.tracking_number || order.trackingNumber || `PX-${order.reference.replace(/[^a-zA-Z0-9]/g, '').slice(-6)}`) : '';
+
   return (
-    <section className="confirmation-page page-gutter" style={{ maxWidth: '880px', margin: '0 auto', textAlign: 'left' }}>
-      <div className="no-print" style={{ textAlign: 'center', width: '100%', marginBottom: '1rem' }}>
-        <span className="confirmation-symbol" style={{ margin: '0 auto 12px' }}>
-          <Check size={36} strokeWidth={1.5} color="#4ade80" />
-        </span>
-        <span className="eyebrow" style={{ color: '#4ade80', letterSpacing: '2px', fontWeight: 700 }}>
-          ORDER CONFIRMED & REGISTERED
-        </span>
-        <h1 style={{ fontSize: 'clamp(28px, 4vw, 48px)', letterSpacing: '-1.5px', margin: '6px 0 10px' }}>
-          LOOKING GOOD.
-        </h1>
-        <p style={{ color: 'var(--muted)', fontSize: '14px', maxWidth: '520px', margin: '0 auto' }}>
-          Thank you for choosing HELLO! Clothing Colombo. Your parcel is registered in our fulfillment hub and being prepared for dispatch.
+    <section className="receipt-page-wrapper">
+      {/* Hero Header */}
+      <div className="receipt-hero-banner no-print">
+        <div className="receipt-badge-pill">
+          <span className="receipt-badge-dot" />
+          <span>OFFICIAL DISPATCH REGISTERED</span>
+        </div>
+        <h1 className="receipt-hero-title">LOOKING GOOD.</h1>
+        <p className="receipt-hero-subtitle">
+          Your order is confirmed and secured in our Colombo atelier fulfillment hub. Below is your official parcel note and tax invoice.
         </p>
       </div>
 
       {isLoading ? (
-        <div className="confirmation-summary" style={{ textAlign: 'center', padding: '60px 20px', background: '#121314', border: '1px solid #27282b', borderRadius: '12px' }}>
-          <div style={{ width: '32px', height: '32px', border: '3px solid #333', borderTopColor: '#4ade80', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 0.8s linear infinite' }} />
-          <p style={{ color: '#aaa', fontSize: '14px', margin: 0 }}>
+        <div className="luxury-receipt-card" style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <div style={{ width: '36px', height: '36px', border: '3px solid #23252a', borderTopColor: '#4ade80', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 0.8s linear infinite' }} />
+          <p style={{ color: '#9ca3af', fontSize: '14px', margin: 0 }}>
             Verifying order <strong>{reference}</strong> with fulfillment database…
           </p>
         </div>
       ) : order ? (
-        <div
-          id="hello-printable-receipt"
-          className="receipt-card"
-          style={{
-            width: '100%',
-            background: '#121314',
-            border: '1px solid #27282b',
-            borderRadius: '12px',
-            padding: '32px 30px',
-            color: '#ededed',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
-          }}
-        >
-          {/* Official Document Header */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              borderBottom: '1px solid #27282b',
-              paddingBottom: '20px',
-              flexWrap: 'wrap',
-              gap: '16px',
-            }}
-          >
-            <div>
-              <img src="/branding/hello-light.webp" alt="HELLO!" className="receipt-logo" style={{ height: "30px", width: "auto", marginBottom: "6px", display: "block", objectFit: "contain" }} />
-              <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#888' }}>
-                Heavyweight Streetwear · Colombo, Sri Lanka
+        <div id="hello-printable-receipt" className="luxury-receipt-card">
+          {/* Top Document Header */}
+          <div className="receipt-header-row">
+            <div className="receipt-brand-col">
+              <img
+                src="/branding/hello-light.webp"
+                alt="HELLO! Clothing"
+                className="receipt-logo-img"
+              />
+              <span className="receipt-brand-tagline">
+                Heavyweight Streetwear Atelier · Colombo
               </span>
-              <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
-                Official Dispatch Receipt & Tax Note · VAT Registered
-              </div>
+              <span className="receipt-brand-note">
+                Official Dispatch Note & Tax Invoice · VAT Registered
+              </span>
             </div>
 
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-                ORDER REFERENCE
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end', marginTop: '2px' }}>
-                <strong style={{ fontSize: '18px', letterSpacing: '1px', color: '#4ade80' }}>
-                  {order.reference}
-                </strong>
+            <div className="receipt-ref-col">
+              <span className="receipt-ref-label">ORDER REFERENCE</span>
+              <div className="receipt-ref-pill">
+                <span className="receipt-ref-code">{order.reference}</span>
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="no-print"
-                  style={{
-                    background: '#1f2022',
-                    border: '1px solid #333',
-                    color: '#ccc',
-                    borderRadius: '4px',
-                    padding: '3px 7px',
-                    fontSize: '10px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  }}
+                  className="receipt-copy-btn no-print"
                   title="Copy reference code"
                 >
                   <Copy size={11} /> {copiedRef ? 'COPIED' : 'COPY'}
                 </button>
               </div>
-              <div style={{ fontSize: '11px', color: '#777', marginTop: '4px' }}>
+              <span className="receipt-timestamp">
                 {new Date(order.createdAt).toLocaleString('en-LK', { dateStyle: 'medium', timeStyle: 'short' })}
+              </span>
+            </div>
+          </div>
+
+          {/* Visual Progress Stepper */}
+          <div className="receipt-stepper-wrap">
+            <div className="receipt-stepper-title">
+              <span>Fulfillment & Dispatch Pipeline</span>
+              <span style={{ color: '#4ade80', fontWeight: 600 }}>PromptX Express</span>
+            </div>
+            <div className="receipt-stepper-grid">
+              <div className="stepper-step completed">
+                <div className="stepper-icon-bubble">
+                  <Check size={14} />
+                </div>
+                <span className="stepper-step-name">1. Placed</span>
+                <span className="stepper-step-desc">Order Registered</span>
+              </div>
+
+              <div className={`stepper-step ${isDispatched ? 'completed' : 'active'}`}>
+                <div className="stepper-icon-bubble">
+                  {isDispatched ? <Check size={14} /> : <PackageCheck size={14} />}
+                </div>
+                <span className="stepper-step-name">2. Processing</span>
+                <span className="stepper-step-desc">QC & Hand-Packed</span>
+              </div>
+
+              <div className={`stepper-step ${isDelivered ? 'completed' : isDispatched ? 'active' : ''}`}>
+                <div className="stepper-icon-bubble">
+                  {isDelivered ? <Check size={14} /> : <Truck size={14} />}
+                </div>
+                <span className="stepper-step-name">3. In Transit</span>
+                <span className="stepper-step-desc">PromptX Courier</span>
+              </div>
+
+              <div className={`stepper-step ${isDelivered ? 'completed' : ''}`}>
+                <div className="stepper-icon-bubble">
+                  <CheckCircle2 size={14} />
+                </div>
+                <span className="stepper-step-name">4. Delivered</span>
+                <span className="stepper-step-desc">To Your Doorstep</span>
               </div>
             </div>
           </div>
 
-          {/* Quick Status Bar */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: '12px',
-              padding: '16px 0',
-              borderBottom: '1px solid #27282b',
-              fontSize: '12px',
-            }}
-          >
-            <div>
-              <span style={{ fontSize: '10px', color: '#777', textTransform: 'uppercase', display: 'block' }}>
-                FULFILLMENT STATUS
-              </span>
-              <strong style={{ color: order.status === 'delivered' ? '#4ade80' : '#38bdf8' }}>
-                {order.status === 'delivered'
-                  ? 'DELIVERED TO DOORSTEP'
-                  : order.status === 'dispatched'
-                  ? 'HANDED TO COURIER (EN ROUTE)'
-                  : 'CONFIRMED & PREPARING'}
-              </strong>
-            </div>
-
-            <div>
-              <span style={{ fontSize: '10px', color: '#777', textTransform: 'uppercase', display: 'block' }}>
-                COURIER PARTNER
-              </span>
-              <strong>{order.courier || 'PromptX Logistics (Islandwide)'}</strong>
-            </div>
-
-            <div>
-              <span style={{ fontSize: '10px', color: '#777', textTransform: 'uppercase', display: 'block' }}>
-                WAYBILL TRACKING #
-              </span>
-              <strong style={{ color: '#4ade80' }}>
-                #{order.tracking_number || order.trackingNumber || `PX-${order.reference.replace(/[^a-zA-Z0-9]/g, '').slice(-6)}`}
-              </strong>
-            </div>
-
-            <div>
-              <span style={{ fontSize: '10px', color: '#777', textTransform: 'uppercase', display: 'block' }}>
-                PAYMENT METHOD
-              </span>
-              <strong style={{ color: '#fff', textTransform: 'uppercase' }}>
-                {order.paymentMethod === 'cod' ? 'Cash on Delivery (COD)' : order.paymentMethod === 'bank' ? 'Bank Transfer' : 'Card'}
-              </strong>
-            </div>
-
-            <div>
-              <span style={{ fontSize: '10px', color: '#777', textTransform: 'uppercase', display: 'block' }}>
-                DELIVERY SERVICE
-              </span>
-              <strong style={{ color: '#fff' }}>
-                {order.deliveryMethod === 'express' ? 'Express Priority (Next-Day)' : 'Standard Islandwide (2-4 Days)'}
-              </strong>
-            </div>
-          </div>
-
-          {/* Customer & Destination Dossier */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-              gap: '20px',
-              padding: '18px 0',
-              borderBottom: '1px solid #27282b',
-              fontSize: '12px',
-              lineHeight: 1.6,
-            }}
-          >
-            <div>
-              <span style={{ fontSize: '11px', color: '#888', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>
-                DELIVER TO (CUSTOMER)
-              </span>
-              <strong style={{ fontSize: '14px', color: '#fff', display: 'block' }}>
-                {order.customer.name || 'Valued Customer'}
-              </strong>
-              <div style={{ color: '#aaa', marginTop: '4px' }}>
-                {order.customer.address}<br />
-                {order.customer.city}{order.customer.postalCode ? `, ${order.customer.postalCode}` : ''}<br />
-                Sri Lanka
+          {/* Dossier Grid (Customer + Logistics) */}
+          <div className="receipt-dossier-grid">
+            <div className="receipt-dossier-card">
+              <div className="dossier-card-header">
+                <MapPin size={14} color="#4ade80" />
+                <span>Destination Dossier</span>
               </div>
-              <div style={{ marginTop: '6px', color: '#888' }}>
-                Phone: <strong style={{ color: '#fff' }}>{order.customer.phone}</strong>
+              <div className="dossier-row">
+                <span className="dossier-label">Customer</span>
+                <span className="dossier-val">{order.customer.name || 'Valued Customer'}</span>
+              </div>
+              <div className="dossier-row">
+                <span className="dossier-label">Address</span>
+                <span className="dossier-val">
+                  {order.customer.address}, {order.customer.city}
+                  {order.customer.postalCode ? ` (${order.customer.postalCode})` : ''}
+                </span>
+              </div>
+              <div className="dossier-row">
+                <span className="dossier-label">Phone</span>
+                <span className="dossier-val">{order.customer.phone || 'On file'}</span>
+              </div>
+              <div className="dossier-row">
+                <span className="dossier-label">Dispatch Email</span>
+                <span className="dossier-val" style={{ fontSize: '11px' }}>
+                  {order.customer.email || 'customer@onfile'}
+                </span>
               </div>
             </div>
 
-            <div>
-              <span style={{ fontSize: '11px', color: '#888', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>
-                COMMUNICATION CHANNELS
-              </span>
-              <div style={{ color: '#aaa' }}>
-                Email: <strong style={{ color: '#fff' }}>{order.customer.email || 'customer on file'}</strong>
+            <div className="receipt-dossier-card">
+              <div className="dossier-card-header">
+                <Truck size={14} color="#4ade80" />
+                <span>Logistics & Dispatch Dossier</span>
               </div>
-              <div style={{ display: 'inline-block', background: '#052e16', border: '1px solid #166534', color: '#4ade80', fontSize: '10px', padding: '3px 8px', borderRadius: '4px', marginTop: '8px' }}>
-                ✓ Official Receipt sent via orders@helloclothing.store
+              <div className="dossier-row">
+                <span className="dossier-label">Courier Partner</span>
+                <span className="dossier-val">{order.courier || 'PromptX Logistics'}</span>
               </div>
-              <div style={{ fontSize: '11px', color: '#777', marginTop: '8px' }}>
-                Estimated Delivery: 1 to 3 business days across Western Province & islandwide.
+              <div className="dossier-row">
+                <span className="dossier-label">Waybill Tracking</span>
+                <span className="dossier-val dossier-val-highlight">#{trackingCode}</span>
+              </div>
+              <div className="dossier-row">
+                <span className="dossier-label">Payment Method</span>
+                <span className="dossier-val" style={{ textTransform: 'uppercase' }}>
+                  {order.paymentMethod === 'cod' ? 'Cash on Delivery (COD)' : order.paymentMethod === 'bank' ? 'Bank Transfer' : 'Card'}
+                </span>
+              </div>
+              <div className="dossier-row">
+                <span className="dossier-label">Estimated Transit</span>
+                <span className="dossier-val">1 - 3 Business Days</span>
               </div>
             </div>
           </div>
 
-          {/* Itemized Table */}
-          <div style={{ padding: '20px 0', borderBottom: '1px solid #27282b' }}>
-            <span style={{ fontSize: '11px', color: '#888', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '12px' }}>
-              PARCEL MERCHANDISE BREAKDOWN ({order.items.length} ITEMS)
-            </span>
+          {/* Parcel Merchandise Breakdown */}
+          <div className="receipt-items-section">
+            <div className="receipt-section-heading">
+              <span>Parcel Contents ({order.items.length} {order.items.length === 1 ? 'Item' : 'Items'})</span>
+              <span style={{ fontSize: '10px', color: '#6b7280' }}>Heavyweight Combed Cotton</span>
+            </div>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #27282b', color: '#777', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  <th style={{ textAlign: 'left', paddingBottom: '10px' }}>ITEM DESCRIPTION</th>
-                  <th style={{ textAlign: 'center', paddingBottom: '10px' }}>COLOR / SIZE</th>
-                  <th style={{ textAlign: 'center', paddingBottom: '10px' }}>QTY</th>
-                  <th style={{ textAlign: 'right', paddingBottom: '10px' }}>UNIT PRICE</th>
-                  <th style={{ textAlign: 'right', paddingBottom: '10px' }}>LINE TOTAL</th>
-                </tr>
-              </thead>
-              <tbody>
-                {order.items.map((item, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid #1e1f21' }}>
-                    <td style={{ padding: '12px 0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        {item.image ? (
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="receipt-item-img"
-                            style={{ width: '42px', height: '42px', objectFit: 'contain', padding: '2px', borderRadius: '6px', background: '#222' }}
-                          />
-                        ) : (
-                          <div style={{ width: '42px', height: '42px', borderRadius: '6px', background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <ShoppingBag size={18} color="#666" />
-                          </div>
-                        )}
-                        <div>
-                          <strong style={{ color: '#fff', fontSize: '13px', display: 'block' }}>{item.name}</strong>
-                          <span style={{ color: '#777', fontSize: '11px' }}>Heavyweight Combed Streetwear</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ textAlign: 'center', color: '#aaa', fontSize: '12px' }}>
-                      {item.color} / {item.size}
-                    </td>
-                    <td style={{ textAlign: 'center', fontWeight: 700, color: '#fff' }}>
-                      {item.quantity}
-                    </td>
-                    <td style={{ textAlign: 'right', color: '#aaa', fontSize: '12px' }}>
-                      {money(item.unitPrice || item.lineTotal / item.quantity)}
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700, color: '#fff' }}>
-                      {money(item.lineTotal)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {order.items.map((item, i) => (
+              <div key={i} className="receipt-item-row">
+                <div className="receipt-item-left">
+                  <div className="receipt-thumb-wrap">
+                    {item.image ? (
+                      <img src={item.image} alt={item.name} className="receipt-thumb-img" />
+                    ) : (
+                      <ShoppingBag size={20} color="#6b7280" />
+                    )}
+                  </div>
+                  <div className="receipt-item-info">
+                    <span className="receipt-item-title">{item.name}</span>
+                    <div className="receipt-item-tags">
+                      <span className="receipt-item-tag-pill">Color: {item.color || 'Standard'}</span>
+                      <span className="receipt-item-tag-pill">Size: {item.size || 'M'}</span>
+                      <span className="receipt-item-tag-pill">Qty: {item.quantity}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="receipt-item-right">
+                  <span className="receipt-item-price">{money(item.lineTotal)}</span>
+                  <span className="receipt-item-unit">
+                    {item.quantity > 1 ? `${money(item.unitPrice || item.lineTotal / item.quantity)} each` : 'Unit Price'}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
 
-          {/* Financial Breakdown */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '18px 0', borderBottom: '1px solid #27282b' }}>
-            <div style={{ width: '100%', maxWidth: '320px', fontSize: '13px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', marginBottom: '6px' }}>
+          {/* Financial Ledger Section */}
+          <div className="receipt-ledger-section">
+            <div className="receipt-ledger-box">
+              <div className="ledger-line">
                 <span>Merchandise Subtotal:</span>
-                <span style={{ color: '#fff' }}>{money(order.subtotal || order.total - order.delivery)}</span>
+                <span className="ledger-val">{money(order.subtotal || order.total - order.delivery)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', marginBottom: '6px' }}>
+              <div className="ledger-line">
                 <span>Islandwide Courier Delivery:</span>
-                <span style={{ color: '#fff' }}>{order.delivery === 0 ? 'FREE' : money(order.delivery || 50000)}</span>
+                <span className="ledger-val">{order.delivery === 0 ? 'FREE' : money(order.delivery || 50000)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', marginBottom: '8px' }}>
+              <div className="ledger-line">
                 <span>Applicable Local Taxes:</span>
-                <span style={{ color: '#4ade80', fontSize: '11px' }}>Included (0% Additional)</span>
+                <span className="ledger-val" style={{ color: '#4ade80', fontSize: '11px' }}>Included (0% Additional)</span>
               </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  borderTop: '1px solid #333',
-                  paddingTop: '10px',
-                  fontSize: '16px',
-                  fontWeight: 900,
-                }}
-              >
-                <span style={{ color: '#fff' }}>TOTAL AMOUNT:</span>
-                <span style={{ color: '#4ade80' }}>{money(order.total)}</span>
+              <div className="ledger-total-line">
+                <span className="ledger-total-label">TOTAL AMOUNT:</span>
+                <span className="ledger-total-amount">{money(order.total)}</span>
               </div>
             </div>
           </div>
 
           {/* Payment Specific Guidance */}
           {order.paymentMethod === 'cod' && (
-            <div style={{ marginTop: '16px', padding: '14px 16px', background: '#171819', border: '1px solid #282a2d', borderRadius: '8px', fontSize: '12px', color: '#ccc', lineHeight: 1.5 }}>
-              <strong style={{ color: '#fff', display: 'block', marginBottom: '4px' }}>
+            <div className="receipt-payment-box cod">
+              <strong style={{ color: '#ffffff', display: 'block', marginBottom: '4px' }}>
                 💵 Cash on Delivery (COD) Instructions:
               </strong>
-              Please have exact cash amount of <strong>{money(order.total)}</strong> ready for the PromptX courier delivery rider upon arrival. You may inspect the tamper-evident exterior seal before handing over cash.
+              Please have the exact cash amount of <strong>{money(order.total)}</strong> ready for the PromptX courier delivery rider upon arrival. You may inspect the tamper-evident exterior seal before handing over cash.
             </div>
           )}
 
           {order.paymentMethod === 'bank' && (
-            <div style={{ marginTop: '16px', padding: '16px', background: '#0e1726', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '12px', color: '#e2e8f0', lineHeight: 1.6 }}>
-              <strong style={{ color: '#38bdf8', fontSize: '13px', display: 'block', marginBottom: '6px' }}>
-                🏦 Commercial Bank of Ceylon Deposit Details:
-              </strong>
-              Bank: <strong>Commercial Bank of Ceylon</strong> · Branch: <strong>Colombo City Branch</strong><br />
-              Account Name: <strong>HELLO! CLOTHING PVT LTD</strong><br />
-              Account Number: <strong>1000 2489 1234</strong><br />
-              <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                <span style={{ color: '#94a3b8' }}>
+            <div className="receipt-payment-box bank">
+              <div className="bank-header">
+                <Building2 size={16} />
+                <span>Commercial Bank of Ceylon Deposit Details:</span>
+              </div>
+              <div>
+                Bank: <strong>Commercial Bank of Ceylon</strong> · Branch: <strong>Colombo City Branch</strong><br />
+                Account Name: <strong>HELLO! CLOTHING PVT LTD</strong><br />
+                Account Number: <strong>1000 2489 1234</strong>
+              </div>
+              <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #1e3a5f', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                <span style={{ color: '#93c5fd' }}>
                   Reference code for transfer: <strong>{order.reference}</strong>
                 </span>
                 <a
                   href={`https://wa.me/94786191260?text=${encodeURIComponent(`Hello! Here is the bank deposit slip for HELLO! order ${order.reference}.`)}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="no-print"
-                  style={{
-                    background: '#25D366',
-                    color: '#000',
-                    fontWeight: 700,
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    textDecoration: 'none',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '11px',
-                  }}
+                  className="bank-wa-btn no-print"
                 >
                   <MessageCircle size={14} /> WhatsApp Slip to Us
                 </a>
@@ -880,78 +803,110 @@ export function OrderConfirmation({ reference }: { reference: string }) {
             </div>
           )}
 
-          {/* Guarantee & Terms Note */}
-          <div style={{ marginTop: '20px', padding: '12px 0 0', fontSize: '11px', color: '#666', borderTop: '1px solid #1f2022', lineHeight: 1.6, textAlign: 'center' }}>
-            HELLO! Clothing Sri Lanka · Designed & Hand-Packed in Colombo · 7-Day Hassle-Free Size Swaps Guaranteed<br />
-            Questions? Email <a href="mailto:orders@helloclothing.store" style={{ color: '#888', textDecoration: 'underline' }}>orders@helloclothing.store</a> or reach WhatsApp Support at <strong>+94 78 619 1260</strong>.
+          {/* Barcode & Guarantee Footer */}
+          <div className="receipt-barcode-footer">
+            <div className="receipt-guarantee-note">
+              <strong>HELLO! Clothing Atelier Sri Lanka</strong> · Hand-Packed in Colombo<br />
+              7-Day Hassle-Free Size Exchanges Guaranteed · Support: <a href="mailto:orders@helloclothing.store" style={{ color: '#9ca3af', textDecoration: 'underline' }}>orders@helloclothing.store</a>
+            </div>
+
+            <div className="receipt-barcode-box">
+              <svg className="barcode-svg" viewBox="0 0 160 40" fill="currentColor">
+                <rect x="0" y="0" width="3" height="40" />
+                <rect x="5" y="0" width="1.5" height="40" />
+                <rect x="9" y="0" width="4" height="40" />
+                <rect x="15" y="0" width="2" height="40" />
+                <rect x="19" y="0" width="1" height="40" />
+                <rect x="23" y="0" width="3.5" height="40" />
+                <rect x="29" y="0" width="1.5" height="40" />
+                <rect x="33" y="0" width="4" height="40" />
+                <rect x="40" y="0" width="2" height="40" />
+                <rect x="44" y="0" width="3" height="40" />
+                <rect x="50" y="0" width="1.5" height="40" />
+                <rect x="54" y="0" width="4.5" height="40" />
+                <rect x="61" y="0" width="2" height="40" />
+                <rect x="66" y="0" width="3.5" height="40" />
+                <rect x="72" y="0" width="1" height="40" />
+                <rect x="76" y="0" width="4" height="40" />
+                <rect x="83" y="0" width="2.5" height="40" />
+                <rect x="88" y="0" width="1.5" height="40" />
+                <rect x="92" y="0" width="4" height="40" />
+                <rect x="98" y="0" width="2" height="40" />
+                <rect x="103" y="0" width="3.5" height="40" />
+                <rect x="109" y="0" width="1" height="40" />
+                <rect x="113" y="0" width="4.5" height="40" />
+                <rect x="120" y="0" width="2" height="40" />
+                <rect x="124" y="0" width="3" height="40" />
+                <rect x="130" y="0" width="1.5" height="40" />
+                <rect x="134" y="0" width="4" height="40" />
+                <rect x="141" y="0" width="2.5" height="40" />
+                <rect x="146" y="0" width="3" height="40" />
+                <rect x="152" y="0" width="1.5" height="40" />
+                <rect x="156" y="0" width="4" height="40" />
+              </svg>
+              <span className="barcode-caption">{trackingCode}</span>
+            </div>
           </div>
         </div>
       ) : (
-        <div className="confirmation-summary" style={{ textAlign: 'center', padding: '40px 20px', background: '#121314', border: '1px solid #27282b', borderRadius: '12px' }}>
-          <p style={{ color: '#aaa', fontSize: '14px', marginBottom: '16px' }}>
+        <div className="luxury-receipt-card" style={{ textAlign: 'center', padding: '50px 20px' }}>
+          <p style={{ color: '#9ca3af', fontSize: '15px', marginBottom: '20px' }}>
             No order details found for reference <strong>{reference}</strong>.
           </p>
-          <Link className="button dark" href="/shop" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-            EXPLORE THE COLLECTION <ArrowRight size={17} />
+          <Link className="receipt-action-btn primary" href="/shop">
+            EXPLORE THE COLLECTION <ArrowRight size={16} />
           </Link>
         </div>
       )}
 
       {/* Action Buttons Toolbar (Hidden when printed) */}
       {order && (
-        <div className="no-print" style={{ width: '100%', marginTop: '20px' }}>
+        <div className="receipt-actions-toolbar no-print">
           {emailNotice && (
-            <div style={{ background: '#052e16', border: '1px solid #166534', color: '#4ade80', padding: '10px 16px', borderRadius: '8px', fontSize: '12px', marginBottom: '14px', textAlign: 'center' }}>
+            <div style={{ width: '100%', background: '#052e16', border: '1px solid #166534', color: '#4ade80', padding: '10px 16px', borderRadius: '8px', fontSize: '12px', marginBottom: '14px', textAlign: 'center' }}>
               ✓ {emailNotice}
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <button
-              type="button"
-              className="button dark"
-              onClick={() => window.print()}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}
-            >
-              <Printer size={16} /> PRINT RECEIPT / PDF
-            </button>
+          <button
+            type="button"
+            className="receipt-action-btn primary"
+            onClick={() => window.print()}
+          >
+            <Printer size={16} /> PRINT RECEIPT / PDF
+          </button>
 
-            <Link
-              className="button outline"
-              href={`/track-order?ref=${encodeURIComponent(order.reference)}`}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px', textDecoration: 'none' }}
-            >
-              <Truck size={16} /> TRACK LIVE DISPATCH
-            </Link>
+          <Link
+            className="receipt-action-btn"
+            href={`/track-order?ref=${encodeURIComponent(order.reference)}`}
+          >
+            <Truck size={16} /> TRACK LIVE DISPATCH
+          </Link>
 
-            <button
-              type="button"
-              className="button outline"
-              onClick={handleEmailReceipt}
-              disabled={isEmailing}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}
-            >
-              <Mail size={16} /> {isEmailing ? 'SENDING…' : 'EMAIL RECEIPT COPY'}
-            </button>
+          <button
+            type="button"
+            className="receipt-action-btn"
+            onClick={handleEmailReceipt}
+            disabled={isEmailing}
+          >
+            <Mail size={16} /> {isEmailing ? 'SENDING…' : 'EMAIL RECEIPT COPY'}
+          </button>
 
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="button outline"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px', textDecoration: 'none', color: '#25D366', borderColor: '#166534' }}
-            >
-              <MessageCircle size={16} /> WHATSAPP CONCIERGE
-            </a>
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="receipt-action-btn whatsapp"
+          >
+            <MessageCircle size={16} /> WHATSAPP CONCIERGE
+          </a>
 
-            <Link
-              className="button outline"
-              href="/shop"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px', textDecoration: 'none' }}
-            >
-              SHOP MORE <ArrowRight size={15} />
-            </Link>
-          </div>
+          <Link
+            className="receipt-action-btn"
+            href="/shop"
+          >
+            SHOP MORE <ArrowRight size={15} />
+          </Link>
         </div>
       )}
     </section>
