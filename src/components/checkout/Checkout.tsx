@@ -584,7 +584,7 @@ export function OrderConfirmation({ reference }: { reference: string }) {
                   className="receipt-copy-btn no-print"
                   title="Copy reference code"
                 >
-                  <Copy size={11} /> {copiedRef ? 'COPIED' : 'COPY'}
+                  {copiedRef ? 'COPIED' : 'COPY'}
                 </button>
               </div>
               <span className="receipt-timestamp">
@@ -632,7 +632,7 @@ export function OrderConfirmation({ reference }: { reference: string }) {
                     {item.image ? (
                       <img src={item.image} alt={item.name} className="receipt-thumb-img" />
                     ) : (
-                      <ShoppingBag size={20} color="#6b7280" />
+                      <div style={{ width: '100%', height: '100%', background: '#1c1f24' }} />
                     )}
                   </div>
                   <div className="receipt-item-info">
@@ -676,7 +676,6 @@ export function OrderConfirmation({ reference }: { reference: string }) {
           {order.paymentMethod === 'bank' && (
             <div className="receipt-payment-box bank" style={{ marginTop: '20px' }}>
               <div className="bank-header">
-                <Building2 size={16} />
                 <span>Commercial Bank of Ceylon Deposit Details:</span>
               </div>
               <div>
@@ -694,7 +693,7 @@ export function OrderConfirmation({ reference }: { reference: string }) {
                   rel="noreferrer"
                   className="bank-wa-btn no-print"
                 >
-                  <MessageCircle size={14} /> WhatsApp Slip to Us
+                  WhatsApp Slip to Us
                 </a>
               </div>
             </div>
@@ -706,7 +705,7 @@ export function OrderConfirmation({ reference }: { reference: string }) {
             No order details found for reference <strong>{reference}</strong>.
           </p>
           <Link className="receipt-action-btn primary" href="/shop">
-            EXPLORE THE COLLECTION <ArrowRight size={16} />
+            EXPLORE THE COLLECTION
           </Link>
         </div>
       )}
@@ -725,15 +724,8 @@ export function OrderConfirmation({ reference }: { reference: string }) {
             className="receipt-action-btn primary"
             onClick={() => window.print()}
           >
-            <Printer size={16} /> PRINT RECEIPT
+            PRINT RECEIPT
           </button>
-
-          <Link
-            className="receipt-action-btn"
-            href={`/track-order?ref=${encodeURIComponent(order.reference)}`}
-          >
-            <Truck size={16} /> TRACK ORDER
-          </Link>
 
           <button
             type="button"
@@ -741,14 +733,14 @@ export function OrderConfirmation({ reference }: { reference: string }) {
             onClick={handleEmailReceipt}
             disabled={isEmailing}
           >
-            <Mail size={16} /> {isEmailing ? 'SENDING…' : 'EMAIL RECEIPT'}
+            {isEmailing ? 'SENDING…' : 'EMAIL RECEIPT'}
           </button>
 
           <Link
             className="receipt-action-btn"
             href="/shop"
           >
-            CONTINUE SHOPPING <ArrowRight size={15} />
+            CONTINUE SHOPPING
           </Link>
         </div>
       )}

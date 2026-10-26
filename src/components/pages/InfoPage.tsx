@@ -601,13 +601,11 @@ export default function InfoPage({ kind }: { kind: string }) {
       {
         title: '1. Order Placed & Confirmed',
         desc: 'Order verified and entered into HELLO! fulfillment hub in Colombo',
-        icon: CheckCircle2,
         status: isCancelled ? 'pending' : currentRank > 0 ? 'done' : currentRank === 0 ? 'current' : 'pending',
       },
       {
         title: '2. In Progress (QC & Hand-Packing)',
         desc: 'Inspected for fabric consistency and hand-packed in signature atelier dust bag',
-        icon: Sparkles,
         status: isCancelled ? 'pending' : currentRank > 1 ? 'done' : currentRank === 1 ? 'current' : 'pending',
       },
       {
@@ -615,7 +613,6 @@ export default function InfoPage({ kind }: { kind: string }) {
         desc: activeTrackingOrder?.tracking_number
           ? `Handed to courier with Waybill #${activeTrackingOrder.tracking_number}`
           : `Handed over to ${activeTrackingOrder?.courier || 'PromptX Logistics'} for express transit`,
-        icon: Truck,
         status: isCancelled ? 'pending' : currentRank > 2 ? 'done' : currentRank === 2 ? 'current' : 'pending',
       },
       {
@@ -623,13 +620,11 @@ export default function InfoPage({ kind }: { kind: string }) {
         desc: activeTrackingOrder?.customer?.city
           ? `Courier rider is on the road for doorstep delivery in ${activeTrackingOrder.customer.city}`
           : 'Courier rider is on the road for doorstep delivery today',
-        icon: Clock,
         status: isCancelled ? 'pending' : currentRank > 3 ? 'done' : currentRank === 3 ? 'current' : 'pending',
       },
       {
         title: '5. Order Received / Delivered',
         desc: 'Recipient signature collected and parcel safely handed over',
-        icon: MapPin,
         status: currentRank >= 4 ? 'done' : 'pending',
       },
     ];
@@ -701,10 +696,23 @@ export default function InfoPage({ kind }: { kind: string }) {
               {timelineSteps.map((step, idx) => (
                 <div key={idx} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <step.icon
-                      size={22}
-                      color={step.status === 'done' ? '#16a34a' : step.status === 'current' ? '#2563eb' : 'var(--muted)'}
-                    />
+                    <div
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        fontFamily: 'monospace',
+                        background: step.status === 'done' ? '#16a34a' : step.status === 'current' ? '#2563eb' : 'var(--line)',
+                        color: step.status === 'done' || step.status === 'current' ? '#ffffff' : 'var(--muted)',
+                      }}
+                    >
+                      {idx + 1}
+                    </div>
                     {idx < timelineSteps.length - 1 && (
                       <div
                         style={{
@@ -755,7 +763,7 @@ export default function InfoPage({ kind }: { kind: string }) {
                 className="button dark"
                 style={{ fontSize: '0.78rem', padding: '0 18px', minHeight: '38px', gap: '10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
               >
-                VIEW & PRINT RECEIPT <Printer size={14} />
+                VIEW & PRINT RECEIPT
               </Link>
             </div>
           </div>
