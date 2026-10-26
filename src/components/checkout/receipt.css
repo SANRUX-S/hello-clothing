@@ -172,6 +172,58 @@
   color: #6b7280;
 }
 
+/* ============================================================
+   CLEAN ORDER RECEIPT ESSENTIAL META GRID
+   ============================================================ */
+.receipt-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 24px 0;
+  border-bottom: 1px solid #23252a;
+}
+
+@media (max-width: 768px) {
+  .receipt-meta-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+.receipt-meta-card {
+  background: #141619;
+  border: 1px solid #23262d;
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.receipt-meta-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #6b7280;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.receipt-meta-val {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.receipt-meta-sub {
+  font-size: 12px;
+  color: #9ca3af;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
 /* Visual Progress Stepper */
 .receipt-stepper-wrap {
   padding: 24px 0 20px;
@@ -688,6 +740,22 @@
   }
   .receipt-ref-code {
     color: #000000 !important;
+  }
+  .receipt-meta-grid {
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+  .receipt-meta-card {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+  .receipt-meta-label {
+    color: #64748b !important;
+  }
+  .receipt-meta-val {
+    color: #000000 !important;
+  }
+  .receipt-meta-sub {
+    color: #475569 !important;
   }
   .receipt-dossier-card {
     background: #f8fafc !important;
