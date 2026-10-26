@@ -8,12 +8,30 @@
   padding: 40px 20px 80px;
   color: #ededed;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  position: relative;
+}
+
+/* Ambient Subtle Radial Glow Behind the Receipt Card */
+.receipt-page-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(780px, 92vw);
+  height: 520px;
+  background: radial-gradient(ellipse at 50% 25%, rgba(74, 222, 128, 0.085) 0%, rgba(30, 41, 59, 0.14) 40%, transparent 72%);
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(35px);
 }
 
 /* Hero Status Banner */
 .receipt-hero-banner {
   text-align: center;
   margin-bottom: 32px;
+  position: relative;
+  z-index: 1;
 }
 
 .receipt-badge-pill {
@@ -63,15 +81,32 @@
   line-height: 1.6;
 }
 
-/* Master Receipt Card */
+/* Master Receipt Card - Floating Luxury Glassmorphism */
 .luxury-receipt-card {
   position: relative;
-  background: #0f1012;
-  border: 1px solid #23252a;
-  border-radius: 16px;
-  padding: 36px 32px;
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
-  backdrop-filter: blur(20px);
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(20, 22, 27, 0.88) 0%, rgba(13, 14, 18, 0.96) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 38px 34px;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 24px 70px -15px rgba(0, 0, 0, 0.85),
+    0 0 45px -10px rgba(74, 222, 128, 0.07);
+  backdrop-filter: blur(24px) saturate(160%);
+  overflow: hidden;
+}
+
+/* Subtle glowing accent highlight line across top edge */
+.luxury-receipt-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 15%;
+  right: 15%;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, rgba(74, 222, 128, 0.65), transparent);
+  pointer-events: none;
 }
 
 /* Top Document Header */
@@ -132,8 +167,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #17191d;
-  border: 1px solid #2c3038;
+  background: rgba(74, 222, 128, 0.06);
+  border: 1px solid rgba(74, 222, 128, 0.25);
   padding: 6px 12px;
   border-radius: 8px;
 }
@@ -147,12 +182,13 @@
 }
 
 .receipt-copy-btn {
-  background: #23262d;
-  border: 1px solid #363b45;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: #cbd5e1;
   font-size: 10px;
-  font-weight: 600;
-  padding: 3px 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 4px 10px;
   border-radius: 4px;
   cursor: pointer;
   display: inline-flex;
@@ -162,7 +198,7 @@
 }
 
 .receipt-copy-btn:hover {
-  background: #2f343e;
+  background: rgba(74, 222, 128, 0.15);
   color: #ffffff;
   border-color: #4ade80;
 }
@@ -180,7 +216,7 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   padding: 24px 0;
-  border-bottom: 1px solid #23252a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 @media (max-width: 768px) {
@@ -191,13 +227,21 @@
 }
 
 .receipt-meta-card {
-  background: #141619;
-  border: 1px solid #23262d;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.065);
   border-radius: 12px;
   padding: 16px 18px;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+}
+
+.receipt-meta-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(74, 222, 128, 0.25);
+  transform: translateY(-1px);
 }
 
 .receipt-meta-label {
@@ -413,15 +457,18 @@
   justify-content: space-between;
   gap: 16px;
   padding: 14px 16px;
-  background: #141619;
-  border: 1px solid #22252c;
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
   margin-bottom: 10px;
-  transition: border-color 0.15s ease;
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
 }
 
 .receipt-item-row:hover {
-  border-color: #333842;
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(74, 222, 128, 0.25);
+  transform: translateY(-1px);
 }
 
 .receipt-item-left {
@@ -435,8 +482,8 @@
   width: 52px;
   height: 52px;
   border-radius: 8px;
-  background: #1a1c21;
-  border: 1px solid #2d313a;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -711,7 +758,9 @@
   .site-header,
   .site-footer,
   .brand-ticker,
-  .skip-link {
+  .skip-link,
+  .receipt-page-wrapper::before,
+  .luxury-receipt-card::before {
     display: none !important;
   }
   .receipt-page-wrapper {
