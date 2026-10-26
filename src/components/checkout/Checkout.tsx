@@ -471,6 +471,7 @@ export function OrderConfirmation({ reference }: { reference: string }) {
   useSyncExternalStore(subscribePreview, previewSnapshot, () => '');
   const localOrder = getStoredOrder(reference);
   const [dbOrder, setDbOrder] = useState<StoredOrder | null>(null);
+  const [isLoading, setIsLoading] = useState(!localOrder);
   const [copiedRef, setCopiedRef] = useState(false);
   const [isEmailing, setIsEmailing] = useState(false);
   const [emailNotice, setEmailNotice] = useState('');
@@ -498,7 +499,10 @@ export function OrderConfirmation({ reference }: { reference: string }) {
           });
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
     return () => {
       active = false;
     };
@@ -560,7 +564,14 @@ export function OrderConfirmation({ reference }: { reference: string }) {
         </p>
       </div>
 
-      {order ? (
+      {isLoading ? (
+        <div className="confirmation-summary" style={{ textAlign: 'center', padding: '60px 20px', background: '#121314', border: '1px solid #27282b', borderRadius: '12px' }}>
+          <div style={{ width: '32px', height: '32px', border: '3px solid #333', borderTopColor: '#4ade80', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 0.8s linear infinite' }} />
+          <p style={{ color: '#aaa', fontSize: '14px', margin: 0 }}>
+            Verifying order <strong>{reference}</strong> with fulfillment database…
+          </p>
+        </div>
+      ) : order ? (
         <div
           id="hello-printable-receipt"
           className="receipt-card"
@@ -587,7 +598,7 @@ export function OrderConfirmation({ reference }: { reference: string }) {
             }}
           >
             <div>
-              <img src="/branding/hello-light.webp" alt="HELLO!" style={{ height: "30px", width: "auto", marginBottom: "6px", display: "block", objectFit: "contain" }} />
+              <img src="/branding/hello-light.webp" alt="HELLO!" className="receipt-logo" style={{ height: "30px", width: "auto", marginBottom: "6px", display: "block", objectFit: "contain" }} />
               <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#888' }}>
                 Heavyweight Streetwear · Colombo, Sri Lanka
               </span>
@@ -760,7 +771,8 @@ export function OrderConfirmation({ reference }: { reference: string }) {
                           <img
                             src={item.image}
                             alt={item.name}
-                            style={{ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '6px', background: '#222' }}
+                            className="receipt-item-img"
+                            style={{ width: '42px', height: '42px', objectFit: 'contain', padding: '2px', borderRadius: '6px', background: '#222' }}
                           />
                         ) : (
                           <div style={{ width: '42px', height: '42px', borderRadius: '6px', background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

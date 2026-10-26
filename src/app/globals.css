@@ -92,7 +92,14 @@
   #hello-printable-receipt p {
     color: #222222 !important;
   }
-  #hello-printable-receipt img {
+  #hello-printable-receipt .receipt-logo {
+    filter: invert(1) brightness(0) !important;
+    border: none !important;
+    background: transparent !important;
+  }
+  #hello-printable-receipt .receipt-item-img {
     border: 1px solid #ddd !important;
+    object-fit: contain !important;
+    background: #f8f8f8 !important;
   }
 }
