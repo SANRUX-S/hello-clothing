@@ -118,7 +118,7 @@ const PRESET_COLORS = [
   { name: 'Brown', hex: '#5c4033' },
 ];
 
-async function compressImage(file: File, maxDim = 900, quality = 0.78): Promise<string> {
+async function compressImage(file: File, maxDim = 1920, quality = 0.92): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Failed to read image file"));
@@ -144,18 +144,36 @@ async function compressImage(file: File, maxDim = 900, quality = 0.78): Promise<
           resolve(String(e.target?.result));
           return;
         }
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, width, height);
+
+        const isTransparent = file.type === "image/png" || file.type === "image/webp" || /\.png$/i.test(file.name) || /\.webp$/i.test(file.name);
+        if (!isTransparent) {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, width, height);
+        }
         ctx.drawImage(img, 0, 0, width, height);
+
+        if (isTransparent) {
+          try {
+            const webp = canvas.toDataURL("image/webp", quality);
+            if (webp.startsWith("data:image/webp")) {
+              resolve(webp);
+              return;
+            }
+          } catch {}
+          try {
+            const png = canvas.toDataURL("image/png");
+            resolve(png);
+            return;
+          } catch {}
+        }
+
         try {
           const webp = canvas.toDataURL("image/webp", quality);
           if (webp.startsWith("data:image/webp")) {
             resolve(webp);
             return;
           }
-        } catch {
-          // fallback
-        }
+        } catch {}
         resolve(canvas.toDataURL("image/jpeg", quality));
       };
       img.src = String(e.target?.result);
@@ -181,8 +199,8 @@ async function uploadOrCompressImage(file: File): Promise<string> {
     console.warn('Direct upload failed, trying fallback:', err);
   }
 
-  // Client-side lightweight WebP compression
-  const clientOptimized = await compressImage(file, 900, 0.78);
+  // Client-side high-fidelity WebP compression (1920px HD @ 0.92 quality)
+  const clientOptimized = await compressImage(file, 1920, 0.92);
 
   // Fallback to sending base64 to upload endpoint
   try {
@@ -406,7 +424,7 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
               title="Click or drag image file here"
             >
               {draft.image ? (
-                <img src={draft.image} alt={draft.name || "Preview"} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                <img src={draft.image} alt={draft.name || "Preview"} style={{ objectFit: 'contain', width: '100%', height: '100%', padding: '4px' }} />
               ) : (
                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#a1a1aa', fontSize: '10px', textAlign: 'center', padding: '12px', gap: '4px' }}>
                   <ImagePlus size={22} color="#71717a" />
@@ -475,7 +493,7 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
           <div className="admin-gallery-editor-strip" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {galleryImages.map((src, idx) => (
               <div key={idx} className="admin-gallery-thumb" style={{ position: 'relative' }}>
-                <img src={src} alt={`Angle ${idx + 1}`} />
+                <img src={src} alt={`Angle ${idx + 1}`} style={{ objectFit: 'contain', width: '100%', height: '100%', padding: '2px' }} />
                 {draft.image === src && (
                   <span style={{ position: 'absolute', bottom: '2px', left: '2px', background: '#22c55e', color: '#000', fontSize: '8px', fontWeight: 800, padding: '1px 3px', borderRadius: '2px' }}>
                     PRIMARY
@@ -1106,11 +1124,19 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
     if (!file) return;
     setMediaError("");
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) { setMediaError("Choose a JPG, PNG, or WebP image."); return; }
-    if (file.size > 2 * 1024 * 1024) { setMediaError("Choose an image smaller than 2 MB for browser storage."); return; }
-    const reader = new FileReader();
-    reader.onerror = () => setMediaError("This image could not be opened. Try another file.");
-    reader.onload = () => { const next = [{ id: `upload-${Date.now()}`, src: String(reader.result), name: file.name, uploaded: true }, ...media]; try { localStorage.setItem(KEYS.media, JSON.stringify(next)); setMedia(next); setNotice("Image added to this browser’s media library."); log(`Added image ${file.name}`); } catch { setMediaError("Browser storage is full. Try a smaller image or remove a local upload."); } };
-    reader.readAsDataURL(file);
+    setNotice("Uploading image to media library…");
+    try {
+      const permanentUrl = await uploadOrCompressImage(file);
+      const next = [{ id: `upload-${Date.now()}`, src: permanentUrl, name: file.name, uploaded: true }, ...media];
+      try {
+        localStorage.setItem(KEYS.media, JSON.stringify(next));
+      } catch {}
+      setMedia(next);
+      setNotice("Image added to media library.");
+      log(`Added image ${file.name}`);
+    } catch (err: any) {
+      setMediaError(err.message || "Failed to upload image.");
+    }
   };
 
   if (authChecking) {

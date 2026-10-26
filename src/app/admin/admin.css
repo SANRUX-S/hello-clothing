@@ -66,7 +66,7 @@
 .admin-app img {
   display: block;
   max-width: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .admin-sr-only {
@@ -1026,10 +1026,12 @@
 .admin-product-cell > img {
   width: 48px;
   height: 56px;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   border-radius: 6px;
   background: #18181b;
   border: 1px solid var(--admin-border);
+  padding: 2px;
 }
 
 .admin-product-cell > span {
@@ -1217,9 +1219,12 @@
 .admin-inventory-selected > img {
   width: 44px;
   height: 50px;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   border-radius: 6px;
   border: 1px solid var(--admin-border);
+  background: #18181b;
+  padding: 2px;
 }
 
 .admin-inventory-selected small {
@@ -1707,7 +1712,9 @@
 .admin-photo-preview-wrap img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  padding: 4px;
 }
 
 .admin-photo-upload-actions {
@@ -1782,7 +1789,10 @@
 .admin-gallery-thumb img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  padding: 2px;
+  background: #121216;
 }
 
 .admin-gallery-thumb button {

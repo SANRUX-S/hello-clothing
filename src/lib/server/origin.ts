@@ -32,6 +32,13 @@ export function isAllowedStoreOrigin(input: StoreOriginInput): boolean {
   let target: URL;
   try { target = new URL(input.requestUrl); } catch { return false; }
   if (supplied.origin === target.origin) return true;
+  if (
+    supplied.protocol === target.protocol &&
+    supplied.port === target.port &&
+    supplied.hostname.replace(/^www\./, '') === target.hostname.replace(/^www\./, '')
+  ) {
+    return true;
+  }
 
   // Next can construct the internal URL from its 0.0.0.0 bind address. Only a
   // local development demo may match that URL to a loopback browser origin.

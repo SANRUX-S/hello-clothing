@@ -36,14 +36,27 @@ export async function readJsonBody(request: Request, maxBytes = 16_384): Promise
 }
 
 export function requireSameOrigin(request: Request) {
-  if (!isAllowedStoreOrigin({
+  const forwardedHost = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+  const proxyUrl = forwardedHost ? `${forwardedProto}://${forwardedHost}` : request.url;
+
+  const allowed = isAllowedStoreOrigin({
     requestUrl: request.url,
     origin: request.headers.get("origin"),
     fetchSite: request.headers.get("sec-fetch-site"),
     configuredOrigin: process.env.STORE_ORIGIN,
     environment: process.env.NODE_ENV,
     demoMode: process.env.STORE_MODE !== "live" && process.env.NEXT_PUBLIC_APP_MODE !== "live",
-  })) {
+  }) || (forwardedHost ? isAllowedStoreOrigin({
+    requestUrl: proxyUrl,
+    origin: request.headers.get("origin"),
+    fetchSite: request.headers.get("sec-fetch-site"),
+    configuredOrigin: process.env.STORE_ORIGIN,
+    environment: process.env.NODE_ENV,
+    demoMode: process.env.STORE_MODE !== "live" && process.env.NEXT_PUBLIC_APP_MODE !== "live",
+  }) : false);
+
+  if (!allowed) {
     throw new RequestError(403, "This request must come from the store.");
   }
 }
