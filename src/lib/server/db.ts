@@ -4,6 +4,19 @@ import { products as fallbackProducts, categories as fallbackCategories, type Pr
 
 let cachedSql: NeonQueryFunction<false, false> | null = null;
 
+// In-Memory cache for catalog & categories to eliminate transatlantic network roundtrips
+let cachedProducts: { data: Product[]; timestamp: number } | null = null;
+let cachedCategories: { data: any[]; timestamp: number } | null = null;
+const CACHE_TTL_MS = 60_000; // 60s cache; immediately invalidated on admin updates
+
+export function invalidateProductsCache() {
+  cachedProducts = null;
+}
+
+export function invalidateCategoriesCache() {
+  cachedCategories = null;
+}
+
 export function getDb() {
   if (cachedSql) return cachedSql;
   const url = process.env.DATABASE_URL || process.env.DATABASE_URL_UNPOOLED;
@@ -55,7 +68,11 @@ export type DbOrder = {
   updated_at: string;
 };
 
-export async function getProductsFromDb(): Promise<Product[]> {
+export async function getProductsFromDb(forceFresh = false): Promise<Product[]> {
+  const now = Date.now();
+  if (!forceFresh && cachedProducts && (now - cachedProducts.timestamp) < CACHE_TTL_MS) {
+    return cachedProducts.data;
+  }
   const sql = getDb();
   if (!sql) return fallbackProducts;
   try {
@@ -67,7 +84,7 @@ export async function getProductsFromDb(): Promise<Product[]> {
       ORDER BY created_at ASC
     `;
     if (!rows || rows.length === 0) return fallbackProducts;
-    return rows.map((r: any) => ({
+    const mapped = rows.map((r: any) => ({
       id: r.id,
       slug: r.slug,
       name: r.name,
@@ -86,49 +103,23 @@ export async function getProductsFromDb(): Promise<Product[]> {
       gender: r.gender || 'unisex',
       fabricDetails: r.fabric_details && typeof r.fabric_details === 'object' ? r.fabric_details : undefined
     }));
+    cachedProducts = { data: mapped, timestamp: now };
+    return mapped;
   } catch (err) {
     console.error('getProductsFromDb error, falling back:', err);
+    if (cachedProducts) return cachedProducts.data;
     return fallbackProducts;
   }
 }
 
 export async function getProductBySlugFromDb(slug: string): Promise<Product | null> {
-  const sql = getDb();
-  if (!sql) return fallbackProducts.find(p => p.slug === slug) || null;
-  try {
-    const rows = await sql`
-      SELECT id, slug, name, price, category, image, gallery, colors,
-             color_images, sizes, stock, description, tags, status, is_demo,
-             gender, fabric_details
-      FROM products
-      WHERE slug = ${slug}
-      LIMIT 1
-    `;
-    if (!rows || rows.length === 0) return fallbackProducts.find(p => p.slug === slug) || null;
-    const r: any = rows[0];
-    return {
-      id: r.id,
-      slug: r.slug,
-      name: r.name,
-      price: Number(r.price),
-      category: r.category,
-      image: r.image,
-      gallery: Array.isArray(r.gallery) ? r.gallery : [],
-      colors: Array.isArray(r.colors) ? r.colors : [],
-      colorImages: r.color_images || {},
-      sizes: Array.isArray(r.sizes) ? r.sizes : [],
-      stock: Number(r.stock),
-      description: r.description || '',
-      tags: Array.isArray(r.tags) ? r.tags : [],
-      status: r.status || 'published',
-      isDemo: Boolean(r.is_demo),
-      gender: r.gender || 'unisex',
-      fabricDetails: r.fabric_details || undefined
-    };
-  } catch (err) {
-    console.error('getProductBySlugFromDb error:', err);
-    return fallbackProducts.find(p => p.slug === slug) || null;
+  // Instant resolution from cache if available
+  if (cachedProducts && (Date.now() - cachedProducts.timestamp) < CACHE_TTL_MS) {
+    const found = cachedProducts.data.find(p => p.slug === slug);
+    if (found) return found;
   }
+  const all = await getProductsFromDb();
+  return all.find(p => p.slug === slug) || null;
 }
 
 export async function saveProductToDb(p: Partial<Product> & { id: string; name: string }): Promise<void> {
@@ -171,35 +162,45 @@ export async function saveProductToDb(p: Partial<Product> & { id: string; name: 
       fabric_details = EXCLUDED.fabric_details,
       updated_at = NOW();
   `;
+  invalidateProductsCache();
 }
 
 export async function deleteProductFromDb(id: string): Promise<void> {
   const sql = getDb();
   if (!sql) throw new Error('Database connection is not configured.');
   await sql`DELETE FROM products WHERE id = ${id}`;
+  invalidateProductsCache();
 }
 
 export async function updateProductStockInDb(id: string, stock: number): Promise<void> {
   const sql = getDb();
   if (!sql) throw new Error('Database connection is not configured.');
   await sql`UPDATE products SET stock = ${stock}, updated_at = NOW() WHERE id = ${id}`;
+  invalidateProductsCache();
 }
 
-export async function getCategoriesFromDb() {
+export async function getCategoriesFromDb(forceFresh = false) {
+  const now = Date.now();
+  if (!forceFresh && cachedCategories && (now - cachedCategories.timestamp) < CACHE_TTL_MS) {
+    return cachedCategories.data;
+  }
   const sql = getDb();
   if (!sql) return fallbackCategories;
   try {
     const rows = await sql`SELECT slug, name, image, caption, description FROM categories ORDER BY name ASC`;
     if (!rows || rows.length === 0) return fallbackCategories;
-    return rows.map((r: any) => ({
+    const mapped = rows.map((r: any) => ({
       slug: r.slug,
       name: r.name,
       image: r.image || '',
       caption: r.caption || '',
       description: r.description || ''
     }));
+    cachedCategories = { data: mapped, timestamp: now };
+    return mapped;
   } catch (err) {
     console.error('getCategoriesFromDb error:', err);
+    if (cachedCategories) return cachedCategories.data;
     return fallbackCategories;
   }
 }
@@ -216,12 +217,14 @@ export async function saveCategoryToDb(cat: { slug: string; name: string; descri
       caption = EXCLUDED.caption,
       description = EXCLUDED.description;
   `;
+  invalidateCategoriesCache();
 }
 
 export async function deleteCategoryFromDb(slug: string) {
   const sql = getDb();
   if (!sql) throw new Error('Database connection is not configured.');
   await sql`DELETE FROM categories WHERE slug = ${slug}`;
+  invalidateCategoriesCache();
 }
 
 export async function getOrdersFromDb(): Promise<DbOrder[]> {
