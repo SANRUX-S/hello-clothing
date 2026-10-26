@@ -1207,32 +1207,32 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
             <strong>{activeNav.label}</strong>
           </div>
           <div className="admin-topbar-right">
-            <span className="admin-demo-badge" style={{ borderColor: '#166534', color: '#4ade80', background: '#052e16' }}>
-              <span style={{ background: '#22c55e' }} /> Penetix Cloud · Connected
+            <span className="admin-demo-badge">
+              <span /> Penetix Cloud · Connected
             </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#18181b', border: '1px solid #27272a', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', color: '#e4e4e7' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: session.role === 'super_admin' ? '#a855f7' : session.role === 'co_admin' ? '#38bdf8' : '#4ade80' }} />
+            <span className="admin-user-badge">
+              <span className="admin-user-dot" style={{ background: session.role === 'super_admin' ? '#a855f7' : session.role === 'co_admin' ? '#38bdf8' : '#4ade80' }} />
               <strong>{session.name}</strong>
+              <small>{session.role === 'super_admin' ? 'Super Admin' : session.role === 'co_admin' ? 'Co-Admin' : 'Staff'}</small>
             </span>
             <button
               type="button"
               onClick={handleSignOut}
-              className="admin-button admin-button-quiet"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', fontSize: '11px', color: '#ef4444' }}
+              className="admin-signout-btn"
               title="Sign Out"
             >
               <LogOut size={13} /> Sign Out
             </button>
-            <Link href="/" className="admin-topbar-store">Visit store <ExternalLink size={14} /></Link>
+            <Link href="/" className="admin-topbar-store" target="_blank">Visit store <ExternalLink size={13} /></Link>
           </div>
         </header>
         <main className="admin-content">
           <div className="admin-page-title">
             <div>
-              <span className="admin-eyebrow">HELLO! CLOTHING / {section === "overview" ? "YOUR EVERYDAY, ELEVATED" : section === "team" ? "STAFF & ACCESS CONTROL" : "STORE MANAGEMENT"}</span>
-              <h1>{section === "overview" ? "Make yourself at home." : activeNav.label}</h1>
+              <span className="admin-eyebrow">HELLO! CLOTHING · {section === "overview" ? "EXECUTIVE STUDIO & ANALYTICS" : section === "team" ? "STAFF & ACCESS CONTROL" : "STORE OPERATIONS"}</span>
+              <h1>{section === "overview" ? "Store Studio & Analytics" : activeNav.label}</h1>
               <p>{({
-                overview: "A little overview of your world. Let’s make it a good one.",
+                overview: "Live operations hub for inventory, customer fulfillment, and catalog performance.",
                 products: "Good essentials. Great first impressions. Your collection starts here.",
                 inventory: "Keep every color and size ready for their next everyday.",
                 orders: "Every great brand starts with its first order.",
@@ -1248,8 +1248,8 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
             {section === "media" && <button className="admin-button" onClick={() => uploadRef.current?.click()}><ImagePlus size={17} /> Upload image</button>}
           </div>
 
-          <div className="admin-sandbox-notice" style={{ background: '#052e16', borderColor: '#166534', color: '#86efac' }}>
-            <ShieldCheck size={15} strokeWidth={1.5} color="#4ade80" />
+          <div className="admin-sandbox-notice">
+            <ShieldCheck size={16} strokeWidth={2} />
             <span>PENETIX CLOUD CONNECTED · Live store operations, products, stock, and customer orders.</span>
           </div>
 
@@ -1266,7 +1266,7 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
             </section>
           )}
     {section === "overview" && <>
-      <div className="admin-metrics">{[{ title: "TOTAL REVENUE", value: customerOrders.length > 0 ? money(totalRevenue) : "LKR 0", icon: ArrowUpRight, note: customerOrders.length > 0 ? `${customerOrders.length} customer order${customerOrders.length === 1 ? '' : 's'}` : "No payments connected" }, { title: "ORDERS", value: String(customerOrders.length), icon: Package, note: customerOrders.length > 0 ? "Saved in browser history" : "Ready for your first order" }, { title: "CATALOG PIECES", value: String(products.length).padStart(2, "0"), icon: ShoppingBag, note: `${categories.length} curated categories` }, { title: "AVAILABLE UNITS", value: String(totalStock), icon: Boxes, note: `${products.filter(p => p.stock <= 5).length} products with low stock` }].map(item => <div className="admin-metric" key={item.title}><div><span>{item.title}</span><item.icon size={18} strokeWidth={1.4} /></div><strong>{item.value}</strong><small>{item.note}</small></div>)}</div>
+      <div className="admin-metrics">{[{ title: "TOTAL REVENUE", value: customerOrders.length > 0 ? money(totalRevenue) : "LKR 0", icon: ArrowUpRight, note: customerOrders.length > 0 ? `${customerOrders.length} customer order${customerOrders.length === 1 ? '' : 's'}` : "Real-time order volume" }, { title: "ORDERS", value: String(customerOrders.length), icon: Package, note: customerOrders.length > 0 ? "Synced with Penetix Cloud" : "Live in Penetix Cloud" }, { title: "CATALOG PIECES", value: String(products.length).padStart(2, "0"), icon: ShoppingBag, note: `${categories.length} curated categories` }, { title: "AVAILABLE UNITS", value: String(totalStock), icon: Boxes, note: `${products.filter(p => p.stock <= 5).length} products with low stock` }].map(item => <div className="admin-metric" key={item.title}><div><span>{item.title}</span><item.icon size={18} strokeWidth={1.4} /></div><strong>{item.value}</strong><small>{item.note}</small></div>)}</div>
       <div className="admin-overview-row"><section className="admin-panel admin-inventory-panel"><div className="admin-panel-heading"><div><h2>Your collection, at a glance.</h2><p>Available stock across your categories</p></div><Link href="/admin/inventory" className="admin-text-link">Manage <ArrowUpRight size={15} /></Link></div><div className="admin-stock-chart">{categories.map(category => { const units = products.filter(p => p.category === category.slug).reduce((sum, p) => sum + p.stock, 0); return <div key={category.slug}><div><span>{category.name}</span><strong>{units}<small> units</small></strong></div><div className="admin-stock-track"><span style={{ width: `${totalStock ? Math.max(2, units / totalStock * 100) : 0}%` }} /></div></div>; })}</div><div className="admin-panel-foot"><span className="admin-status-dot" style={{ background: '#16a34a' }} /> Collection inventory <span style={{ color: '#4ade80' }}>Synced live with Penetix Cloud</span></div></section><section className="admin-brand-panel"><div className="admin-brand-image">{products[0]?.image && <img src={products[0].image} alt="Hello clothing collection" />}<span className="admin-eyebrow">THE EVERYDAY COLLECTION</span><h2>Good clothes.<br />Better energy.</h2></div><div className="admin-brand-panel-bottom"><p>Your next chapter<br />starts with a simple Hello!</p><Link href="/" aria-label="Open your store"><ArrowUpRight size={24} /></Link></div></section></div>
       <div className="admin-overview-bottom"><section className="admin-panel"><div className="admin-panel-heading"><div><h2>Recent activity</h2><p>The latest changes in your store</p></div><span className="admin-small-pill" style={{ background: '#052e16', color: '#4ade80', borderColor: '#166534' }}>PENETIX</span></div>{activity.length ? <div className="admin-activity-list">{activity.slice(0, 4).map(item => <div key={item.id}><span><Check size={15} /></span><p>{item.label}<small>{new Date(item.time).toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" })}</small></p></div>)}</div> : <div className="admin-activity-empty"><span><CheckCircle2 size={25} strokeWidth={1.3} /></span><p>A clean slate.<small>Your product and store updates will appear here.</small></p></div>}</section><section className="admin-panel admin-quick-actions"><div className="admin-panel-heading"><div><h2>A few good next steps.</h2><p>Build your store, one detail at a time.</p></div></div>{[{ label: "Add your next essential", subtitle: "Create a product in your store catalog", to: "/admin/products", icon: ShoppingBag }, { label: "Make it sound like you", subtitle: "Edit your homepage copy", to: "/admin/content", icon: Type }, { label: "A little logo personality", subtitle: "Choose the navbar logo motion", to: "/admin/settings", icon: SlidersHorizontal }].map(action => <Link href={action.to} key={action.to}><action.icon size={19} strokeWidth={1.4} /><span>{action.label}<small>{action.subtitle}</small></span><ArrowRight size={17} /></Link>)}</section></div>
     </>}
