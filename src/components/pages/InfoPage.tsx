@@ -583,55 +583,54 @@ export default function InfoPage({ kind }: { kind: string }) {
     const isCancelled = orderStatus === 'cancelled';
 
     const STATUS_RANKS: Record<string, number> = {
+      order_placed: 0,
+      confirmed: 0,
       processing: 0,
-      confirmed: 1,
-      production: 2,
-      dispatched: 3,
-      out_for_delivery: 4,
-      delivered: 5,
+      placed: 0,
+      in_progress: 1,
+      production: 1,
+      ready_to_dispatch: 2,
+      dispatched: 2,
+      out_for_delivery: 3,
+      delivered: 4,
+      order_received: 4,
     };
     const currentRank = STATUS_RANKS[orderStatus] ?? 0;
 
     const timelineSteps = [
       {
-        title: 'Order Placed & Processing',
-        desc: 'Order received at HELLO! fulfillment hub in Colombo',
+        title: '1. Order Placed & Confirmed',
+        desc: 'Order verified and entered into HELLO! fulfillment hub in Colombo',
         icon: CheckCircle2,
         status: isCancelled ? 'pending' : currentRank > 0 ? 'done' : currentRank === 0 ? 'current' : 'pending',
       },
       {
-        title: 'Order Confirmed & Stock Verified',
-        desc: 'Garments and sizes allocated for your parcel',
-        icon: ShieldCheck,
+        title: '2. In Progress (QC & Hand-Packing)',
+        desc: 'Inspected for fabric consistency and hand-packed in signature atelier dust bag',
+        icon: Sparkles,
         status: isCancelled ? 'pending' : currentRank > 1 ? 'done' : currentRank === 1 ? 'current' : 'pending',
       },
       {
-        title: 'Quality Checked & Prepared',
-        desc: 'Inspected for fabric consistency and sealed in branded dust bag',
-        icon: Sparkles,
+        title: `3. Ready to Dispatch (${activeTrackingOrder?.courier || 'PromptX Logistics'})`,
+        desc: activeTrackingOrder?.tracking_number
+          ? `Handed to courier with Waybill #${activeTrackingOrder.tracking_number}`
+          : `Handed over to ${activeTrackingOrder?.courier || 'PromptX Logistics'} for express transit`,
+        icon: Truck,
         status: isCancelled ? 'pending' : currentRank > 2 ? 'done' : currentRank === 2 ? 'current' : 'pending',
       },
       {
-        title: `Handed Over to ${activeTrackingOrder?.courier || 'PromptX Logistics'}`,
-        desc: activeTrackingOrder?.tracking_number
-          ? `Dispatched with Waybill #${activeTrackingOrder.tracking_number}`
-          : 'Handed to courier delivery team for transit',
-        icon: Truck,
+        title: '4. Out for Delivery Today',
+        desc: activeTrackingOrder?.customer?.city
+          ? `Courier rider is on the road for doorstep delivery in ${activeTrackingOrder.customer.city}`
+          : 'Courier rider is on the road for doorstep delivery today',
+        icon: Clock,
         status: isCancelled ? 'pending' : currentRank > 3 ? 'done' : currentRank === 3 ? 'current' : 'pending',
       },
       {
-        title: 'Out for Delivery to Your Doorstep',
-        desc: activeTrackingOrder?.customer?.city
-          ? `Courier rider dispatched for delivery in ${activeTrackingOrder.customer.city}`
-          : 'Courier rider assigned for doorstep delivery',
-        icon: Clock,
-        status: isCancelled ? 'pending' : currentRank > 4 ? 'done' : currentRank === 4 ? 'current' : 'pending',
-      },
-      {
-        title: 'Delivered Successfully',
-        desc: 'Recipient signature collected and parcel handed over',
+        title: '5. Order Received / Delivered',
+        desc: 'Recipient signature collected and parcel safely handed over',
         icon: MapPin,
-        status: currentRank === 5 ? 'done' : 'pending',
+        status: currentRank >= 4 ? 'done' : 'pending',
       },
     ];
 

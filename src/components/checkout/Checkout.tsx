@@ -21,7 +21,8 @@ import {
   MapPin,
   MessageCircle,
   FileText,
-  PackageCheck
+  PackageCheck,
+  Clock
 } from 'lucide-react';
 import './receipt.css';
 
@@ -549,8 +550,21 @@ export function OrderConfirmation({ reference }: { reference: string }) {
     `Hello HELLO! Clothing, I have a query regarding my order receipt ${order?.reference || reference}.`
   )}`;
 
-  const isDelivered = order?.status === 'delivered';
-  const isDispatched = order?.status === 'dispatched' || isDelivered;
+  const orderStatus = (order?.status || 'order_placed').toLowerCase();
+  const STATUS_RANKS: Record<string, number> = {
+    order_placed: 0,
+    confirmed: 0,
+    processing: 0,
+    placed: 0,
+    in_progress: 1,
+    production: 1,
+    ready_to_dispatch: 2,
+    dispatched: 2,
+    out_for_delivery: 3,
+    delivered: 4,
+    order_received: 4,
+  };
+  const currentRank = STATUS_RANKS[orderStatus] ?? 0;
   const trackingCode = order ? (order.tracking_number || order.trackingNumber || `PX-${order.reference.replace(/[^a-zA-Z0-9]/g, '').slice(-6)}`) : '';
 
   return (
@@ -618,7 +632,7 @@ export function OrderConfirmation({ reference }: { reference: string }) {
               <span style={{ color: '#4ade80', fontWeight: 600 }}>PromptX Express</span>
             </div>
             <div className="receipt-stepper-grid">
-              <div className="stepper-step completed">
+              <div className={`stepper-step ${currentRank > 0 ? 'completed' : 'active'}`}>
                 <div className="stepper-icon-bubble">
                   <Check size={14} />
                 </div>
@@ -626,27 +640,35 @@ export function OrderConfirmation({ reference }: { reference: string }) {
                 <span className="stepper-step-desc">Order Registered</span>
               </div>
 
-              <div className={`stepper-step ${isDispatched ? 'completed' : 'active'}`}>
+              <div className={`stepper-step ${currentRank > 1 ? 'completed' : currentRank === 1 ? 'active' : ''}`}>
                 <div className="stepper-icon-bubble">
-                  {isDispatched ? <Check size={14} /> : <PackageCheck size={14} />}
+                  {currentRank > 1 ? <Check size={14} /> : <Sparkles size={14} />}
                 </div>
-                <span className="stepper-step-name">2. Processing</span>
+                <span className="stepper-step-name">2. In Progress</span>
                 <span className="stepper-step-desc">QC & Hand-Packed</span>
               </div>
 
-              <div className={`stepper-step ${isDelivered ? 'completed' : isDispatched ? 'active' : ''}`}>
+              <div className={`stepper-step ${currentRank > 2 ? 'completed' : currentRank === 2 ? 'active' : ''}`}>
                 <div className="stepper-icon-bubble">
-                  {isDelivered ? <Check size={14} /> : <Truck size={14} />}
+                  {currentRank > 2 ? <Check size={14} /> : <Truck size={14} />}
                 </div>
-                <span className="stepper-step-name">3. In Transit</span>
+                <span className="stepper-step-name">3. Dispatched</span>
                 <span className="stepper-step-desc">PromptX Courier</span>
               </div>
 
-              <div className={`stepper-step ${isDelivered ? 'completed' : ''}`}>
+              <div className={`stepper-step ${currentRank > 3 ? 'completed' : currentRank === 3 ? 'active' : ''}`}>
+                <div className="stepper-icon-bubble">
+                  {currentRank > 3 ? <Check size={14} /> : <Clock size={14} />}
+                </div>
+                <span className="stepper-step-name">4. Out for Delivery</span>
+                <span className="stepper-step-desc">Rider on the Way</span>
+              </div>
+
+              <div className={`stepper-step ${currentRank >= 4 ? 'completed' : ''}`}>
                 <div className="stepper-icon-bubble">
                   <CheckCircle2 size={14} />
                 </div>
-                <span className="stepper-step-name">4. Delivered</span>
+                <span className="stepper-step-name">5. Received</span>
                 <span className="stepper-step-desc">To Your Doorstep</span>
               </div>
             </div>

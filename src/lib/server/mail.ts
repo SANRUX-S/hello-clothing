@@ -343,28 +343,37 @@ export async function sendOrderStatusUpdateEmail(order: {
   const courierName = order.courier || 'PromptX Logistics';
   const waybill = order.tracking_number || '';
 
-  if (status === 'dispatched' || status === 'out_for_delivery') {
-    subject = `🚚 Dispatched: Your HELLO! Order ${order.reference} is on its way!`;
-    statusTitle = 'YOUR PIECE IS EN ROUTE.';
-    statusBadge = 'DISPATCHED WITH COURIER';
-    statusMessage = `Great news! Your HELLO! parcel has been packed, quality checked, and handed over to our courier partner <strong>${courierName}</strong>.${waybill ? ` Your tracking waybill number is <strong>#${waybill}</strong>.` : ''} Delivery typically takes 1&ndash;3 business days.`;
-  } else if (status === 'delivered') {
-    subject = `🎉 Delivered: Your HELLO! Order ${order.reference}`;
+  if (status === 'order_placed' || status === 'confirmed') {
+    subject = `✅ Order Placed & Confirmed: ${order.reference} — HELLO! Clothing`;
+    statusTitle = 'ORDER PLACED & VERIFIED.';
+    statusBadge = 'ORDER PLACED';
+    statusMessage = `Thank you for shopping with HELLO! Clothing. Your order <strong>${order.reference}</strong> has been officially placed and confirmed in our Colombo fulfillment atelier. Our team will begin hand-packing your streetwear shortly.`;
+  } else if (status === 'in_progress' || status === 'processing' || status === 'production') {
+    subject = `⚡ In Progress: Your HELLO! Order ${order.reference} is Being Prepared`;
+    statusTitle = 'HAND-PACKING IN PROGRESS.';
+    statusBadge = 'IN PROGRESS';
+    statusMessage = `Great news! Your pieces for order <strong>${order.reference}</strong> are now in progress. Each garment is undergoing rigorous quality inspection and being carefully hand-packed into our signature atelier dust bag.`;
+  } else if (status === 'ready_to_dispatch' || status === 'dispatched') {
+    subject = `📦 Ready & Dispatched: HELLO! Order ${order.reference}`;
+    statusTitle = 'PARCEL DISPATCHED TO COURIER.';
+    statusBadge = 'READY & DISPATCHED';
+    statusMessage = `Your parcel is sealed and has been handed over to our delivery partner <strong>${courierName}</strong>.${waybill ? ` Your PromptX tracking waybill number is <strong>#${waybill}</strong>.` : ''} Islandwide delivery typically takes 1&ndash;3 business days.`;
+  } else if (status === 'out_for_delivery') {
+    subject = `🚀 Out for Delivery Today: HELLO! Order ${order.reference}`;
+    statusTitle = 'YOUR RIDER IS ON THE WAY.';
+    statusBadge = 'OUT FOR DELIVERY TODAY';
+    statusMessage = `Your HELLO! parcel is out for delivery with your courier delivery rider today! Please ensure your phone is reachable. If you chose Cash on Delivery, please have the exact cash amount ready for the rider.`;
+  } else if (status === 'delivered' || status === 'order_received') {
+    subject = `🎉 Order Delivered: ${order.reference} — HELLO! Clothing`;
     statusTitle = 'DELIVERED TO YOUR DOORSTEP.';
-    statusBadge = 'DELIVERED';
-    statusMessage = `Your parcel has been successfully delivered by ${courierName}. We hope you love the fit and heavyweight feel! Tag us on Instagram @hello.streetwear to be featured.`;
-  } else if (status === 'confirmed' || status === 'production') {
-    subject = `✅ Order Confirmed: ${order.reference} — HELLO! Clothing`;
-    statusTitle = 'ORDER CONFIRMED & IN PREPARATION.';
-    statusBadge = 'CONFIRMED';
-    statusMessage = `Your order details and stock have been verified by our Colombo fulfillment team. We are packing your pieces in our signature branded dust bag.`;
+    statusBadge = 'ORDER RECEIVED / DELIVERED';
+    statusMessage = `Your parcel has been successfully delivered by ${courierName}! We hope you love the heavyweight fit and combed cotton craftsmanship. Tag us on Instagram <strong>@hello.streetwear</strong> to be featured!`;
   } else if (status === 'cancelled') {
     subject = `Notice: HELLO! Order ${order.reference} Cancelled`;
     statusTitle = 'ORDER STATUS UPDATE.';
     statusBadge = 'CANCELLED';
-    statusMessage = `Your order ${order.reference} has been cancelled. If you believe this is in error, please reply directly to this email or contact support@helloclothing.store.`;
+    statusMessage = `Your order <strong>${order.reference}</strong> has been cancelled. If you believe this is in error or need help with a new order, please reply directly to this email or reach us on WhatsApp.`;
   } else {
-    // Default processing update
     subject = `Update: HELLO! Order ${order.reference} (${status})`;
     statusTitle = `ORDER STATUS: ${status.toUpperCase()}`;
     statusBadge = status.toUpperCase();

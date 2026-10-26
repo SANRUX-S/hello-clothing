@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, Check, CheckCircle2, Copy, ExternalLink, ImagePlus, Images, LayoutDashboard, Menu, Package, Plus, Search, Settings2, ShoppingBag, SlidersHorizontal, Tags, Trash2, Type, X, Pencil, Save, RotateCcw, ShieldCheck, Boxes, MessageCircle, Truck, UserRound, Eye, MapPin, Mail, Printer, RefreshCw, AlertCircle, Phone, CreditCard, Sparkles, PlusCircle, Users, LogOut, KeyRound, ShieldAlert } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, Check, CheckCircle2, Copy, ExternalLink, ImagePlus, Images, LayoutDashboard, Menu, Package, PackageCheck, Plus, Search, Settings2, ShoppingBag, SlidersHorizontal, Tags, Trash2, Type, X, Pencil, Save, RotateCcw, ShieldCheck, Boxes, MessageCircle, Truck, UserRound, Eye, MapPin, Mail, Printer, RefreshCw, AlertCircle, Phone, CreditCard, Sparkles, PlusCircle, Users, LogOut, KeyRound, ShieldAlert, Send } from "lucide-react";
 import { products as catalogProducts } from "@/lib/catalog";
 import AdminLogin, { type AdminUserSession } from "./AdminLogin";
 import AdminTeamSection from "./AdminTeamSection";
@@ -51,6 +51,138 @@ type AdminOrder = {
   tracking_number?: string;
   notes?: string;
 };
+
+export const ORDER_STAGES = [
+  {
+    key: 'order_placed',
+    aliases: ['confirmed', 'placed', 'order_placed'],
+    label: 'Order Placed',
+    stageNumber: 1,
+    color: '#38bdf8',
+    bg: '#0c2d48',
+    border: '#0284c7',
+    badgeText: '1. ORDER PLACED',
+    description: 'Order placed & confirmed in atelier',
+  },
+  {
+    key: 'in_progress',
+    aliases: ['processing', 'production', 'in_progress'],
+    label: 'In Progress',
+    stageNumber: 2,
+    color: '#fbbf24',
+    bg: '#422006',
+    border: '#d97706',
+    badgeText: '2. IN PROGRESS',
+    description: 'QC checking & hand-packing in dust bag',
+  },
+  {
+    key: 'ready_to_dispatch',
+    aliases: ['dispatched', 'ready_to_dispatch'],
+    label: 'Ready to Dispatch',
+    stageNumber: 3,
+    color: '#c084fc',
+    bg: '#3b0764',
+    border: '#9333ea',
+    badgeText: '3. READY TO DISPATCH',
+    description: 'Sealed & handed to courier partner',
+  },
+  {
+    key: 'out_for_delivery',
+    aliases: ['out_for_delivery'],
+    label: 'Out for Delivery',
+    stageNumber: 4,
+    color: '#60a5fa',
+    bg: '#172554',
+    border: '#2563eb',
+    badgeText: '4. OUT FOR DELIVERY',
+    description: 'Rider is out for doorstep delivery today',
+  },
+  {
+    key: 'delivered',
+    aliases: ['delivered', 'order_received'],
+    label: 'Order Received',
+    stageNumber: 5,
+    color: '#4ade80',
+    bg: '#052e16',
+    border: '#16a34a',
+    badgeText: '5. ORDER RECEIVED',
+    description: 'Delivered safely to customer',
+  },
+] as const;
+
+export function getOrderStageInfo(status?: string) {
+  const norm = (status || 'order_placed').toLowerCase().trim();
+  const found = ORDER_STAGES.find(s => s.key === norm || (s.aliases as readonly string[]).includes(norm));
+  if (found) return found;
+  if (norm === 'cancelled') {
+    return {
+      key: 'cancelled',
+      aliases: ['cancelled'],
+      label: 'Cancelled',
+      stageNumber: 0,
+      color: '#f87171',
+      bg: '#450a0a',
+      border: '#dc2626',
+      badgeText: 'CANCELLED',
+      description: 'Order has been cancelled',
+    };
+  }
+  return ORDER_STAGES[0];
+}
+
+export function formatSriLankanPhone(rawPhone?: string): string {
+  if (!rawPhone) return '';
+  const cleaned = rawPhone.replace(/[^0-9]/g, '');
+  if (cleaned.startsWith('0')) {
+    return '94' + cleaned.slice(1);
+  }
+  if (cleaned.startsWith('94')) {
+    return cleaned;
+  }
+  if (cleaned.length === 9) {
+    return '94' + cleaned;
+  }
+  return cleaned;
+}
+
+export function getOrderWhatsAppMessage(order: AdminOrder, targetStageKey?: string): string {
+  const stage = getOrderStageInfo(targetStageKey || order.status);
+  const customerName = order.customer?.name || 'Customer';
+  const ref = order.reference;
+  const courier = order.courier || 'PromptX Logistics';
+  const waybill = order.tracking_number ? ` (Waybill #${order.tracking_number})` : '';
+  const trackUrl = `https://www.helloclothing.store/track-order?ref=${encodeURIComponent(ref)}`;
+  const isCod = order.paymentMethod === 'cod';
+
+  switch (stage.key) {
+    case 'order_placed':
+      return `Hello ${customerName}! 👋\n\nYour order *${ref}* has been *PLACED & CONFIRMED* with HELLO! Clothing. Total: Rs. ${(order.total || 0).toLocaleString()}.\n\nOur Colombo fulfillment atelier is preparing your streetwear parcel. You can track your order live anytime:\n🔗 ${trackUrl}\n\nThank you for shopping with HELLO! 🖤`;
+
+    case 'in_progress':
+      return `Hello ${customerName}! ⚡\n\nOrder Update: Your HELLO! Clothing order *${ref}* is now *IN PROGRESS*! Each piece is undergoing quality inspection and being hand-packed into our atelier dust bag.\n\nTrack your live progress here:\n🔗 ${trackUrl}\n\nWe will update you as soon as your parcel is ready for dispatch! 👕`;
+
+    case 'ready_to_dispatch':
+      return `Hello ${customerName}! 📦\n\nGreat news! Your HELLO! Clothing order *${ref}* is *READY TO DISPATCH* and handed over to our delivery partner *${courier}*${waybill}.\n\nIslandwide delivery typically takes 1–3 business days. Track your courier rider live:\n🔗 ${trackUrl}\n\nThank you for choosing HELLO! 🚀`;
+
+    case 'out_for_delivery':
+      return `Hello ${customerName}! 🚀\n\nYour HELLO! Clothing order *${ref}* is *OUT FOR DELIVERY TODAY* with your ${courier} delivery rider! 🛵\n\nPlease ensure your phone is reachable.${isCod ? ` If you chose Cash on Delivery, kindly have the exact cash amount (Rs. ${(order.total || 0).toLocaleString()}) ready for the rider.` : ''}\n\nTrack parcel:\n🔗 ${trackUrl}`;
+
+    case 'delivered':
+      return `Hello ${customerName}! 🎉\n\nYour HELLO! Clothing order *${ref}* has been *DELIVERED & RECEIVED*! 🖤\n\nWe hope you love the heavyweight fit and combed cotton craftsmanship. Tag us on Instagram *@hello.streetwear* to be featured!\n\nIf you need any sizing or styling assistance, reply to this message anytime. Enjoy your HELLO! pieces! ✨`;
+
+    default:
+      return `Hello ${customerName}! This is HELLO! Clothing regarding your order ${ref}. Track your parcel live here: ${trackUrl}`;
+  }
+}
+
+export function getOrderWhatsAppUrl(order: AdminOrder, targetStageKey?: string): string {
+  const phone = formatSriLankanPhone(order.customer?.phone);
+  const message = getOrderWhatsAppMessage(order, targetStageKey);
+  if (!phone) {
+    return `https://wa.me/?text=${encodeURIComponent(message)}`;
+  }
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
 export type AdminSection = "overview" | "products" | "inventory" | "orders" | "categories" | "content" | "media" | "settings" | "team";
 
 const NAV: { id: AdminSection; label: string; icon: typeof Package; minRole?: "admin" | "co_admin" | "super_admin" }[] = [
@@ -1038,7 +1170,13 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
 
   const filteredCustomerOrders = useMemo(() => {
     return customerOrders.filter(o => {
-      const matchesStatus = orderStatus === 'all' || o.status === orderStatus;
+      let matchesStatus = false;
+      if (orderStatus === 'all') {
+        matchesStatus = true;
+      } else {
+        const stage = getOrderStageInfo(o.status);
+        matchesStatus = stage.key === orderStatus || o.status === orderStatus;
+      }
       if (!matchesStatus) return false;
       if (!orderSearch.trim()) return true;
       const q = orderSearch.toLowerCase();
@@ -1323,20 +1461,20 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
             <button className={orderStatus === "all" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("all")}>
               All <span>{customerOrders.length}</span>
             </button>
-            <button className={orderStatus === "processing" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("processing")}>
-              Processing <span>{customerOrders.filter(o => o.status === 'processing').length}</span>
+            <button className={orderStatus === "order_placed" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("order_placed")}>
+              1. Placed <span>{customerOrders.filter(o => getOrderStageInfo(o.status).key === 'order_placed').length}</span>
             </button>
-            <button className={orderStatus === "confirmed" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("confirmed")}>
-              Confirmed <span>{customerOrders.filter(o => o.status === 'confirmed').length}</span>
+            <button className={orderStatus === "in_progress" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("in_progress")}>
+              2. In Progress <span>{customerOrders.filter(o => getOrderStageInfo(o.status).key === 'in_progress').length}</span>
             </button>
-            <button className={orderStatus === "production" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("production")}>
-              In Production <span>{customerOrders.filter(o => o.status === 'production').length}</span>
+            <button className={orderStatus === "ready_to_dispatch" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("ready_to_dispatch")}>
+              3. Ready to Dispatch <span>{customerOrders.filter(o => getOrderStageInfo(o.status).key === 'ready_to_dispatch').length}</span>
             </button>
-            <button className={orderStatus === "dispatched" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("dispatched")}>
-              Dispatched <span>{customerOrders.filter(o => o.status === 'dispatched').length}</span>
+            <button className={orderStatus === "out_for_delivery" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("out_for_delivery")}>
+              4. Out for Delivery <span>{customerOrders.filter(o => getOrderStageInfo(o.status).key === 'out_for_delivery').length}</span>
             </button>
             <button className={orderStatus === "delivered" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("delivered")}>
-              Delivered <span>{customerOrders.filter(o => o.status === 'delivered').length}</span>
+              5. Order Received <span>{customerOrders.filter(o => getOrderStageInfo(o.status).key === 'delivered').length}</span>
             </button>
             <button className={orderStatus === "cancelled" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("cancelled")}>
               Cancelled <span>{customerOrders.filter(o => o.status === 'cancelled').length}</span>
@@ -1444,29 +1582,55 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
                       </td>
                       <td className="admin-price-cell">{money(order.total || 0)}</td>
                       <td>
-                        <select
-                          aria-label={`Status for ${order.reference}`}
-                          value={order.status || 'processing'}
-                          onChange={e => updateOrderStatus(order.reference, e.target.value)}
-                          style={{
-                            padding: '4px 8px',
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            borderRadius: '4px',
-                            background: order.status === 'delivered' ? '#14532d' : order.status === 'out_for_delivery' ? '#1e3a8a' : order.status === 'cancelled' ? '#7f1d1d' : '#222',
-                            color: order.status === 'delivered' ? '#4ade80' : order.status === 'out_for_delivery' ? '#93c5fd' : order.status === 'cancelled' ? '#fca5a5' : '#fff',
-                            border: '1px solid #444',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <option value="processing">Processing</option>
-                          <option value="confirmed">Confirmed</option>
-                          <option value="production">In Production</option>
-                          <option value="dispatched">Handed to Courier</option>
-                          <option value="out_for_delivery">Out for Delivery</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <select
+                            aria-label={`Status for ${order.reference}`}
+                            value={getOrderStageInfo(order.status).key}
+                            onChange={e => updateOrderStatus(order.reference, e.target.value)}
+                            style={{
+                              padding: '5px 8px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              borderRadius: '6px',
+                              background: getOrderStageInfo(order.status).bg,
+                              color: getOrderStageInfo(order.status).color,
+                              border: `1px solid ${getOrderStageInfo(order.status).border}`,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <option value="order_placed">1. Order Placed</option>
+                            <option value="in_progress">2. In Progress</option>
+                            <option value="ready_to_dispatch">3. Ready to Dispatch</option>
+                            <option value="out_for_delivery">4. Out for Delivery</option>
+                            <option value="delivered">5. Order Received</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+
+                          {order.customer?.phone && (
+                            <a
+                              href={getOrderWhatsAppUrl(order, order.status)}
+                              target="_blank"
+                              rel="noreferrer"
+                              title={`Open WhatsApp for ${order.customer?.name || 'Customer'} (${order.customer?.phone})`}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '28px',
+                                height: '28px',
+                                background: '#052e16',
+                                border: '1px solid #166534',
+                                borderRadius: '6px',
+                                color: '#4ade80',
+                                textDecoration: 'none',
+                                flexShrink: 0,
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <MessageCircle size={15} color="#25D366" />
+                            </a>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <div className="admin-row-actions">
@@ -1622,19 +1786,32 @@ function OrderDetailsModal({
   onClose: () => void;
   onUpdateStatus: (reference: string, newStatus: string, courier?: string, trackingNumber?: string) => void;
 }) {
-  const [status, setStatus] = useState(order.status || 'processing');
+  const [status, setStatus] = useState(order.status || 'order_placed');
   const [courier, setCourier] = useState(order.courier || 'PromptX Logistics');
   const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || '');
   const [saved, setSaved] = useState(false);
+  const [savedStage, setSavedStage] = useState('');
+  const [copiedWp, setCopiedWp] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [resendNotice, setResendNotice] = useState('');
 
-  const phone = (order.customer?.phone || '').replace(/[^0-9]/g, '');
-  const customerName = order.customer?.name || 'Customer';
-  const whatsappText = encodeURIComponent(
-    `Hello ${customerName}! This is HELLO! Clothing (https://www.helloclothing.store) regarding your order ${order.reference}.`
-  );
-  const whatsappUrl = phone ? `https://wa.me/${phone.startsWith('0') ? '94' + phone.slice(1) : phone}?text=${whatsappText}` : '';
+  const currentOrderSnapshot: AdminOrder = {
+    ...order,
+    status,
+    courier,
+    tracking_number: trackingNumber,
+  };
+
+  const whatsappMessage = getOrderWhatsAppMessage(currentOrderSnapshot, status);
+  const whatsappUrl = getOrderWhatsAppUrl(currentOrderSnapshot, status);
+
+  const handleTransitionStage = (stageKey: string) => {
+    setStatus(stageKey);
+    onUpdateStatus(order.reference, stageKey, courier, trackingNumber);
+    const stageInfo = getOrderStageInfo(stageKey);
+    setSavedStage(stageInfo.label);
+    setTimeout(() => setSavedStage(''), 4500);
+  };
 
   const handleSave = () => {
     onUpdateStatus(order.reference, status, courier, trackingNumber);
@@ -1665,6 +1842,8 @@ function OrderDetailsModal({
     }
   };
 
+  const activeStageInfo = getOrderStageInfo(status);
+
   return (
     <Modal title={`Order Details: ${order.reference}`} onClose={onClose}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '78vh', overflowY: 'auto', paddingRight: '4px' }}>
@@ -1674,11 +1853,159 @@ function OrderDetailsModal({
             <span style={{ fontSize: '10px', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block' }}>PLACED ON</span>
             <strong style={{ fontSize: '13px' }}>{new Date(order.createdAt).toLocaleString('en-LK', { dateStyle: 'medium', timeStyle: 'short' })}</strong>
           </div>
-          <div>
-            <span style={{ fontSize: '10px', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block' }}>PAYMENT METHOD</span>
-            <strong style={{ fontSize: '13px', color: '#4ade80' }}>
-              {order.paymentMethod === 'cod' ? 'Cash on Delivery (COD)' : order.paymentMethod === 'bank' ? 'Bank Transfer' : 'Card'}
-            </strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div>
+              <span style={{ fontSize: '10px', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block' }}>PAYMENT METHOD</span>
+              <strong style={{ fontSize: '13px', color: '#4ade80' }}>
+                {order.paymentMethod === 'cod' ? 'Cash on Delivery (COD)' : order.paymentMethod === 'bank' ? 'Bank Transfer' : 'Card'}
+              </strong>
+            </div>
+            <span style={{
+              fontSize: '11px',
+              fontWeight: 800,
+              padding: '4px 10px',
+              borderRadius: '6px',
+              background: activeStageInfo.bg,
+              color: activeStageInfo.color,
+              border: `1px solid ${activeStageInfo.border}`,
+              letterSpacing: '0.5px'
+            }}>
+              {activeStageInfo.badgeText}
+            </span>
+          </div>
+        </div>
+
+        {/* 5-Stage Interactive Fulfillment Stepper */}
+        <div style={{ background: '#0d0e11', border: '1px solid #27272a', borderRadius: '10px', padding: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+            <div>
+              <span style={{ fontSize: '10px', color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800, display: 'block' }}>
+                FULFILLMENT PIPELINE (5 STAGES)
+              </span>
+              <span style={{ fontSize: '12px', color: '#e4e4e7' }}>
+                Click any stage button to transition order status &amp; send customer email via <strong style={{ color: '#fff' }}>orders@helloclothing.store</strong>:
+              </span>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
+            {ORDER_STAGES.map((s) => {
+              const isCurrent = activeStageInfo.key === s.key;
+              const isPassed = activeStageInfo.stageNumber > s.stageNumber;
+              return (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => handleTransitionStage(s.key)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    gap: '4px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: isCurrent ? s.bg : isPassed ? '#18181b' : '#121215',
+                    border: isCurrent ? `2px solid ${s.color}` : isPassed ? '1px solid #27272a' : '1px solid #222',
+                    color: isCurrent ? '#fff' : isPassed ? '#a1a1aa' : '#71717a',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title={`Transition to ${s.label} & auto-send notification email`}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: isCurrent ? s.color : isPassed ? '#4ade80' : '#71717a' }}>
+                      STAGE 0{s.stageNumber}
+                    </span>
+                    {isPassed && <Check size={12} color="#4ade80" />}
+                    {isCurrent && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: s.color }} />}
+                  </div>
+                  <strong style={{ fontSize: '12px', color: isCurrent ? '#fff' : isPassed ? '#e4e4e7' : '#a1a1aa' }}>
+                    {s.label}
+                  </strong>
+                  <span style={{ fontSize: '10px', color: isCurrent ? s.color : '#71717a', lineHeight: 1.2 }}>
+                    {isCurrent ? '● Active Now' : isPassed ? '✓ Completed' : 'Click to Set'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {savedStage && (
+            <div style={{ marginTop: '10px', background: '#052e16', border: '1px solid #166534', color: '#4ade80', padding: '8px 12px', borderRadius: '6px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CheckCircle2 size={16} />
+              <span>Status updated to <strong>{savedStage}</strong>! Branded notification email dispatched via <strong>orders@helloclothing.store</strong></span>
+            </div>
+          )}
+        </div>
+
+        {/* WhatsApp Customer Messaging Station */}
+        <div style={{ background: '#0a1610', border: '1px solid #164e2e', borderRadius: '10px', padding: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#25D366', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', flexShrink: 0 }}>
+                <MessageCircle size={16} />
+              </div>
+              <div>
+                <strong style={{ fontSize: '13px', color: '#fff', display: 'block' }}>
+                  WhatsApp Customer Station ({order.customer?.phone || 'No phone'})
+                </strong>
+                <span style={{ fontSize: '11px', color: '#86efac' }}>
+                  Customized for stage: <strong style={{ color: '#fff' }}>{activeStageInfo.label}</strong>
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(whatsappMessage);
+                  setCopiedWp(true);
+                  setTimeout(() => setCopiedWp(false), 3000);
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#162e21',
+                  color: '#86efac',
+                  border: '1px solid #166534',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                <Copy size={13} /> {copiedWp ? 'Copied!' : 'Copy WhatsApp Text'}
+              </button>
+
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#25D366',
+                  color: '#000',
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  textDecoration: 'none',
+                  boxShadow: '0 2px 8px rgba(37, 211, 102, 0.3)'
+                }}
+              >
+                <Send size={13} /> Open in WhatsApp
+              </a>
+            </div>
+          </div>
+
+          <div style={{ background: '#06130b', border: '1px solid #143521', borderRadius: '6px', padding: '10px 12px', fontFamily: 'monospace', fontSize: '11px', color: '#dcfce7', whiteSpace: 'pre-wrap', lineHeight: 1.5, maxHeight: '130px', overflowY: 'auto' }}>
+            {whatsappMessage}
           </div>
         </div>
 
@@ -1689,27 +2016,6 @@ function OrderDetailsModal({
               <UserRound size={15} color="#4ade80" /> Customer Information
             </strong>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-              {whatsappUrl && (
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: '#25D366',
-                    color: '#000',
-                    padding: '5px 10px',
-                    borderRadius: '6px',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    textDecoration: 'none',
-                  }}
-                >
-                  <MessageCircle size={14} /> WhatsApp Customer
-                </a>
-              )}
               <button
                 type="button"
                 onClick={handleResendReceipt}
@@ -1797,7 +2103,7 @@ function OrderDetailsModal({
             <Truck size={15} color="#4ade80" /> Courier & Fulfillment Management
           </strong>
           <p style={{ fontSize: '11px', color: '#888', margin: '0 0 12px 0' }}>
-            Updating status automatically dispatches a branded email notification with tracking link to the customer via <strong style={{ color: '#fff' }}>orders@helloclothing.store</strong>.
+            Saving automatically dispatches a branded email notification with tracking link to the customer via <strong style={{ color: '#fff' }}>orders@helloclothing.store</strong>.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
@@ -1808,12 +2114,11 @@ function OrderDetailsModal({
                 onChange={e => setStatus(e.target.value)}
                 style={{ padding: '8px 10px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px', fontSize: '12px' }}
               >
-                <option value="processing">Processing</option>
-                <option value="confirmed">Confirmed (Email sent to customer)</option>
-                <option value="production">In Production</option>
-                <option value="dispatched">Handed to Courier (Email sent with Waybill)</option>
-                <option value="out_for_delivery">Out for Delivery</option>
-                <option value="delivered">Delivered (Thank-you email sent)</option>
+                <option value="order_placed">1. Order Placed (Confirmation email)</option>
+                <option value="in_progress">2. In Progress (QC & Packing email)</option>
+                <option value="ready_to_dispatch">3. Ready to Dispatch (Handed to Courier)</option>
+                <option value="out_for_delivery">4. Out for Delivery (Rider dispatched today)</option>
+                <option value="delivered">5. Order Received / Delivered (Thank-you email)</option>
                 <option value="cancelled">Cancelled</option>
               </select>
             </label>
@@ -1902,7 +2207,7 @@ function OrderCreateModal({
   const [customerAddress, setCustomerAddress] = useState("");
   const [customerCity, setCustomerCity] = useState("Colombo");
   const [paymentMethod, setPaymentMethod] = useState("cod");
-  const [orderStatus, setOrderStatus] = useState("confirmed");
+  const [orderStatus, setOrderStatus] = useState("order_placed");
   const [courier, setCourier] = useState("PromptX Logistics");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -2212,11 +2517,11 @@ function OrderCreateModal({
                 onChange={e => setOrderStatus(e.target.value)}
                 style={{ padding: '8px 10px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px', fontSize: '12px' }}
               >
-                <option value="confirmed">Confirmed</option>
-                <option value="processing">Processing</option>
-                <option value="production">In Production</option>
-                <option value="dispatched">Handed to Courier</option>
-                <option value="delivered">Delivered</option>
+                <option value="order_placed">1. Order Placed</option>
+                <option value="in_progress">2. In Progress</option>
+                <option value="ready_to_dispatch">3. Ready to Dispatch</option>
+                <option value="out_for_delivery">4. Out for Delivery</option>
+                <option value="delivered">5. Order Received</option>
               </select>
             </label>
 
