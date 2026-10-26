@@ -32,11 +32,11 @@ const policies: Record<string, { title: string; intro: string; sections: { title
     sections: [
       {
         title: 'Delivery Coverage & Courier Partners',
-        copy: 'HELLO! delivers to every postal address across Sri Lanka in partnership with PromptX Logistics and Domex Courier. All orders are carefully packed in our tamper-evident branded dust bags.',
+        copy: 'HELLO! delivers to every postal address across all 25 districts in Sri Lanka in partnership with PromptX Logistics and Domex Courier. All orders are carefully packed in our tamper-evident branded dust bags.',
       },
       {
-        title: 'Shipping Times & Rates',
-        copy: '• Colombo & Greater Suburbs: 1 to 2 business days (LKR 500).\n• Outstation & Islandwide: 2 to 4 business days (LKR 500).\n• Express Priority (Western Province): Next-day delivery (LKR 750).\n• Free Islandwide Shipping is automatically applied to all orders over LKR 10,000.',
+        title: 'Shipping Times, Cutoff & Rates',
+        copy: '• Colombo & Greater Suburbs: 1 to 2 business days (LKR 500).\n• Outstation & Islandwide: 2 to 4 business days (LKR 500).\n• Express Priority (Western Province): Next-day guaranteed delivery (LKR 750).\n• Free Islandwide Shipping is automatically applied to all orders of LKR 10,000 or more.\n• Orders placed before 2:00 PM (Monday–Saturday) are prepared and handed to couriers on the same business day.',
       },
       {
         title: 'Cash on Delivery (COD) & SMS Tracking',
@@ -58,7 +58,7 @@ const policies: Record<string, { title: string; intro: string; sections: { title
       },
       {
         title: 'Doorstep Courier Exchange',
-        copy: 'Simply message our WhatsApp Concierge at +94 77 123 4567 with your Order Reference. We will send our courier to deliver your new size and collect the previous piece directly from your doorstep.',
+        copy: 'Simply message our WhatsApp Concierge at +94 78 619 1260 with your Order Reference. We will send our courier to deliver your new size and collect the previous piece directly from your doorstep.',
       },
     ],
   },
@@ -119,7 +119,7 @@ const faq = [
   },
   {
     q: 'Can I exchange my piece if the size doesn’t fit?',
-    a: 'Absolutely. We offer a 7-day hassle-free doorstep exchange policy. Just WhatsApp our team at +94 77 123 4567 with your order reference number, and we will arrange a size swap.',
+    a: 'Absolutely. We offer a 7-day hassle-free doorstep exchange policy. Just WhatsApp our team at +94 78 619 1260 with your order reference number, and we will arrange a size swap.',
   },
   {
     q: 'Where is your store located?',

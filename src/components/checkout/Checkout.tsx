@@ -95,7 +95,6 @@ export default function Checkout() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          mode: 'demo',
           items: store.cart,
           customer: customerData,
           paymentMethod,
@@ -588,9 +587,7 @@ export function OrderConfirmation({ reference }: { reference: string }) {
             }}
           >
             <div>
-              <span style={{ fontSize: '24px', fontWeight: 900, letterSpacing: '2px', color: '#fff', display: 'block' }}>
-                HELLO!
-              </span>
+              <img src="/branding/hello-light.webp" alt="HELLO!" style={{ height: "30px", width: "auto", marginBottom: "6px", display: "block", objectFit: "contain" }} />
               <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#888' }}>
                 Heavyweight Streetwear · Colombo, Sri Lanka
               </span>

@@ -261,65 +261,6 @@ export async function initDb() {
     }
   }
 
-  // Check sample orders
-  const existingOrders = await sql`SELECT count(*)::int as count FROM orders`;
-  if (existingOrders[0].count === 0) {
-    console.log('Seeding initial sample order for demonstration...');
-    const sampleOrder = {
-      reference: 'HL-782914',
-      customer: {
-        name: 'Kasun Perera',
-        email: 'kasun.p@gmail.com',
-        phone: '077 849 2011',
-        address: 'No 45/2, Ward Place',
-        city: 'Colombo 07',
-        postalCode: '00700'
-      },
-      items: [
-        {
-          productId: 'essential-tee',
-          slug: 'essential-tee',
-          name: 'Essential Tee',
-          size: 'L',
-          color: 'Black',
-          quantity: 2,
-          unitPrice: 349000,
-          lineTotal: 698000,
-          image: '/demo-products/essential-tee.webp'
-        }
-      ],
-      subtotal: 698000,
-      delivery: 50000,
-      total: 748000,
-      payment_method: 'cod',
-      status: 'out_for_delivery',
-      courier: 'PromptX Logistics',
-      tracking_number: 'PX-849201',
-      notes: 'Please call before delivery'
-    };
-
-    await sql`
-      INSERT INTO orders (
-        reference, customer, items, subtotal, delivery, total,
-        payment_method, status, courier, tracking_number, notes
-      )
-      VALUES (
-        ${sampleOrder.reference},
-        ${JSON.stringify(sampleOrder.customer)},
-        ${JSON.stringify(sampleOrder.items)},
-        ${sampleOrder.subtotal},
-        ${sampleOrder.delivery},
-        ${sampleOrder.total},
-        ${sampleOrder.payment_method},
-        ${sampleOrder.status},
-        ${sampleOrder.courier},
-        ${sampleOrder.tracking_number},
-        ${sampleOrder.notes}
-      )
-      ON CONFLICT (reference) DO NOTHING
-    `;
-  }
-
   console.log('Neon database initialized & seeded successfully!');
 }
 

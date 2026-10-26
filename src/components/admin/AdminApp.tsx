@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, Check, CheckCircle2, Copy, ExternalLink, ImagePlus, Images, LayoutDashboard, Menu, Package, Plus, Search, Settings2, ShoppingBag, SlidersHorizontal, Tags, Trash2, Type, X, Pencil, Save, RotateCcw, ShieldCheck, Boxes, MessageCircle, Truck, UserRound, Eye, MapPin, Mail, Printer } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, Check, CheckCircle2, Copy, ExternalLink, ImagePlus, Images, LayoutDashboard, Menu, Package, Plus, Search, Settings2, ShoppingBag, SlidersHorizontal, Tags, Trash2, Type, X, Pencil, Save, RotateCcw, ShieldCheck, Boxes, MessageCircle, Truck, UserRound, Eye, MapPin, Mail, Printer, RefreshCw, AlertCircle, Phone, CreditCard, Sparkles, PlusCircle, Users, LogOut, KeyRound, ShieldAlert } from "lucide-react";
 import { products as catalogProducts } from "@/lib/catalog";
+import AdminLogin, { type AdminUserSession } from "./AdminLogin";
+import AdminTeamSection from "./AdminTeamSection";
+import { logOut as firebaseLogOut } from "@/lib/firebase";
 
 type Color = { name: string; hex: string };
 type Product = {
@@ -48,13 +51,18 @@ type AdminOrder = {
   tracking_number?: string;
   notes?: string;
 };
-export type AdminSection = "overview" | "products" | "inventory" | "orders" | "categories" | "content" | "media" | "settings";
+export type AdminSection = "overview" | "products" | "inventory" | "orders" | "categories" | "content" | "media" | "settings" | "team";
 
-const NAV: { id: AdminSection; label: string; icon: typeof Package }[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard }, { id: "products", label: "Products", icon: ShoppingBag },
-  { id: "inventory", label: "Inventory", icon: Boxes }, { id: "orders", label: "Orders", icon: Package },
-  { id: "categories", label: "Categories", icon: Tags }, { id: "content", label: "Store content", icon: Type },
-  { id: "media", label: "Media library", icon: Images }, { id: "settings", label: "Settings", icon: Settings2 },
+const NAV: { id: AdminSection; label: string; icon: typeof Package; minRole?: "admin" | "co_admin" | "super_admin" }[] = [
+  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "products", label: "Products", icon: ShoppingBag, minRole: "co_admin" },
+  { id: "inventory", label: "Inventory", icon: Boxes },
+  { id: "orders", label: "Orders", icon: Package },
+  { id: "categories", label: "Categories", icon: Tags, minRole: "co_admin" },
+  { id: "content", label: "Store content", icon: Type, minRole: "co_admin" },
+  { id: "media", label: "Media library", icon: Images },
+  { id: "settings", label: "Settings", icon: Settings2, minRole: "super_admin" },
+  { id: "team", label: "Staff & Admins", icon: Users, minRole: "super_admin" },
 ];
 const KEYS = { products: "hello-admin-demo-products-v1", categories: "hello-admin-demo-categories-v1", content: "hello-demo-content-v1", settings: "hello-demo-settings-v1", media: "hello-admin-demo-media-v1", inventory: "hello-admin-demo-inventory-v1", activity: "hello-admin-demo-activity-v1" };
 const DEFAULT_CONTENT: Content = { announcement: "Islandwide delivery across Sri Lanka · Free on orders over LKR 10,000", heroTitle: "ONE DAY, EVEN THE DEVIL WILL SAY HELLO!", heroSubtitle: "Heavyweight streetwear designed in Colombo.", aboutText: "Heavyweight cotton. Custom boxy fits. Built for real wear in the island heat." };
@@ -110,7 +118,7 @@ const PRESET_COLORS = [
   { name: 'Brown', hex: '#5c4033' },
 ];
 
-async function compressImage(file: File, maxDim = 1200, quality = 0.85): Promise<string> {
+async function compressImage(file: File, maxDim = 900, quality = 0.78): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Failed to read image file"));
@@ -156,6 +164,44 @@ async function compressImage(file: File, maxDim = 1200, quality = 0.85): Promise
   });
 }
 
+async function uploadOrCompressImage(file: File): Promise<string> {
+  // Fast FormData upload to /api/admin/upload
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch('/api/admin/upload', {
+      method: 'POST',
+      body: fd,
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.url) return data.url;
+    }
+  } catch (err) {
+    console.warn('Direct upload failed, trying fallback:', err);
+  }
+
+  // Client-side lightweight WebP compression
+  const clientOptimized = await compressImage(file, 900, 0.78);
+
+  // Fallback to sending base64 to upload endpoint
+  try {
+    const res = await fetch('/api/admin/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataUrl: clientOptimized, filename: file.name }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.url) return data.url;
+    }
+  } catch {
+    // Ignore and fallback to clientOptimized
+  }
+
+  return clientOptimized;
+}
+
 function ProductEditor({ product, categories, onSave, onClose }: { product: Product | null; categories: Category[]; onSave: (p: Product) => void; onClose: () => void }) {
   const [draft, setDraft] = useState<Product>(() => product || {
     id: `prod-${Date.now()}`,
@@ -163,8 +209,8 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
     name: "",
     price: 349000,
     category: categories[0]?.slug || "t-shirts",
-    image: BASE_PRODUCTS[0]?.image || "/demo-products/essential-tee.webp",
-    gallery: [BASE_PRODUCTS[0]?.image || "/demo-products/essential-tee.webp"],
+    image: "",
+    gallery: [],
     stock: 20,
     colors: [{ name: "Black", hex: "#181918" }],
     sizes: ["S", "M", "L", "XL"],
@@ -182,7 +228,9 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
 
   const [priceRupees, setPriceRupees] = useState<string>(() => String(Math.round((product?.price ?? 349000) / 100)));
   const [isUploading, setIsUploading] = useState(false);
-  const [galleryImages, setGalleryImages] = useState<string[]>(() => draft.gallery || [draft.image]);
+  const [uploadStatus, setUploadStatus] = useState<string>("");
+  const [isDragging, setIsDragging] = useState(false);
+  const [galleryImages, setGalleryImages] = useState<string[]>(() => draft.gallery?.length ? draft.gallery : (draft.image ? [draft.image] : []));
   const [selectedSizes, setSelectedSizes] = useState<string[]>(() => draft.sizes && draft.sizes.length ? draft.sizes : ['S', 'M', 'L', 'XL']);
   const [selectedColors, setSelectedColors] = useState<Color[]>(() => draft.colors && draft.colors.length ? draft.colors : [{ name: 'Black', hex: '#181918' }]);
   const [customColorName, setCustomColorName] = useState("");
@@ -217,51 +265,101 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
     setCustomColorName("");
   };
 
-  // Handle main image file upload with instant compression
+  // Handle main image file upload with instant optimistic preview + fast background processing
   const handleMainPhotoUpload = async (file: File | undefined) => {
     if (!file) return;
     setIsUploading(true);
+    setUploadStatus("⚡ Optimizing photo...");
+
+    // Instant optimistic preview in 0ms
+    const localPreview = URL.createObjectURL(file);
+    setDraft(d => ({ ...d, image: localPreview }));
+
     try {
-      const optimizedUrl = await compressImage(file, 1200, 0.85);
-      setDraft(d => ({ ...d, image: optimizedUrl }));
-      setGalleryImages(g => g.length > 0 ? [optimizedUrl, ...g.slice(1)] : [optimizedUrl]);
+      const permanentUrl = await uploadOrCompressImage(file);
+      setDraft(d => ({ ...d, image: permanentUrl }));
+      setGalleryImages(g => {
+        const withoutLocal = g.filter(src => src !== localPreview);
+        return withoutLocal.length > 0 ? [permanentUrl, ...withoutLocal.slice(1)] : [permanentUrl];
+      });
+      setUploadStatus("✓ Photo attached & optimized");
     } catch (err: any) {
       alert("Could not process image: " + (err.message || 'Unknown error'));
+      setUploadStatus("Upload failed");
     } finally {
       setIsUploading(false);
+      setTimeout(() => setUploadStatus(""), 4000);
     }
   };
 
-  // Handle gallery photo upload with instant compression
-  const handleGalleryPhotoUpload = async (file: File | undefined) => {
-    if (!file) return;
+  // Handle gallery photo upload (single or multiple)
+  const handleGalleryPhotoUpload = async (files: FileList | File[] | null | undefined) => {
+    if (!files || files.length === 0) return;
     setIsUploading(true);
+    setUploadStatus(`⚡ Optimizing ${files.length} gallery image${files.length > 1 ? 's' : ''}...`);
+
     try {
-      const optimizedUrl = await compressImage(file, 1200, 0.85);
-      setGalleryImages(g => [...g, optimizedUrl]);
+      const fileList = Array.from(files);
+      const uploadedUrls = await Promise.all(fileList.map(f => uploadOrCompressImage(f)));
+      setGalleryImages(g => [...g, ...uploadedUrls]);
+      if (!draft.image && uploadedUrls[0]) {
+        setDraft(d => ({ ...d, image: uploadedUrls[0] }));
+      }
+      setUploadStatus(`✓ ${uploadedUrls.length} angle photo${uploadedUrls.length > 1 ? 's' : ''} added`);
     } catch (err: any) {
-      alert("Could not process image: " + (err.message || 'Unknown error'));
+      alert("Could not process gallery image: " + (err.message || 'Unknown error'));
+      setUploadStatus("Gallery upload failed");
     } finally {
       setIsUploading(false);
+      setTimeout(() => setUploadStatus(""), 4000);
     }
   };
 
   const removeGalleryImage = (idx: number) => {
-    setGalleryImages(g => g.filter((_, i) => i !== idx));
+    setGalleryImages(g => {
+      const next = g.filter((_, i) => i !== idx);
+      if (draft.image === g[idx]) {
+        setDraft(d => ({ ...d, image: next[0] || "" }));
+      }
+      return next;
+    });
+  };
+
+  const setAsPrimary = (imgSrc: string) => {
+    setDraft(d => ({ ...d, image: imgSrc }));
+    setGalleryImages(g => [imgSrc, ...g.filter(x => x !== imgSrc)]);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith("image/")) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          void handleMainPhotoUpload(file);
+          break;
+        }
+      }
+    }
   };
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const finalSlug = draft.slug ? slugify(draft.slug) : slugify(draft.name);
     const parsedPrice = Math.round((Number(priceRupees) || (draft.price / 100)) * 100);
+    const finalImage = draft.image || galleryImages[0] || "/demo-products/essential-tee.webp";
+    const finalGallery = galleryImages.length > 0 ? galleryImages : [finalImage];
+
     onSave({
       ...draft,
       id: draft.id || `prod-${Date.now()}`,
       slug: finalSlug,
       name: draft.name.trim(),
       price: parsedPrice,
-      image: draft.image || galleryImages[0] || "/demo-products/essential-tee.webp",
-      gallery: galleryImages.length > 0 ? galleryImages : [draft.image],
+      image: finalImage,
+      gallery: finalGallery,
       colors: selectedColors,
       sizes: selectedSizes,
       isDemo: false
@@ -270,32 +368,58 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
 
   return (
     <Modal title={product ? `Edit "${product.name}"` : "Add New Streetwear Essential"} onClose={onClose}>
-      <form onSubmit={submit} className="admin-edit-form">
+      <form onSubmit={submit} className="admin-edit-form" onPaste={handlePaste}>
         {/* Live sync banner */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#052e16', border: '1px solid #166534', borderRadius: '4px', color: '#86efac', fontSize: '10px' }}>
           <ShieldCheck size={16} color="#4ade80" />
-          <span><strong>LIVE NEON POSTGRESQL SYNC:</strong> Saving here publishes immediately to www.helloclothing.store</span>
+          <span><strong>LIVE PENETIX SYNC:</strong> Saving here publishes immediately to www.helloclothing.store</span>
         </div>
 
         {/* Product photo upload section */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <label style={{ margin: 0 }}>Primary Product Photo</label>
-            {isUploading && <span style={{ color: '#4ade80', fontSize: '9px', fontWeight: 600 }}>⚡ Optimizing photo...</span>}
+            <label style={{ margin: 0, fontWeight: 600 }}>Primary Product Photo</label>
+            {(isUploading || uploadStatus) && (
+              <span style={{ color: isUploading ? '#38bdf8' : '#4ade80', fontSize: '10px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                {uploadStatus || '⚡ Processing...'}
+              </span>
+            )}
           </div>
           <div className="admin-photo-uploader">
-            <div className="admin-photo-preview-wrap">
+            <div
+              className="admin-photo-preview-wrap"
+              style={{
+                border: isDragging ? '2px dashed #4ade80' : undefined,
+                background: isDragging ? '#064e3b' : undefined,
+                cursor: 'pointer',
+                position: 'relative'
+              }}
+              onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={e => {
+                e.preventDefault();
+                setIsDragging(false);
+                const file = e.dataTransfer.files?.[0];
+                if (file) void handleMainPhotoUpload(file);
+              }}
+              onClick={() => mainImageInputRef.current?.click()}
+              title="Click or drag image file here"
+            >
               {draft.image ? (
-                <img src={draft.image} alt={draft.name || "Preview"} />
+                <img src={draft.image} alt={draft.name || "Preview"} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
               ) : (
-                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888', fontSize: '9px' }}>No photo</div>
+                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#a1a1aa', fontSize: '10px', textAlign: 'center', padding: '12px', gap: '4px' }}>
+                  <ImagePlus size={22} color="#71717a" />
+                  <span>Click to upload or drag photo here</span>
+                  <small style={{ color: '#52525b', fontSize: '9px' }}>JPG, PNG, WebP · Auto-optimized</small>
+                </div>
               )}
             </div>
             <div className="admin-photo-upload-actions">
               <input
                 ref={mainImageInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/*"
                 style={{ display: 'none' }}
                 onChange={e => { void handleMainPhotoUpload(e.target.files?.[0]); e.target.value = ""; }}
               />
@@ -303,7 +427,7 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
                 <button
                   type="button"
                   className="admin-button"
-                  style={{ minHeight: '32px', padding: '6px 12px', fontSize: '9px' }}
+                  style={{ minHeight: '32px', padding: '6px 12px', fontSize: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   onClick={() => mainImageInputRef.current?.click()}
                   disabled={isUploading}
                 >
@@ -311,10 +435,16 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
                 </button>
               </div>
               <input
-                placeholder="Or paste image URL (e.g. /demo-products/essential-tee.webp)"
+                placeholder="Or paste image URL (e.g. /demo-products/essential-tee.webp or https://...)"
                 value={draft.image}
-                onChange={e => setDraft({ ...draft, image: e.target.value })}
-                style={{ fontSize: '10px', height: '32px' }}
+                onChange={e => {
+                  const val = e.target.value;
+                  setDraft({ ...draft, image: val });
+                  if (val && !galleryImages.includes(val)) {
+                    setGalleryImages(g => g.length > 0 ? [val, ...g.slice(1)] : [val]);
+                  }
+                }}
+                style={{ fontSize: '11px', height: '34px' }}
               />
             </div>
           </div>
@@ -322,35 +452,57 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
 
         {/* Gallery photos */}
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label>Additional Gallery Angles ({galleryImages.length})</label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <label style={{ margin: 0 }}>Additional Angle Photos ({galleryImages.length})</label>
             <button
               type="button"
               className="admin-button admin-button-quiet"
-              style={{ minHeight: '26px', padding: '3px 8px', fontSize: '8px' }}
+              style={{ minHeight: '26px', padding: '3px 8px', fontSize: '9px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
               onClick={() => galleryImageInputRef.current?.click()}
+              disabled={isUploading}
             >
-              <Plus size={12} /> Add Angle Photo
+              <Plus size={12} /> Add Angles
             </button>
             <input
               ref={galleryImageInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/*"
+              multiple
               style={{ display: 'none' }}
-              onChange={e => { void handleGalleryPhotoUpload(e.target.files?.[0]); e.target.value = ""; }}
+              onChange={e => { void handleGalleryPhotoUpload(e.target.files); e.target.value = ""; }}
             />
           </div>
-          <div className="admin-gallery-editor-strip">
+          <div className="admin-gallery-editor-strip" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {galleryImages.map((src, idx) => (
-              <div key={idx} className="admin-gallery-thumb">
+              <div key={idx} className="admin-gallery-thumb" style={{ position: 'relative' }}>
                 <img src={src} alt={`Angle ${idx + 1}`} />
-                {galleryImages.length > 1 && (
-                  <button type="button" onClick={() => removeGalleryImage(idx)}>
-                    <X size={12} />
-                  </button>
+                {draft.image === src && (
+                  <span style={{ position: 'absolute', bottom: '2px', left: '2px', background: '#22c55e', color: '#000', fontSize: '8px', fontWeight: 800, padding: '1px 3px', borderRadius: '2px' }}>
+                    PRIMARY
+                  </span>
                 )}
+                <div style={{ position: 'absolute', top: '2px', right: '2px', display: 'flex', gap: '2px' }}>
+                  {draft.image !== src && (
+                    <button
+                      type="button"
+                      title="Set as primary photo"
+                      onClick={() => setAsPrimary(src)}
+                      style={{ background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', padding: '2px', cursor: 'pointer', borderRadius: '2px', fontSize: '8px' }}
+                    >
+                      ★
+                    </button>
+                  )}
+                  {galleryImages.length > 1 && (
+                    <button type="button" onClick={() => removeGalleryImage(idx)} title="Remove photo">
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
+            {galleryImages.length === 0 && (
+              <span style={{ fontSize: '10px', color: '#71717a' }}>No additional photos yet. Primary photo will be used.</span>
+            )}
           </div>
         </div>
 
@@ -548,7 +700,7 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
             Cancel
           </button>
           <button className="admin-button" type="submit" style={{ background: '#1e3a15' }}>
-            <Check size={16} /> Save & Publish to Store (Neon DB)
+            <Check size={16} /> Save & Publish to Store (Penetix)
           </button>
         </div>
       </form>
@@ -557,11 +709,23 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
 }
 
 export function AdminDisabled() {
-  return <div className="admin-locked"><div className="admin-brand">Hello!</div><ShieldCheck size={36} strokeWidth={1.3} /><h1>Admin access is unavailable.</h1><p>This browser demo is disabled in live mode. Connect your authenticated management service to manage a live store.</p><Link href="/" className="admin-button">Back to store <ArrowRight size={16} /></Link></div>;
+  return (
+    <div className="admin-locked">
+      <div className="admin-brand">
+        <img src="/branding/hello-light.webp" alt="HELLO!" style={{ height: "30px", width: "auto", marginBottom: "14px", objectFit: "contain" }} />
+      </div>
+      <ShieldCheck size={36} strokeWidth={1.3} />
+      <h1>Admin access is unavailable.</h1>
+      <p>This workspace is disabled in public view. Connect your authenticated management service to manage your store.</p>
+      <Link href="/" className="admin-button">Back to store <ArrowRight size={16} /></Link>
+    </div>
+  );
 }
 
 export default function AdminApp({ initialSection = "overview" }: { initialSection?: AdminSection }) {
   const section = initialSection;
+  const [session, setSession] = useState<AdminUserSession | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
   const [products, setProducts] = useState<Product[]>(BASE_PRODUCTS);
   const [categories, setCategories] = useState<Category[]>(BASE_CATEGORIES);
   const [content, setContent] = useState<Content>(DEFAULT_CONTENT);
@@ -570,7 +734,12 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
   const [inventory, setInventory] = useState<Record<string, number>>({});
   const [activity, setActivity] = useState<Activity[]>([]);
   const [customerOrders, setCustomerOrders] = useState<AdminOrder[]>([]);
+  const [isFetchingOrders, setIsFetchingOrders] = useState(false);
+  const [orderSearch, setOrderSearch] = useState("");
+  const [orderStatus, setOrderStatus] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
+  const [orderToDelete, setOrderToDelete] = useState<AdminOrder | null>(null);
+  const [createOrderModalOpen, setCreateOrderModalOpen] = useState(false);
   const [ready, setReady] = useState(false);
   const [notice, setNotice] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -584,75 +753,259 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
   const [resetOpen, setResetOpen] = useState(false);
   const [mediaError, setMediaError] = useState("");
   const uploadRef = useRef<HTMLInputElement>(null);
-  const activeNav = NAV.find(item => item.id === section)!;
+
+  // Authentication check on mount
+  useEffect(() => {
+    let isMounted = true;
+    try {
+      const cached = localStorage.getItem('hello-admin-session');
+      if (cached) {
+        const parsed: AdminUserSession = JSON.parse(cached);
+        if (parsed && parsed.email) {
+          setSession(parsed);
+          // Verify against Penetix to ensure account is still active
+          fetch(`/api/admin/auth?email=${encodeURIComponent(parsed.email)}`)
+            .then(r => r.json())
+            .then(data => {
+              if (!isMounted) return;
+              if (data.authorized && data.user) {
+                setSession(data.user);
+                try {
+                  localStorage.setItem('hello-admin-session', JSON.stringify(data.user));
+                } catch {}
+              } else {
+                try {
+                  localStorage.removeItem('hello-admin-session');
+                } catch {}
+                setSession(null);
+              }
+            })
+            .catch(() => {})
+            .finally(() => {
+              if (isMounted) setAuthChecking(false);
+            });
+          return;
+        }
+      }
+    } catch {}
+    if (isMounted) setAuthChecking(false);
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await firebaseLogOut();
+    } catch {}
+    try {
+      localStorage.removeItem('hello-admin-session');
+    } catch {}
+    setSession(null);
+    setNotice("Signed out of admin portal.");
+  };
+
+  const visibleNav = useMemo(() => {
+    if (!session) return [];
+    if (session.role === 'super_admin') return NAV;
+    if (session.role === 'co_admin') return NAV.filter(n => n.id !== 'settings' && n.id !== 'team');
+    // Admin staff: orders, inventory, media, overview
+    return NAV.filter(n => ['overview', 'orders', 'inventory', 'media'].includes(n.id));
+  }, [session]);
+
+  const activeNav = NAV.find(item => item.id === section) || NAV[0];
+
+  const fetchOrders = async () => {
+    setIsFetchingOrders(true);
+    try {
+      const res = await fetch('/api/admin/orders');
+      const data = await res.json();
+      if (data && Array.isArray(data.orders)) {
+        setCustomerOrders(data.orders.map((o: any) => ({
+          reference: o.reference,
+          createdAt: o.created_at || o.createdAt,
+          customer: o.customer,
+          items: o.items,
+          paymentMethod: o.payment_method || o.paymentMethod,
+          total: o.total,
+          subtotal: o.subtotal,
+          delivery: o.delivery,
+          status: o.status || 'processing',
+          courier: o.courier || 'PromptX Logistics',
+          tracking_number: o.tracking_number || o.trackingNumber,
+          notes: o.notes || '',
+        })));
+      }
+    } catch (err: any) {
+      console.error('Failed to load orders from Penetix:', err);
+    } finally {
+      setIsFetchingOrders(false);
+    }
+  };
+
+  const deleteOrder = async (reference: string) => {
+    setCustomerOrders(prev => prev.filter(o => o.reference !== reference));
+    if (selectedOrder?.reference === reference) setSelectedOrder(null);
+    setOrderToDelete(null);
+    setNotice(`Deleting order ${reference} from Penetix…`);
+    try {
+      const res = await fetch(`/api/admin/orders?reference=${encodeURIComponent(reference)}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setNotice(`Order ${reference} permanently deleted from Penetix.`);
+        log(`Deleted order ${reference}`);
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        setNotice(`Failed to delete order: ${errJson.error || res.statusText}`);
+      }
+    } catch (err: any) {
+      setNotice(`Network error deleting order: ${err.message}`);
+    }
+  };
+
+  const purgeDemoOrders = async () => {
+    setNotice("Clearing test orders from Penetix…");
+    try {
+      await fetch('/api/admin/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'clear_demo' }),
+      });
+      try {
+        localStorage.removeItem('hello-order-history');
+        sessionStorage.removeItem('hello-order-preview');
+      } catch {}
+      await fetchOrders();
+      setNotice("Test orders cleared from Penetix successfully.");
+      log("Cleared test orders from Penetix");
+    } catch {
+      setNotice("Failed to clear test orders.");
+    }
+  };
+
+  const saveStoreContent = async (e: FormEvent) => {
+    e.preventDefault();
+    setNotice("Saving content to Penetix…");
+    try {
+      await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'store_content', value: content }),
+      });
+      localStorage.setItem(KEYS.content, JSON.stringify(content));
+      window.dispatchEvent(new Event("hello:demo-settings"));
+      setNotice("Store content saved to Penetix Cloud!");
+      log("Saved store content to Penetix Cloud");
+    } catch {
+      localStorage.setItem(KEYS.content, JSON.stringify(content));
+      setNotice("Content saved locally.");
+    }
+  };
+
+  const saveStoreSettings = async (e: FormEvent) => {
+    e.preventDefault();
+    setNotice("Saving settings to Penetix…");
+    try {
+      await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'store_settings', value: settings }),
+      });
+      localStorage.setItem(KEYS.settings, JSON.stringify(settings));
+      window.dispatchEvent(new Event("hello:demo-settings"));
+      setNotice("Settings saved to Penetix Cloud!");
+      log("Saved store settings to Penetix Cloud");
+    } catch {
+      localStorage.setItem(KEYS.settings, JSON.stringify(settings));
+      setNotice("Settings saved locally.");
+    }
+  };
+
   useEffect(() => {
     let active = true;
-    // Read the browser snapshot after hydration, and ignore stale Strict Mode callbacks.
     queueMicrotask(() => {
-    if (!active) return;
-    const savedProducts = readLocal<unknown>(KEYS.products, BASE_PRODUCTS);
-    if (Array.isArray(savedProducts) && savedProducts.every(p => p && typeof p.id === "string" && typeof p.name === "string" && typeof p.stock === "number" && Array.isArray(p.colors) && Array.isArray(p.sizes))) setProducts(savedProducts as Product[]);
-    const savedCategories = readLocal<unknown>(KEYS.categories, BASE_CATEGORIES);
-    if (Array.isArray(savedCategories) && savedCategories.every(c => c && typeof c.slug === "string" && typeof c.name === "string")) setCategories(savedCategories as Category[]);
-    setContent({ ...DEFAULT_CONTENT, ...readLocal<Partial<Content>>(KEYS.content, {}) });
-    setSettings({ ...DEFAULT_SETTINGS, ...readLocal<Partial<Settings>>(KEYS.settings, {}) });
-    const savedMedia = readLocal<unknown>(KEYS.media, []);
-    if (Array.isArray(savedMedia)) setMedia(savedMedia.filter(m => m && typeof m.src === "string" && typeof m.id === "string") as MediaItem[]);
-    const savedInventory = readLocal<unknown>(KEYS.inventory, {});
-    if (savedInventory && typeof savedInventory === "object" && !Array.isArray(savedInventory)) setInventory(Object.fromEntries(Object.entries(savedInventory).filter(([, value]) => typeof value === "number" && Number.isFinite(value) && value >= 0).map(([key, value]) => [key, Number(value)])));
-    const savedActivity = readLocal<unknown>(KEYS.activity, []);
-    if (Array.isArray(savedActivity)) setActivity(savedActivity.filter(item => item && typeof item.id === "string" && typeof item.label === "string" && typeof item.time === "number").slice(0, 8));
-    const savedOrders = readLocal<AdminOrder[]>('hello-order-history', []);
-    if (Array.isArray(savedOrders)) setCustomerOrders(savedOrders);
-    setReady(true);
+      if (!active) return;
+      const savedProducts = readLocal<unknown>(KEYS.products, BASE_PRODUCTS);
+      if (Array.isArray(savedProducts) && savedProducts.every(p => p && typeof p.id === "string" && typeof p.name === "string" && typeof p.stock === "number" && Array.isArray(p.colors) && Array.isArray(p.sizes))) setProducts(savedProducts as Product[]);
+      const savedCategories = readLocal<unknown>(KEYS.categories, BASE_CATEGORIES);
+      if (Array.isArray(savedCategories) && savedCategories.every(c => c && typeof c.slug === "string" && typeof c.name === "string")) setCategories(savedCategories as Category[]);
+      setContent({ ...DEFAULT_CONTENT, ...readLocal<Partial<Content>>(KEYS.content, {}) });
+      setSettings({ ...DEFAULT_SETTINGS, ...readLocal<Partial<Settings>>(KEYS.settings, {}) });
+      const savedMedia = readLocal<unknown>(KEYS.media, []);
+      if (Array.isArray(savedMedia)) setMedia(savedMedia.filter(m => m && typeof m.src === "string" && typeof m.id === "string") as MediaItem[]);
+      const savedInventory = readLocal<unknown>(KEYS.inventory, {});
+      if (savedInventory && typeof savedInventory === "object" && !Array.isArray(savedInventory)) setInventory(Object.fromEntries(Object.entries(savedInventory).filter(([, value]) => typeof value === "number" && Number.isFinite(value) && value >= 0).map(([key, value]) => [key, Number(value)])));
+      const savedActivity = readLocal<unknown>(KEYS.activity, []);
+      if (Array.isArray(savedActivity)) setActivity(savedActivity.filter(item => item && typeof item.id === "string" && typeof item.label === "string" && typeof item.time === "number").slice(0, 8));
+      setReady(true);
 
-    // Fetch live data from Neon Database
-    fetch('/api/admin/products')
-      .then(r => r.json())
-      .then(d => {
-        if (active && d.products && Array.isArray(d.products) && d.products.length > 0) {
-          setProducts(d.products);
-        }
-      })
-      .catch(() => {});
+      // Fetch live products from Penetix Cloud
+      fetch('/api/admin/products')
+        .then(r => r.json())
+        .then(d => {
+          if (active && d.products && Array.isArray(d.products) && d.products.length > 0) {
+            setProducts(d.products);
+          }
+        })
+        .catch(() => {});
 
-    fetch('/api/admin/orders')
-      .then(r => r.json())
-      .then(d => {
-        if (active && d.orders && Array.isArray(d.orders) && d.orders.length > 0) {
-          setCustomerOrders(d.orders.map((o: any) => ({
-            reference: o.reference,
-            createdAt: o.created_at || o.createdAt,
-            customer: o.customer,
-            items: o.items,
-            paymentMethod: o.payment_method || o.paymentMethod,
-            total: o.total,
-            subtotal: o.subtotal,
-            delivery: o.delivery,
-            status: o.status || 'processing',
-            courier: o.courier || 'PromptX Logistics',
-            tracking_number: o.tracking_number || o.trackingNumber,
-            notes: o.notes || '',
-          })));
-        }
-      })
-      .catch(() => {});
+      // Fetch live orders directly from Penetix Cloud
+      fetch('/api/admin/orders')
+        .then(r => r.json())
+        .then(d => {
+          if (active && d && Array.isArray(d.orders)) {
+            setCustomerOrders(d.orders.map((o: any) => ({
+              reference: o.reference,
+              createdAt: o.created_at || o.createdAt,
+              customer: o.customer,
+              items: o.items,
+              paymentMethod: o.payment_method || o.paymentMethod,
+              total: o.total,
+              subtotal: o.subtotal,
+              delivery: o.delivery,
+              status: o.status || 'processing',
+              courier: o.courier || 'PromptX Logistics',
+              tracking_number: o.tracking_number || o.trackingNumber,
+              notes: o.notes || '',
+            })));
+          }
+        })
+        .catch(() => {});
 
-    fetch('/api/admin/categories')
-      .then(r => r.json())
-      .then(d => {
-        if (active && d.categories && Array.isArray(d.categories) && d.categories.length > 0) {
-          setCategories(d.categories);
-        }
-      })
-      .catch(() => {});
+      // Fetch live categories from Penetix Cloud
+      fetch('/api/admin/categories')
+        .then(r => r.json())
+        .then(d => {
+          if (active && d.categories && Array.isArray(d.categories) && d.categories.length > 0) {
+            setCategories(d.categories);
+          }
+        })
+        .catch(() => {});
+
+      // Fetch live settings and content from Penetix Cloud
+      fetch('/api/admin/settings')
+        .then(r => r.json())
+        .then(d => {
+          if (active && d) {
+            if (d.settings) setSettings(prev => ({ ...prev, ...d.settings }));
+            if (d.content) setContent(prev => ({ ...prev, ...d.content }));
+          }
+        })
+        .catch(() => {});
     });
     return () => { active = false; };
   }, []);
+
   useEffect(() => {
     if (!ready) return;
     let errorTimer: ReturnType<typeof setTimeout> | undefined;
-    try { localStorage.setItem(KEYS.products, JSON.stringify(products)); localStorage.setItem(KEYS.categories, JSON.stringify(categories)); localStorage.setItem(KEYS.inventory, JSON.stringify(inventory)); localStorage.setItem(KEYS.activity, JSON.stringify(activity)); } catch { errorTimer = setTimeout(() => setNotice("Browser storage is full. Some changes could not be saved."), 0); }
+    try {
+      localStorage.setItem(KEYS.products, JSON.stringify(products));
+      localStorage.setItem(KEYS.categories, JSON.stringify(categories));
+      localStorage.setItem(KEYS.inventory, JSON.stringify(inventory));
+      localStorage.setItem(KEYS.activity, JSON.stringify(activity));
+    } catch {
+      // Gracefully prevent QuotaExceededError
+    }
     return () => { if (errorTimer) clearTimeout(errorTimer); };
   }, [products, categories, inventory, activity, ready]);
   useEffect(() => { if (!notice) return; const timeout = setTimeout(() => setNotice(""), 5000); return () => clearTimeout(timeout); }, [notice]);
@@ -665,6 +1018,21 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
   const selectedVariants = selectedProduct ? variants(selectedProduct) : [];
   const allMedia = useMemo<MediaItem[]>(() => [...media, ...Array.from(new Map(products.filter(p => p.image).map(p => [p.image, { id: p.id, src: p.image, name: p.name }])).values())], [products, media]);
 
+  const filteredCustomerOrders = useMemo(() => {
+    return customerOrders.filter(o => {
+      const matchesStatus = orderStatus === 'all' || o.status === orderStatus;
+      if (!matchesStatus) return false;
+      if (!orderSearch.trim()) return true;
+      const q = orderSearch.toLowerCase();
+      const ref = (o.reference || '').toLowerCase();
+      const name = (o.customer?.name || '').toLowerCase();
+      const phone = (o.customer?.phone || '').toLowerCase();
+      const city = (o.customer?.city || '').toLowerCase();
+      const email = (o.customer?.email || '').toLowerCase();
+      return ref.includes(q) || name.includes(q) || phone.includes(q) || city.includes(q) || email.includes(q);
+    });
+  }, [customerOrders, orderSearch, orderStatus]);
+
   const saveProduct = async (product: Product) => {
     const previous = products.find(p => p.id === product.id);
     setProducts(current => previous ? current.map(p => p.id === product.id ? product : p) : [...current, product]);
@@ -672,7 +1040,7 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
       setInventory(current => Object.fromEntries(Object.entries(current).filter(([key]) => !key.startsWith(`${product.id}|`))));
     }
     setEditor(null);
-    setNotice("Syncing with Neon database…");
+    setNotice("Syncing with Penetix Cloud…");
     try {
       const res = await fetch('/api/admin/products', {
         method: 'POST',
@@ -680,8 +1048,8 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
         body: JSON.stringify(product),
       });
       if (res.ok) {
-        setNotice(previous ? `"${product.name}" updated in Neon DB & Live Storefront!` : `"${product.name}" published to Neon DB & Live Storefront!`);
-        log(`${previous ? "Updated" : "Added"} ${product.name} (Neon DB)`);
+        setNotice(previous ? `"${product.name}" updated in Penetix & Live Storefront!` : `"${product.name}" published to Penetix & Live Storefront!`);
+        log(`${previous ? "Updated" : "Added"} ${product.name} (Penetix)`);
       } else {
         const errJson = await res.json().catch(() => ({}));
         setNotice(`Save failed: ${errJson.error || res.statusText || 'Database error'}`);
@@ -717,7 +1085,7 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
       courier: courier !== undefined ? courier : prev.courier,
       tracking_number: trackingNumber !== undefined ? trackingNumber : prev.tracking_number,
     } : prev));
-    setNotice(`Updating order ${reference} in Neon…`);
+    setNotice(`Updating order ${reference} in Penetix…`);
     try {
       const res = await fetch('/api/admin/orders', {
         method: 'PATCH',
@@ -725,7 +1093,7 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
         body: JSON.stringify({ reference, status: newStatus, courier, trackingNumber })
       });
       if (res.ok) {
-        setNotice(`Order ${reference} updated in Neon DB.`);
+        setNotice(`Order ${reference} updated in Penetix.`);
         log(`Order ${reference}: ${newStatus}`);
       } else {
         setNotice("Order updated locally.");
@@ -745,29 +1113,175 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
     reader.readAsDataURL(file);
   };
 
-  return <div className="admin-app">
-    {menuOpen && <button className="admin-sidebar-scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
-    <aside className={`admin-sidebar ${menuOpen ? "admin-sidebar-open" : ""}`}><Link className="admin-brand" href="/" aria-label="Hello clothing home">Hello!</Link><div className="admin-workspace-label"><span className="admin-workspace-dot" style={{ background: '#16a34a' }} /> STORE WORKSPACE <span style={{ color: '#4ade80' }}>NEON DB</span></div><nav aria-label="Admin navigation">{NAV.map(({ id, label, icon: Icon }) => <Link key={id} href={id === "overview" ? "/admin" : `/admin/${id}`} aria-current={section === id ? "page" : undefined} className={section === id ? "admin-nav-active" : ""} onClick={() => setMenuOpen(false)}><Icon size={18} strokeWidth={1.5} />{label}{id === "orders" && <span className="admin-nav-count">{customerOrders.length}</span>}</Link>)}</nav><div className="admin-sidebar-bottom"><div className="admin-store-status"><span style={{ background: '#16a34a' }} /> Neon DB Connected</div><Link href="/">View storefront <ArrowUpRight size={16} /></Link><div className="admin-profile"><div>H!</div><p>HELLO! Workspace<small>Neon DB Store Administrator</small></p></div></div></aside>
-    <div className="admin-main"><header className="admin-topbar"><div className="admin-breadcrumb"><button className="admin-icon-button admin-mobile-menu" aria-label="Open navigation" onClick={() => setMenuOpen(true)}><Menu size={22} /></button><span>Workspace</span><span>/</span><strong>{activeNav.label}</strong></div><div className="admin-topbar-right"><span className="admin-demo-badge" style={{ borderColor: '#166534', color: '#4ade80', background: '#052e16' }}><span style={{ background: '#22c55e' }} /> Neon PostgreSQL 18 · Connected</span><Link href="/" className="admin-topbar-store">Visit store <ExternalLink size={14} /></Link></div></header>
-    <main className="admin-content"><div className="admin-page-title"><div><span className="admin-eyebrow">HELLO! CLOTHING / {section === "overview" ? "YOUR EVERYDAY, ELEVATED" : "STORE MANAGEMENT"}</span><h1>{section === "overview" ? "Make yourself at home." : activeNav.label}</h1><p>{({ overview: "A little overview of your world. Let’s make it a good one.", products: "Good essentials. Great first impressions. Your collection starts here.", inventory: "Keep every color and size ready for their next everyday.", orders: "Every great brand starts with its first order.", categories: "A place for every piece in your collection.", content: "A few words. A whole lot of personality.", media: "The images that bring your brand to life.", settings: "The details that make this store yours." })[section]}</p></div>{section === "products" && <button className="admin-button" onClick={() => setEditor("new")}><Plus size={17} /> Add product</button>}{section === "categories" && <button className="admin-button" onClick={() => setCategoryEditor("new")}><Plus size={17} /> Add category</button>}{section === "media" && <button className="admin-button" onClick={() => uploadRef.current?.click()}><ImagePlus size={17} /> Upload image</button>}</div>
+  if (authChecking) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#09090b', color: '#fff', gap: '16px' }}>
+        <img src="/branding/hello-light.webp" alt="HELLO!" style={{ height: "32px", width: "auto" }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#a1a1aa', fontSize: '13px' }}>
+          <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+          <span>Verifying administrator credentials…</span>
+        </div>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
-    <div className="admin-sandbox-notice" style={{ background: '#052e16', borderColor: '#166534', color: '#86efac' }}><ShieldCheck size={15} strokeWidth={1.5} color="#4ade80" /><span>NEON POSTGRESQL CONNECTED · Live store operations, products, stock, and customer orders.</span></div>
+  if (!session) {
+    return <AdminLogin onSuccess={(user) => setSession(user)} />;
+  }
+
+  // Permission access check for active section
+  const isSectionRestricted =
+    ((section === "team" || section === "settings") && session.role !== "super_admin") ||
+    (["products", "categories", "content"].includes(section) && session.role === "admin");
+
+  return (
+    <div className="admin-app">
+      {menuOpen && <button className="admin-sidebar-scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
+      <aside className={`admin-sidebar ${menuOpen ? "admin-sidebar-open" : ""}`}>
+        <Link className="admin-brand" href="/" aria-label="Hello clothing home" style={{ display: 'flex', alignItems: 'center', padding: '12px 0' }}>
+          <img src="/branding/hello-light.webp" alt="HELLO!" style={{ height: "26px", width: "auto", objectFit: "contain" }} />
+        </Link>
+        <div className="admin-workspace-label">
+          <span className="admin-workspace-dot" style={{ background: '#16a34a' }} /> STORE WORKSPACE <span style={{ color: '#4ade80' }}>PENETIX</span>
+        </div>
+        <nav aria-label="Admin navigation">
+          {visibleNav.map(({ id, label, icon: Icon }) => (
+            <Link
+              key={id}
+              href={id === "overview" ? "/admin" : `/admin/${id}`}
+              aria-current={section === id ? "page" : undefined}
+              className={section === id ? "admin-nav-active" : ""}
+              onClick={() => setMenuOpen(false)}
+            >
+              <Icon size={18} strokeWidth={1.5} />
+              {label}
+              {id === "orders" && <span className="admin-nav-count">{customerOrders.length}</span>}
+            </Link>
+          ))}
+        </nav>
+        <div className="admin-sidebar-bottom">
+          <div className="admin-store-status"><span style={{ background: '#16a34a' }} /> Penetix Cloud Connected</div>
+          <Link href="/">View storefront <ArrowUpRight size={16} /></Link>
+          <div className="admin-profile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '10px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+              <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: session.role === 'super_admin' ? '#7c3aed' : session.role === 'co_admin' ? '#0284c7' : '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px', color: '#fff', flexShrink: 0 }}>
+                {session.name ? session.name.charAt(0).toUpperCase() : 'A'}
+              </div>
+              <div style={{ overflow: 'hidden', textAlign: 'left' }}>
+                <p style={{ margin: 0, fontSize: '11px', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                  {session.name}
+                </p>
+                <span style={{
+                  display: 'inline-block',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  letterSpacing: '0.5px',
+                  color: session.role === 'super_admin' ? '#fde047' : session.role === 'co_admin' ? '#93c5fd' : '#86efac',
+                  textTransform: 'uppercase'
+                }}>
+                  {session.role === 'super_admin' ? 'Super Admin' : session.role === 'co_admin' ? 'Co-Admin' : 'Staff'}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              title="Sign Out"
+              aria-label="Sign out of admin portal"
+              style={{ background: 'transparent', border: 'none', color: '#a1a1aa', cursor: 'pointer', padding: '6px', borderRadius: '4px', display: 'flex', alignItems: 'center' }}
+            >
+              <LogOut size={15} />
+            </button>
+          </div>
+        </div>
+      </aside>
+      <div className="admin-main">
+        <header className="admin-topbar">
+          <div className="admin-breadcrumb">
+            <button className="admin-icon-button admin-mobile-menu" aria-label="Open navigation" onClick={() => setMenuOpen(true)}>
+              <Menu size={22} />
+            </button>
+            <span>Workspace</span>
+            <span>/</span>
+            <strong>{activeNav.label}</strong>
+          </div>
+          <div className="admin-topbar-right">
+            <span className="admin-demo-badge" style={{ borderColor: '#166534', color: '#4ade80', background: '#052e16' }}>
+              <span style={{ background: '#22c55e' }} /> Penetix Cloud · Connected
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#18181b', border: '1px solid #27272a', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', color: '#e4e4e7' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: session.role === 'super_admin' ? '#a855f7' : session.role === 'co_admin' ? '#38bdf8' : '#4ade80' }} />
+              <strong>{session.name}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="admin-button admin-button-quiet"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', fontSize: '11px', color: '#ef4444' }}
+              title="Sign Out"
+            >
+              <LogOut size={13} /> Sign Out
+            </button>
+            <Link href="/" className="admin-topbar-store">Visit store <ExternalLink size={14} /></Link>
+          </div>
+        </header>
+        <main className="admin-content">
+          <div className="admin-page-title">
+            <div>
+              <span className="admin-eyebrow">HELLO! CLOTHING / {section === "overview" ? "YOUR EVERYDAY, ELEVATED" : section === "team" ? "STAFF & ACCESS CONTROL" : "STORE MANAGEMENT"}</span>
+              <h1>{section === "overview" ? "Make yourself at home." : activeNav.label}</h1>
+              <p>{({
+                overview: "A little overview of your world. Let’s make it a good one.",
+                products: "Good essentials. Great first impressions. Your collection starts here.",
+                inventory: "Keep every color and size ready for their next everyday.",
+                orders: "Every great brand starts with its first order.",
+                categories: "A place for every piece in your collection.",
+                content: "A few words. A whole lot of personality.",
+                media: "The images that bring your brand to life.",
+                settings: "The details that make this store yours.",
+                team: "Hierarchical staff permissions and store administrator access."
+              })[section]}</p>
+            </div>
+            {section === "products" && <button className="admin-button" onClick={() => setEditor("new")}><Plus size={17} /> Add product</button>}
+            {section === "categories" && <button className="admin-button" onClick={() => setCategoryEditor("new")}><Plus size={17} /> Add category</button>}
+            {section === "media" && <button className="admin-button" onClick={() => uploadRef.current?.click()}><ImagePlus size={17} /> Upload image</button>}
+          </div>
+
+          <div className="admin-sandbox-notice" style={{ background: '#052e16', borderColor: '#166534', color: '#86efac' }}>
+            <ShieldCheck size={15} strokeWidth={1.5} color="#4ade80" />
+            <span>PENETIX CLOUD CONNECTED · Live store operations, products, stock, and customer orders.</span>
+          </div>
+
+          {isSectionRestricted && (
+            <section className="admin-panel" style={{ padding: '32px 20px', textAlign: 'center', margin: '20px 0' }}>
+              <ShieldAlert size={44} color="#eab308" style={{ margin: '0 auto 12px', display: 'block' }} />
+              <h3 style={{ fontSize: '18px', color: '#fff', marginBottom: '6px' }}>Access Restricted</h3>
+              <p style={{ color: '#a1a1aa', fontSize: '13px', maxWidth: '440px', margin: '0 auto 16px' }}>
+                Your assigned role ({session.role.replace('_', ' ').toUpperCase()}) does not have permission to access the <strong>{activeNav.label}</strong> module.
+              </p>
+              <Link href="/admin/orders" className="admin-button" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                Switch to Orders <ArrowRight size={14} />
+              </Link>
+            </section>
+          )}
     {section === "overview" && <>
       <div className="admin-metrics">{[{ title: "TOTAL REVENUE", value: customerOrders.length > 0 ? money(totalRevenue) : "LKR 0", icon: ArrowUpRight, note: customerOrders.length > 0 ? `${customerOrders.length} customer order${customerOrders.length === 1 ? '' : 's'}` : "No payments connected" }, { title: "ORDERS", value: String(customerOrders.length), icon: Package, note: customerOrders.length > 0 ? "Saved in browser history" : "Ready for your first order" }, { title: "CATALOG PIECES", value: String(products.length).padStart(2, "0"), icon: ShoppingBag, note: `${categories.length} curated categories` }, { title: "AVAILABLE UNITS", value: String(totalStock), icon: Boxes, note: `${products.filter(p => p.stock <= 5).length} products with low stock` }].map(item => <div className="admin-metric" key={item.title}><div><span>{item.title}</span><item.icon size={18} strokeWidth={1.4} /></div><strong>{item.value}</strong><small>{item.note}</small></div>)}</div>
-      <div className="admin-overview-row"><section className="admin-panel admin-inventory-panel"><div className="admin-panel-heading"><div><h2>Your collection, at a glance.</h2><p>Available stock across your categories</p></div><Link href="/admin/inventory" className="admin-text-link">Manage <ArrowUpRight size={15} /></Link></div><div className="admin-stock-chart">{categories.map(category => { const units = products.filter(p => p.category === category.slug).reduce((sum, p) => sum + p.stock, 0); return <div key={category.slug}><div><span>{category.name}</span><strong>{units}<small> units</small></strong></div><div className="admin-stock-track"><span style={{ width: `${totalStock ? Math.max(2, units / totalStock * 100) : 0}%` }} /></div></div>; })}</div><div className="admin-panel-foot"><span className="admin-status-dot" style={{ background: '#16a34a' }} /> Collection inventory <span style={{ color: '#4ade80' }}>Synced live with Neon DB</span></div></section><section className="admin-brand-panel"><div className="admin-brand-image">{products[0]?.image && <img src={products[0].image} alt="Hello clothing collection" />}<span className="admin-eyebrow">THE EVERYDAY COLLECTION</span><h2>Good clothes.<br />Better energy.</h2></div><div className="admin-brand-panel-bottom"><p>Your next chapter<br />starts with a simple Hello!</p><Link href="/" aria-label="Open your store"><ArrowUpRight size={24} /></Link></div></section></div>
-      <div className="admin-overview-bottom"><section className="admin-panel"><div className="admin-panel-heading"><div><h2>Recent activity</h2><p>The latest changes in your store</p></div><span className="admin-small-pill" style={{ background: '#052e16', color: '#4ade80', borderColor: '#166534' }}>NEON DB</span></div>{activity.length ? <div className="admin-activity-list">{activity.slice(0, 4).map(item => <div key={item.id}><span><Check size={15} /></span><p>{item.label}<small>{new Date(item.time).toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" })}</small></p></div>)}</div> : <div className="admin-activity-empty"><span><CheckCircle2 size={25} strokeWidth={1.3} /></span><p>A clean slate.<small>Your product and store updates will appear here.</small></p></div>}</section><section className="admin-panel admin-quick-actions"><div className="admin-panel-heading"><div><h2>A few good next steps.</h2><p>Build your store, one detail at a time.</p></div></div>{[{ label: "Add your next essential", subtitle: "Create a product in your demo catalog", to: "/admin/products", icon: ShoppingBag }, { label: "Make it sound like you", subtitle: "Edit your homepage copy", to: "/admin/content", icon: Type }, { label: "A little logo personality", subtitle: "Choose the navbar logo motion", to: "/admin/settings", icon: SlidersHorizontal }].map(action => <Link href={action.to} key={action.to}><action.icon size={19} strokeWidth={1.4} /><span>{action.label}<small>{action.subtitle}</small></span><ArrowRight size={17} /></Link>)}</section></div>
+      <div className="admin-overview-row"><section className="admin-panel admin-inventory-panel"><div className="admin-panel-heading"><div><h2>Your collection, at a glance.</h2><p>Available stock across your categories</p></div><Link href="/admin/inventory" className="admin-text-link">Manage <ArrowUpRight size={15} /></Link></div><div className="admin-stock-chart">{categories.map(category => { const units = products.filter(p => p.category === category.slug).reduce((sum, p) => sum + p.stock, 0); return <div key={category.slug}><div><span>{category.name}</span><strong>{units}<small> units</small></strong></div><div className="admin-stock-track"><span style={{ width: `${totalStock ? Math.max(2, units / totalStock * 100) : 0}%` }} /></div></div>; })}</div><div className="admin-panel-foot"><span className="admin-status-dot" style={{ background: '#16a34a' }} /> Collection inventory <span style={{ color: '#4ade80' }}>Synced live with Penetix Cloud</span></div></section><section className="admin-brand-panel"><div className="admin-brand-image">{products[0]?.image && <img src={products[0].image} alt="Hello clothing collection" />}<span className="admin-eyebrow">THE EVERYDAY COLLECTION</span><h2>Good clothes.<br />Better energy.</h2></div><div className="admin-brand-panel-bottom"><p>Your next chapter<br />starts with a simple Hello!</p><Link href="/" aria-label="Open your store"><ArrowUpRight size={24} /></Link></div></section></div>
+      <div className="admin-overview-bottom"><section className="admin-panel"><div className="admin-panel-heading"><div><h2>Recent activity</h2><p>The latest changes in your store</p></div><span className="admin-small-pill" style={{ background: '#052e16', color: '#4ade80', borderColor: '#166534' }}>PENETIX</span></div>{activity.length ? <div className="admin-activity-list">{activity.slice(0, 4).map(item => <div key={item.id}><span><Check size={15} /></span><p>{item.label}<small>{new Date(item.time).toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" })}</small></p></div>)}</div> : <div className="admin-activity-empty"><span><CheckCircle2 size={25} strokeWidth={1.3} /></span><p>A clean slate.<small>Your product and store updates will appear here.</small></p></div>}</section><section className="admin-panel admin-quick-actions"><div className="admin-panel-heading"><div><h2>A few good next steps.</h2><p>Build your store, one detail at a time.</p></div></div>{[{ label: "Add your next essential", subtitle: "Create a product in your store catalog", to: "/admin/products", icon: ShoppingBag }, { label: "Make it sound like you", subtitle: "Edit your homepage copy", to: "/admin/content", icon: Type }, { label: "A little logo personality", subtitle: "Choose the navbar logo motion", to: "/admin/settings", icon: SlidersHorizontal }].map(action => <Link href={action.to} key={action.to}><action.icon size={19} strokeWidth={1.4} /><span>{action.label}<small>{action.subtitle}</small></span><ArrowRight size={17} /></Link>)}</section></div>
     </>}
 
-    {section === "products" && <section className="admin-panel"><div className="admin-list-toolbar"><div className="admin-filter-tabs"><button className={statusFilter === "all" ? "admin-filter-active" : ""} onClick={() => setStatusFilter("all")}>All products <span>{products.length}</span></button><button className={statusFilter === "published" ? "admin-filter-active" : ""} onClick={() => setStatusFilter("published")}>Active</button><button className={statusFilter === "draft" ? "admin-filter-active" : ""} onClick={() => setStatusFilter("draft")}>Draft</button><button className={statusFilter === "low" ? "admin-filter-active" : ""} onClick={() => setStatusFilter("low")}>Low stock</button></div><label className="admin-search"><Search size={17} /><span className="admin-sr-only">Search products</span><input placeholder="Search your products…" value={query} onChange={event => setQuery(event.target.value)} /></label></div><div className="admin-table-scroll"><table className="admin-table"><thead><tr><th>PRODUCT</th><th>STATUS</th><th>INVENTORY <ArrowDown size={12} /></th><th>CATEGORY</th><th>PRICE</th><th><span className="admin-sr-only">Actions</span></th></tr></thead><tbody>{filteredProducts.map(product => <tr key={product.id}><td><button className="admin-product-cell" onClick={() => setEditor(product)}><img src={product.image} alt="" /><span>{product.name}<small>{product.sizes.join(" / ") || "One size"}</small></span></button></td><td><span className={`admin-status-pill admin-status-${product.status}`}><span />{titleCase(product.status)}</span></td><td><span className={product.stock <= 5 ? "admin-low-stock" : ""}>{product.stock} in stock</span></td><td>{categories.find(c => c.slug === product.category)?.name || titleCase(product.category)}</td><td className="admin-price-cell">{money(product.price)}</td><td><div className="admin-row-actions"><button className="admin-icon-button" onClick={() => setEditor(product)} title="Edit product" aria-label={`Edit ${product.name}`}><Pencil size={15} /></button><button className="admin-icon-button" onClick={() => duplicateProduct(product)} title="Duplicate / Copy this product" aria-label={`Duplicate ${product.name}`}><Copy size={15} /></button><button className="admin-icon-button" onClick={() => setDeleteProduct(product)} title="Delete product" aria-label={`Delete ${product.name}`}><Trash2 size={15} /></button></div></td></tr>)}</tbody></table></div>{!filteredProducts.length && <div className="admin-empty"><Search size={30} strokeWidth={1.2} /><h3>No matching essentials.</h3><p>Try another name, category, or filter.</p><button className="admin-button admin-button-quiet" onClick={() => { setQuery(""); setStatusFilter("all"); }}>Clear filters</button></div>}<div className="admin-table-footer">{filteredProducts.length} of {products.length} products <span style={{ color: '#4ade80' }}>Synced live with Neon PostgreSQL database</span></div></section>}
+    {section === "products" && <section className="admin-panel"><div className="admin-list-toolbar"><div className="admin-filter-tabs"><button className={statusFilter === "all" ? "admin-filter-active" : ""} onClick={() => setStatusFilter("all")}>All products <span>{products.length}</span></button><button className={statusFilter === "published" ? "admin-filter-active" : ""} onClick={() => setStatusFilter("published")}>Active</button><button className={statusFilter === "draft" ? "admin-filter-active" : ""} onClick={() => setStatusFilter("draft")}>Draft</button><button className={statusFilter === "low" ? "admin-filter-active" : ""} onClick={() => setStatusFilter("low")}>Low stock</button></div><label className="admin-search"><Search size={17} /><span className="admin-sr-only">Search products</span><input placeholder="Search your products…" value={query} onChange={event => setQuery(event.target.value)} /></label></div><div className="admin-table-scroll"><table className="admin-table"><thead><tr><th>PRODUCT</th><th>STATUS</th><th>INVENTORY <ArrowDown size={12} /></th><th>CATEGORY</th><th>PRICE</th><th><span className="admin-sr-only">Actions</span></th></tr></thead><tbody>{filteredProducts.map(product => <tr key={product.id}><td><button className="admin-product-cell" onClick={() => setEditor(product)}><img src={product.image} alt="" /><span>{product.name}<small>{product.sizes.join(" / ") || "One size"}</small></span></button></td><td><span className={`admin-status-pill admin-status-${product.status}`}><span />{titleCase(product.status)}</span></td><td><span className={product.stock <= 5 ? "admin-low-stock" : ""}>{product.stock} in stock</span></td><td>{categories.find(c => c.slug === product.category)?.name || titleCase(product.category)}</td><td className="admin-price-cell">{money(product.price)}</td><td><div className="admin-row-actions"><button className="admin-icon-button" onClick={() => setEditor(product)} title="Edit product" aria-label={`Edit ${product.name}`}><Pencil size={15} /></button><button className="admin-icon-button" onClick={() => duplicateProduct(product)} title="Duplicate / Copy this product" aria-label={`Duplicate ${product.name}`}><Copy size={15} /></button><button className="admin-icon-button" onClick={() => setDeleteProduct(product)} title="Delete product" aria-label={`Delete ${product.name}`}><Trash2 size={15} /></button></div></td></tr>)}</tbody></table></div>{!filteredProducts.length && <div className="admin-empty"><Search size={30} strokeWidth={1.2} /><h3>No matching essentials.</h3><p>Try another name, category, or filter.</p><button className="admin-button admin-button-quiet" onClick={() => { setQuery(""); setStatusFilter("all"); }}>Clear filters</button></div>}<div className="admin-table-footer">{filteredProducts.length} of {products.length} products <span style={{ color: '#4ade80' }}>Synced live with Penetix Cloud</span></div></section>}
 
-    {section === "inventory" && <section className="admin-panel"><div className="admin-panel-heading"><div><h2>Every variant, accounted for.</h2><p>Quantities are split across colors and sizes. Save to update the product’s total.</p></div><span className="admin-small-pill">{totalStock} UNITS</span></div><div className="admin-inventory-picker"><label>Choose a product<select value={selectedProduct?.id || ""} onChange={event => { setSelectedProductId(event.target.value); setVariantDrafts({}); }}>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</select></label>{selectedProduct && <div className="admin-inventory-selected"><img src={selectedProduct.image} alt="" /><div>{selectedProduct.name}<small>{selectedVariants.length} color and size variants</small></div></div>}</div>{selectedProduct ? <><div className="admin-table-scroll"><table className="admin-table admin-variant-table"><thead><tr><th>COLOR</th><th>SIZE</th><th>SKU</th><th>AVAILABLE UNITS</th></tr></thead><tbody>{selectedVariants.map(variant => <tr key={variant.key}><td><span className="admin-color-name"><span style={{ backgroundColor: variant.color.hex }} />{variant.color.name}</span></td><td>{variant.size}</td><td className="admin-muted">{selectedProduct.slug.slice(0, 16).toUpperCase()}-{variant.color.name.slice(0, 2).toUpperCase()}-{variant.size}</td><td><input type="number" aria-label={`${selectedProduct.name}, ${variant.color.name}, ${variant.size} stock`} className="admin-stock-input" min="0" max="100000" step="1" value={variantDrafts[variant.key] ?? inventory[variant.key] ?? variant.initial} onChange={event => setVariantDrafts(current => ({ ...current, [variant.key]: Math.max(0, Math.floor(Number(event.target.value))) }))} /></td></tr>)}</tbody></table></div><div className="admin-form-footer"><p>Total: <strong>{selectedVariants.reduce((sum, v) => sum + (variantDrafts[v.key] ?? inventory[v.key] ?? v.initial), 0)} units</strong></p><button className="admin-button" onClick={async () => { const next = Object.fromEntries(selectedVariants.map(v => [v.key, variantDrafts[v.key] ?? inventory[v.key] ?? v.initial])); setInventory(current => ({ ...current, ...next })); const updatedStock = Object.values(next).reduce((sum, value) => sum + value, 0); const updatedProd = { ...selectedProduct, stock: updatedStock }; setProducts(current => current.map(p => p.id === selectedProduct.id ? updatedProd : p)); setVariantDrafts({}); setNotice("Saving inventory to Neon DB…"); try { await fetch('/api/admin/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedProd) }); setNotice(`Inventory saved: ${updatedStock} units in Neon DB.`); log(`Updated inventory for ${selectedProduct.name} to ${updatedStock} units`); } catch { setNotice("Inventory saved locally."); } }}><Save size={16} /> Save inventory</button></div></> : <div className="admin-empty"><Boxes size={34} strokeWidth={1.2} /><h3>Add an essential first.</h3><p>Your product variants will appear here.</p><Link href="/admin/products" className="admin-button">Go to products <ArrowRight size={15} /></Link></div>}</section>}
+    {section === "inventory" && <section className="admin-panel"><div className="admin-panel-heading"><div><h2>Every variant, accounted for.</h2><p>Quantities are split across colors and sizes. Save to update the product’s total.</p></div><span className="admin-small-pill">{totalStock} UNITS</span></div><div className="admin-inventory-picker"><label>Choose a product<select value={selectedProduct?.id || ""} onChange={event => { setSelectedProductId(event.target.value); setVariantDrafts({}); }}>{products.map(product => <option key={product.id} value={product.id}>{product.name}</option>)}</select></label>{selectedProduct && <div className="admin-inventory-selected"><img src={selectedProduct.image} alt="" /><div>{selectedProduct.name}<small>{selectedVariants.length} color and size variants</small></div></div>}</div>{selectedProduct ? <><div className="admin-table-scroll"><table className="admin-table admin-variant-table"><thead><tr><th>COLOR</th><th>SIZE</th><th>SKU</th><th>AVAILABLE UNITS</th></tr></thead><tbody>{selectedVariants.map(variant => <tr key={variant.key}><td><span className="admin-color-name"><span style={{ backgroundColor: variant.color.hex }} />{variant.color.name}</span></td><td>{variant.size}</td><td className="admin-muted">{selectedProduct.slug.slice(0, 16).toUpperCase()}-{variant.color.name.slice(0, 2).toUpperCase()}-{variant.size}</td><td><input type="number" aria-label={`${selectedProduct.name}, ${variant.color.name}, ${variant.size} stock`} className="admin-stock-input" min="0" max="100000" step="1" value={variantDrafts[variant.key] ?? inventory[variant.key] ?? variant.initial} onChange={event => setVariantDrafts(current => ({ ...current, [variant.key]: Math.max(0, Math.floor(Number(event.target.value))) }))} /></td></tr>)}</tbody></table></div><div className="admin-form-footer"><p>Total: <strong>{selectedVariants.reduce((sum, v) => sum + (variantDrafts[v.key] ?? inventory[v.key] ?? v.initial), 0)} units</strong></p><button className="admin-button" onClick={async () => { const next = Object.fromEntries(selectedVariants.map(v => [v.key, variantDrafts[v.key] ?? inventory[v.key] ?? v.initial])); setInventory(current => ({ ...current, ...next })); const updatedStock = Object.values(next).reduce((sum, value) => sum + value, 0); const updatedProd = { ...selectedProduct, stock: updatedStock }; setProducts(current => current.map(p => p.id === selectedProduct.id ? updatedProd : p)); setVariantDrafts({}); setNotice("Saving inventory to Penetix…"); try { await fetch('/api/admin/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedProd) }); setNotice(`Inventory saved: ${updatedStock} units in Penetix.`); log(`Updated inventory for ${selectedProduct.name} to ${updatedStock} units`); } catch { setNotice("Inventory saved locally."); } }}><Save size={16} /> Save inventory</button></div></> : <div className="admin-empty"><Boxes size={34} strokeWidth={1.2} /><h3>Add an essential first.</h3><p>Your product variants will appear here.</p><Link href="/admin/products" className="admin-button">Go to products <ArrowRight size={15} /></Link></div>}</section>}
 
     {section === "orders" && <>
       <div className="admin-order-metrics">
         {[
-          { label: "ALL ORDERS", val: String(customerOrders.length), note: customerOrders.length ? `${customerOrders.length} saved in this browser` : "No live orders yet" },
-          { label: "TO FULFILL", val: String(customerOrders.length), note: customerOrders.length ? "Ready for PromptX courier pickup" : "No orders awaiting dispatch" },
-          { label: "TOTAL REVENUE", val: money(totalRevenue), note: customerOrders.length ? "Gross volume" : "No payments connected" }
+          { label: "ALL ORDERS", val: String(customerOrders.length), note: customerOrders.length ? "Saved in Penetix Cloud" : "No live orders yet" },
+          { label: "PENDING DISPATCH", val: String(customerOrders.filter(o => o.status === 'processing' || o.status === 'confirmed').length), note: "Ready for courier pickup & dispatch" },
+          { label: "COMPLETED", val: String(customerOrders.filter(o => o.status === 'delivered').length), note: "Successfully delivered" },
+          { label: "TOTAL REVENUE", val: money(totalRevenue), note: customerOrders.length ? "Gross order volume" : "No orders yet" }
         ].map(item => (
           <div className="admin-metric" key={item.label}>
             <div><span>{item.label}</span><Package size={18} strokeWidth={1.4} /></div>
@@ -776,168 +1290,294 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
           </div>
         ))}
       </div>
-      {customerOrders.length > 0 ? (
-        <section className="admin-panel">
-          <div className="admin-panel-heading">
-            <div>
-              <h2>Placed customer orders</h2>
-              <p>Simulated checkouts stored in this browser session & history</p>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span className="admin-small-pill">{customerOrders.length} ORDERS</span>
+
+      <section className="admin-panel">
+        <div className="admin-list-toolbar" style={{ flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+          <div className="admin-filter-tabs" style={{ overflowX: 'auto', maxWidth: '100%' }}>
+            <button className={orderStatus === "all" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("all")}>
+              All <span>{customerOrders.length}</span>
+            </button>
+            <button className={orderStatus === "processing" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("processing")}>
+              Processing <span>{customerOrders.filter(o => o.status === 'processing').length}</span>
+            </button>
+            <button className={orderStatus === "confirmed" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("confirmed")}>
+              Confirmed <span>{customerOrders.filter(o => o.status === 'confirmed').length}</span>
+            </button>
+            <button className={orderStatus === "production" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("production")}>
+              In Production <span>{customerOrders.filter(o => o.status === 'production').length}</span>
+            </button>
+            <button className={orderStatus === "dispatched" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("dispatched")}>
+              Dispatched <span>{customerOrders.filter(o => o.status === 'dispatched').length}</span>
+            </button>
+            <button className={orderStatus === "delivered" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("delivered")}>
+              Delivered <span>{customerOrders.filter(o => o.status === 'delivered').length}</span>
+            </button>
+            <button className={orderStatus === "cancelled" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("cancelled")}>
+              Cancelled <span>{customerOrders.filter(o => o.status === 'cancelled').length}</span>
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
+            <label className="admin-search" style={{ minWidth: '240px' }}>
+              <Search size={16} />
+              <input
+                placeholder="Search ref, customer, phone, city…"
+                value={orderSearch}
+                onChange={e => setOrderSearch(e.target.value)}
+              />
+              {orderSearch && (
+                <button
+                  type="button"
+                  onClick={() => setOrderSearch("")}
+                  style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', padding: '0 4px' }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </label>
+
+            <button
+              type="button"
+              className="admin-button admin-button-quiet"
+              style={{ minHeight: '34px', padding: '0 10px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              onClick={fetchOrders}
+              disabled={isFetchingOrders}
+              title="Refresh orders from Penetix"
+            >
+              <RefreshCw size={13} className={isFetchingOrders ? "admin-spin" : ""} />
+              {isFetchingOrders ? "Syncing…" : "Refresh"}
+            </button>
+
+            <button
+              type="button"
+              className="admin-button"
+              style={{ minHeight: '34px', padding: '0 12px', fontSize: '11px', background: '#22c55e', color: '#000', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              onClick={() => setCreateOrderModalOpen(true)}
+            >
+              <Plus size={15} /> Create Order
+            </button>
+
+            {customerOrders.length > 0 && (
               <button
                 type="button"
                 className="admin-button admin-button-quiet"
-                style={{ minHeight: "30px", padding: "4px 10px", fontSize: "9px" }}
-                onClick={() => {
-                  try {
-                    localStorage.removeItem("hello-order-history");
-                    sessionStorage.removeItem("hello-order-preview");
-                    setCustomerOrders([]);
-                    setNotice("Demo orders cleared.");
-                  } catch {}
-                }}
+                style={{ minHeight: '34px', padding: '0 8px', fontSize: '10px', color: '#ef4444' }}
+                onClick={purgeDemoOrders}
+                title="Clear any test order records from Penetix"
               >
-                Clear orders
+                Clear Test Orders
               </button>
-            </div>
+            )}
           </div>
-          <div className="admin-table-scroll">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>ORDER REF</th>
-                  <th>DATE</th>
-                  <th>CUSTOMER</th>
-                  <th>CITY</th>
-                  <th>ITEMS</th>
-                  <th>PAYMENT</th>
-                  <th>TOTAL</th>
-                  <th>STATUS</th>
-                  <th>ACTION</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customerOrders.map(order => (
-                  <tr key={order.reference}>
-                    <td>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedOrder(order)}
-                        style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", font: "inherit", padding: 0, textAlign: "left" }}
-                        title="Click to view full order details"
-                      >
-                        <strong style={{ letterSpacing: "0.5px", color: "#4ade80", textDecoration: "underline" }}>{order.reference}</strong>
-                      </button>
-                    </td>
-                    <td>{new Date(order.createdAt).toLocaleDateString("en-LK", { dateStyle: "medium" })}</td>
-                    <td>
-                      <div onClick={() => setSelectedOrder(order)} style={{ cursor: "pointer" }}>
-                        <strong style={{ display: "block", fontSize: "10px" }}>{order.customer?.name || "Customer"}</strong>
-                        <small style={{ color: "#888", fontSize: "8px" }}>{order.customer?.phone || ""}</small>
-                      </div>
-                    </td>
-                    <td>{order.customer?.city || "Islandwide"}</td>
-                    <td>{order.items?.length || 1} item(s)</td>
-                    <td>
-                      <span className="admin-status-pill admin-status-active">
-                        <span />
-                        {order.paymentMethod === "cod" ? "Cash on Delivery" : order.paymentMethod === "bank" ? "Bank Transfer" : "Card"}
-                      </span>
-                    </td>
-                    <td className="admin-price-cell">{money(order.total || 0)}</td>
-                    <td>
-                      <select
-                        aria-label={`Status for ${order.reference}`}
-                        value={order.status || 'processing'}
-                        onChange={e => updateOrderStatus(order.reference, e.target.value)}
-                        style={{
-                          padding: '3px 6px',
-                          fontSize: '9px',
-                          fontWeight: 700,
-                          borderRadius: '4px',
-                          background: order.status === 'delivered' ? '#14532d' : order.status === 'out_for_delivery' ? '#1e3a8a' : '#222',
-                          color: order.status === 'delivered' ? '#4ade80' : order.status === 'out_for_delivery' ? '#93c5fd' : '#fff',
-                          border: '1px solid #444',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <option value="processing">Processing</option>
-                        <option value="confirmed">Confirmed</option>
-                        <option value="production">In Production</option>
-                        <option value="dispatched">Handed to Courier</option>
-                        <option value="out_for_delivery">Out for Delivery</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                    </td>
-                    <td>
-                      <div className="admin-row-actions">
+        </div>
+
+        {customerOrders.length > 0 ? (
+          filteredCustomerOrders.length > 0 ? (
+            <div className="admin-table-scroll">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>ORDER REF</th>
+                    <th>DATE</th>
+                    <th>CUSTOMER</th>
+                    <th>CITY</th>
+                    <th>ITEMS</th>
+                    <th>PAYMENT</th>
+                    <th>TOTAL</th>
+                    <th>STATUS</th>
+                    <th>ACTION</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCustomerOrders.map(order => (
+                    <tr key={order.reference}>
+                      <td>
                         <button
                           type="button"
-                          className="admin-text-link"
                           onClick={() => setSelectedOrder(order)}
+                          style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", font: "inherit", padding: 0, textAlign: "left" }}
+                          title="Click to view full order details"
+                        >
+                          <strong style={{ letterSpacing: "0.5px", color: "#4ade80", textDecoration: "underline" }}>{order.reference}</strong>
+                        </button>
+                      </td>
+                      <td>{new Date(order.createdAt).toLocaleDateString("en-LK", { dateStyle: "medium" })}</td>
+                      <td>
+                        <div onClick={() => setSelectedOrder(order)} style={{ cursor: "pointer" }}>
+                          <strong style={{ display: "block", fontSize: "11px" }}>{order.customer?.name || "Customer"}</strong>
+                          <small style={{ color: "#888", fontSize: "9px" }}>{order.customer?.phone || ""}</small>
+                        </div>
+                      </td>
+                      <td>{order.customer?.city || "Islandwide"}</td>
+                      <td>{order.items?.length || 1} item(s)</td>
+                      <td>
+                        <span className="admin-status-pill admin-status-active">
+                          <span />
+                          {order.paymentMethod === "cod" ? "COD" : order.paymentMethod === "bank" ? "Bank" : "Card"}
+                        </span>
+                      </td>
+                      <td className="admin-price-cell">{money(order.total || 0)}</td>
+                      <td>
+                        <select
+                          aria-label={`Status for ${order.reference}`}
+                          value={order.status || 'processing'}
+                          onChange={e => updateOrderStatus(order.reference, e.target.value)}
                           style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            padding: 0,
-                            font: "inherit",
-                            color: "#4ade80",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "3px",
+                            padding: '4px 8px',
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            borderRadius: '4px',
+                            background: order.status === 'delivered' ? '#14532d' : order.status === 'out_for_delivery' ? '#1e3a8a' : order.status === 'cancelled' ? '#7f1d1d' : '#222',
+                            color: order.status === 'delivered' ? '#4ade80' : order.status === 'out_for_delivery' ? '#93c5fd' : order.status === 'cancelled' ? '#fca5a5' : '#fff',
+                            border: '1px solid #444',
+                            cursor: 'pointer'
                           }}
                         >
-                          View <Eye size={13} />
-                        </button>
-                        <Link href={`/order-confirmation/${order.reference}`} className="admin-text-link" target="_blank" style={{ color: '#38bdf8' }}>
-                          Receipt <Printer size={13} />
-                        </Link>
-                        <Link href={`/track-order?ref=${order.reference}`} className="admin-text-link" target="_blank">
-                          Track <ArrowUpRight size={13} />
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                          <option value="processing">Processing</option>
+                          <option value="confirmed">Confirmed</option>
+                          <option value="production">In Production</option>
+                          <option value="dispatched">Handed to Courier</option>
+                          <option value="out_for_delivery">Out for Delivery</option>
+                          <option value="delivered">Delivered</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </td>
+                      <td>
+                        <div className="admin-row-actions">
+                          <button
+                            type="button"
+                            className="admin-text-link"
+                            onClick={() => setSelectedOrder(order)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              padding: 0,
+                              font: "inherit",
+                              color: "#4ade80",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px",
+                            }}
+                          >
+                            View <Eye size={13} />
+                          </button>
+                          <Link href={`/order-confirmation/${order.reference}`} className="admin-text-link" target="_blank" style={{ color: '#38bdf8' }}>
+                            Receipt <Printer size={13} />
+                          </Link>
+                          <Link href={`/track-order?ref=${order.reference}`} className="admin-text-link" target="_blank">
+                            Track <ArrowUpRight size={13} />
+                          </Link>
+                          <button
+                            type="button"
+                            className="admin-icon-button"
+                            onClick={() => setOrderToDelete(order)}
+                            title="Delete order from Penetix"
+                            style={{ color: '#ef4444' }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="admin-empty">
+              <Search size={32} strokeWidth={1.2} />
+              <h3>No matching orders.</h3>
+              <p>No orders matched your current search query or status filter.</p>
+              <button
+                type="button"
+                className="admin-button admin-button-quiet"
+                onClick={() => { setOrderSearch(""); setOrderStatus("all"); }}
+              >
+                Clear filters
+              </button>
+            </div>
+          )
+        ) : (
+          <div className="admin-empty" style={{ padding: '40px 20px' }}>
+            <ShoppingBag size={44} strokeWidth={1} style={{ opacity: 0.5, marginBottom: '12px' }} />
+            <h3 style={{ fontSize: '18px', marginBottom: '6px' }}>No orders in database yet</h3>
+            <p style={{ maxWidth: '440px', margin: '0 auto 16px', color: '#a1a1aa', fontSize: '13px' }}>
+              Real customer checkouts and manual orders will appear here automatically from Penetix Cloud.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button
+                type="button"
+                className="admin-button"
+                style={{ background: '#22c55e', color: '#000', fontWeight: 700 }}
+                onClick={() => setCreateOrderModalOpen(true)}
+              >
+                <Plus size={15} /> Create Manual Order
+              </button>
+              <Link href="/shop" className="admin-button admin-button-quiet" target="_blank">
+                Visit Storefront <ExternalLink size={14} />
+              </Link>
+            </div>
           </div>
-          <div className="admin-table-footer">
-            Showing all {customerOrders.length} order(s)
-            <span>Orders are synced live with Neon PostgreSQL database</span>
-          </div>
-        </section>
-      ) : (
-        <section className="admin-panel admin-orders-empty">
-          <span className="admin-empty-illustration"><ShoppingBag size={44} strokeWidth={1} /></span>
-          <span className="admin-eyebrow">ROOM FOR SOMETHING GOOD</span>
-          <h2>Your first order is a new beginning.</h2>
-          <p>This store has no customer records yet.<br />Place an order via the store checkout to see it appear here in real-time.</p>
-          <Link href="/shop" className="admin-button">Explore the store <ArrowUpRight size={17} /></Link>
-          <div className="admin-setup-note"><ShieldCheck size={16} /> Orders sync directly with Neon Database.</div>
-        </section>
-      )}
+        )}
+
+        <div className="admin-table-footer">
+          Showing {filteredCustomerOrders.length} of {customerOrders.length} order(s)
+          <span style={{ color: '#4ade80' }}>Synced live with Penetix Cloud</span>
+        </div>
+      </section>
     </>}
 
-    {section === "categories" && <div className="admin-category-grid">{categories.map(category => { const members = products.filter(p => p.category === category.slug); return <section className="admin-panel admin-category-card" key={category.slug}><div className="admin-category-image">{members[0]?.image ? <img src={members[0].image} alt={category.name} /> : <Tags size={40} strokeWidth={1} />}<span>{String(members.length).padStart(2, "0")} PRODUCTS</span></div><div className="admin-category-copy"><h2>{category.name}</h2><p>{category.description}</p><div><code>/{category.slug}</code><button className="admin-icon-button" aria-label={`Edit ${category.name}`} onClick={() => setCategoryEditor(category)}><Pencil size={16} /></button><button className="admin-icon-button" aria-label={`Delete ${category.name}`} disabled={members.length > 0} title={members.length ? "Move products out of this category before deleting it" : "Delete empty category"} onClick={async () => { setCategories(current => current.filter(c => c.slug !== category.slug)); setNotice("Removing category from Neon DB…"); try { await fetch(`/api/admin/categories?slug=${encodeURIComponent(category.slug)}`, { method: 'DELETE' }); setNotice("Category removed from Neon DB."); log(`Removed category ${category.name}`); } catch { setNotice("Removed locally."); } }}><Trash2 size={16} /></button></div></div></section>; })}<button className="admin-category-add" onClick={() => setCategoryEditor("new")}><Plus size={26} strokeWidth={1.2} /><strong>Make room for more.</strong><span>Add a category</span></button></div>}
+    {section === "categories" && <div className="admin-category-grid">{categories.map(category => { const members = products.filter(p => p.category === category.slug); return <section className="admin-panel admin-category-card" key={category.slug}><div className="admin-category-image">{members[0]?.image ? <img src={members[0].image} alt={category.name} /> : <Tags size={40} strokeWidth={1} />}<span>{String(members.length).padStart(2, "0")} PRODUCTS</span></div><div className="admin-category-copy"><h2>{category.name}</h2><p>{category.description}</p><div><code>/{category.slug}</code><button className="admin-icon-button" aria-label={`Edit ${category.name}`} onClick={() => setCategoryEditor(category)}><Pencil size={16} /></button><button className="admin-icon-button" aria-label={`Delete ${category.name}`} disabled={members.length > 0} title={members.length ? "Move products out of this category before deleting it" : "Delete empty category"} onClick={async () => { setCategories(current => current.filter(c => c.slug !== category.slug)); setNotice("Removing category from Penetix…"); try { await fetch(`/api/admin/categories?slug=${encodeURIComponent(category.slug)}`, { method: 'DELETE' }); setNotice("Category removed from Penetix."); log(`Removed category ${category.name}`); } catch { setNotice("Removed locally."); } }}><Trash2 size={16} /></button></div></div></section>; })}<button className="admin-category-add" onClick={() => setCategoryEditor("new")}><Plus size={26} strokeWidth={1.2} /><strong>Make room for more.</strong><span>Add a category</span></button></div>}
 
-    {section === "content" && <form onSubmit={event => { event.preventDefault(); saveLocal(KEYS.content, content, "Store content saved to this browser."); }} className="admin-content-editor"><section className="admin-panel admin-form-panel"><div className="admin-panel-heading"><div><h2>The words behind the wardrobe.</h2><p>Customize your demo storefront copy.</p></div></div><div className="admin-fields"><label>Announcement bar<input maxLength={140} value={content.announcement} onChange={e => setContent({ ...content, announcement: e.target.value })} /><small>A short note for the top of your store.</small></label><label>Hero headline<input maxLength={100} required value={content.heroTitle} onChange={e => setContent({ ...content, heroTitle: e.target.value })} /></label><label>Hero supporting line<textarea rows={2} maxLength={200} value={content.heroSubtitle} onChange={e => setContent({ ...content, heroSubtitle: e.target.value })} /></label><label>Brand story<textarea rows={5} maxLength={1200} value={content.aboutText} onChange={e => setContent({ ...content, aboutText: e.target.value })} /></label></div><div className="admin-form-footer"><span className="admin-muted">Local preview content</span><button className="admin-button"><Check size={16} /> Save content</button></div></section><aside className="admin-content-preview"><span className="admin-eyebrow">LIVE COPY PREVIEW</span><div className="admin-mini-store"><div className="admin-mini-announcement">{content.announcement}</div><div className="admin-mini-nav"><span>SHOP</span><strong className="admin-brand">Hello!</strong><ShoppingBag size={14} /></div><div className="admin-mini-hero"><span className="admin-eyebrow">THE EVERYDAY COLLECTION</span><h2>{content.heroTitle}</h2><p>{content.heroSubtitle}</p><span className="admin-mini-cta">SHOP NOW <ArrowRight size={13} /></span></div><div className="admin-mini-story"><h3>Built for real people.</h3><p>{content.aboutText}</p></div></div><p className="admin-preview-hint">The preview updates as you type. Save to keep your words.</p></aside></form>}
+    {section === "content" && <form onSubmit={saveStoreContent} className="admin-content-editor"><section className="admin-panel admin-form-panel"><div className="admin-panel-heading"><div><h2>The words behind the wardrobe.</h2><p>Customize your storefront copy synced with Penetix Cloud.</p></div></div><div className="admin-fields"><label>Announcement bar<input maxLength={140} value={content.announcement} onChange={e => setContent({ ...content, announcement: e.target.value })} /><small>A short note for the top of your store.</small></label><label>Hero headline<input maxLength={100} required value={content.heroTitle} onChange={e => setContent({ ...content, heroTitle: e.target.value })} /></label><label>Hero supporting line<textarea rows={2} maxLength={200} value={content.heroSubtitle} onChange={e => setContent({ ...content, heroSubtitle: e.target.value })} /></label><label>Brand story<textarea rows={5} maxLength={1200} value={content.aboutText} onChange={e => setContent({ ...content, aboutText: e.target.value })} /></label></div><div className="admin-form-footer"><span className="admin-muted" style={{ color: '#4ade80' }}>Synced with Penetix Cloud</span><button className="admin-button"><Check size={16} /> Save content</button></div></section><aside className="admin-content-preview"><span className="admin-eyebrow">LIVE COPY PREVIEW</span><div className="admin-mini-store"><div className="admin-mini-announcement">{content.announcement}</div><div className="admin-mini-nav"><span>SHOP</span><strong className="admin-brand"><img src="/branding/hello-light.webp" alt="HELLO!" style={{ height: "14px", width: "auto", verticalAlign: "middle" }} /></strong><ShoppingBag size={14} /></div><div className="admin-mini-hero"><span className="admin-eyebrow">THE EVERYDAY COLLECTION</span><h2>{content.heroTitle}</h2><p>{content.heroSubtitle}</p><span className="admin-mini-cta">SHOP NOW <ArrowRight size={13} /></span></div><div className="admin-mini-story"><h3>Built for real people.</h3><p>{content.aboutText}</p></div></div><p className="admin-preview-hint">The preview updates as you type. Save to keep your words.</p></aside></form>}
 
     {section === "media" && <><input ref={uploadRef} className="admin-sr-only" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Upload a local image" onChange={event => { void upload(event.target.files?.[0]); event.target.value = ""; }} /><div className="admin-media-note"><Images size={18} strokeWidth={1.5} /><p>{allMedia.length} images in your library <span>JPG, PNG & WebP · up to 2 MB · local browser previews</span></p></div>{mediaError && <p className="admin-error" role="alert">{mediaError}</p>}<div className="admin-media-grid"><button className="admin-media-upload" onClick={() => uploadRef.current?.click()}><ImagePlus size={28} strokeWidth={1.2} /><strong>Drop a little personality.</strong><span>Choose an image</span></button>{allMedia.map(item => <figure className="admin-media-card" key={item.id}><div><img src={item.src} alt={item.name} />{item.uploaded && <button className="admin-icon-button" aria-label={`Remove local image ${item.name}`} onClick={() => { const next = media.filter(m => m.id !== item.id); try { localStorage.setItem(KEYS.media, JSON.stringify(next)); setMedia(next); setNotice("Local image removed."); } catch { setNotice("Could not update browser storage."); } }}><Trash2 size={16} /></button>}</div><figcaption><strong>{item.name}</strong><span>{item.uploaded ? "LOCAL UPLOAD" : "CATALOG IMAGE"}</span></figcaption></figure>)}</div></>}
 
-    {section === "settings" && <form onSubmit={event => { event.preventDefault(); saveLocal(KEYS.settings, settings, "Settings saved in your browser."); }} className="admin-settings-layout"><div><section className="admin-panel admin-form-panel"><div className="admin-panel-heading"><div><h2>Domain Email Channels</h2><p>Automated Resend transactional identities configured for helloclothing.store</p></div><span className="admin-small-pill" style={{ background: '#052e16', color: '#4ade80', border: '1px solid #166534' }}>VERIFIED DOMAIN</span></div><div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}><div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#121215', padding: '12px 14px', borderRadius: '8px', border: '1px solid #27272a' }}><Mail size={18} color="#4ade80" style={{ marginTop: '2px', flexShrink: 0 }} /><div><strong style={{ fontSize: '13px', color: '#ffffff', display: 'block' }}>orders@helloclothing.store</strong><p style={{ margin: '2px 0 0', fontSize: '11px', color: '#a1a1aa', lineHeight: 1.5 }}>Automated customer receipts, fulfillment status updates (confirmed, promptX courier tracking #, delivered), and admin new-order alerts.</p></div></div><div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#121215', padding: '12px 14px', borderRadius: '8px', border: '1px solid #27272a' }}><Mail size={18} color="#38bdf8" style={{ marginTop: '2px', flexShrink: 0 }} /><div><strong style={{ fontSize: '13px', color: '#ffffff', display: 'block' }}>support@helloclothing.store</strong><p style={{ margin: '2px 0 0', fontSize: '11px', color: '#a1a1aa', lineHeight: 1.5 }}>Storefront customer inquiries, support concierge auto-replies, and forward to management team.</p></div></div><div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#121215', padding: '12px 14px', borderRadius: '8px', border: '1px solid #27272a' }}><Mail size={18} color="#fbbf24" style={{ marginTop: '2px', flexShrink: 0 }} /><div><strong style={{ fontSize: '13px', color: '#ffffff', display: 'block' }}>drops@helloclothing.store</strong><p style={{ margin: '2px 0 0', fontSize: '11px', color: '#a1a1aa', lineHeight: 1.5 }}>VIP drop announcements, exclusive member early access, secret restocks, and welcome discount code (HELLO10).</p></div></div></div></section><section className="admin-panel admin-form-panel"><div className="admin-panel-heading"><div><h2>The everyday details.</h2><p>Your store’s name, contact, and preferences.</p></div></div><div className="admin-fields"><label>Store name<input maxLength={100} required value={settings.storeName} onChange={e => setSettings({ ...settings, storeName: e.target.value })} /></label><label>Public contact email <span>(optional)</span><input type="email" maxLength={150} placeholder="orders@helloclothing.store" value={settings.email} onChange={e => setSettings({ ...settings, email: e.target.value })} /><small>Business address for customer receipts and notifications.</small></label><div className="admin-form-grid"><label>Currency<select value={settings.currency} onChange={e => setSettings({ ...settings, currency: e.target.value })}><option value="LKR">LKR — Sri Lankan Rupee</option></select></label><label>Planning delivery fee (LKR)<input required type="number" min="0" step="1" value={settings.deliveryFee} onChange={e => setSettings({ ...settings, deliveryFee: Math.max(0, Math.round(Number(e.target.value))) })} /><small>Planning only. Standard checkout uses LKR 500 islandwide fee (Free over LKR 10,000).</small></label></div></div></section><section className="admin-panel admin-form-panel"><div className="admin-panel-heading"><div><h2>A playful little Hello!</h2><p>Only the original logo’s exclamation mark moves. The store opens directly.</p></div><span className="admin-small-pill">LOGO MOTION</span></div><div className="admin-radio-options"><label className={settings.logoMotion ? "admin-radio-selected" : ""}><input type="radio" name="logo-motion" checked={settings.logoMotion} onChange={()=>setSettings({...settings,logoMotion:true})}/><span><strong>A little personality</strong><small>Play a short navbar hop, with a calm cooldown on hover or keyboard focus.</small></span></label><label className={!settings.logoMotion ? "admin-radio-selected" : ""}><input type="radio" name="logo-motion" checked={!settings.logoMotion} onChange={()=>setSettings({...settings,logoMotion:false})}/><span><strong>Keep it still</strong><small>Show the exact original logo without animation.</small></span></label></div><p className="admin-reduced-motion-note">Reduced-motion preferences always keep the logo still. This setting affects only this browser.</p></section><div className="admin-settings-save"><button className="admin-button" type="submit"><Check size={17} /> Save settings</button></div></div><aside><section className="admin-panel admin-mode-card"><ShieldCheck size={26} strokeWidth={1.2} /><h2>A little room to experiment.</h2><p>This is a live management workspace connected to Neon PostgreSQL database.</p><div><span>Store mode</span><strong><span className="admin-status-dot" style={{ background: '#16a34a' }} /> LIVE NEON DB</strong></div><div><span>Payment processing</span><strong>Cash on Delivery (COD) & Bank Transfer</strong></div><div><span>Database engine</span><strong>Neon PostgreSQL 18</strong></div><div><span>Resend Email</span><strong>Active Domain</strong></div></section><section className="admin-panel admin-reset-card"><h3>A fresh start?</h3><p>Reset admin products, uploads, and preferences to the sample collection.</p><button type="button" className="admin-button admin-button-quiet" onClick={() => setResetOpen(true)}><RotateCcw size={15} /> Reset demo workspace</button></section></aside></form>}
+    {section === "settings" && <form onSubmit={saveStoreSettings} className="admin-settings-layout"><div><section className="admin-panel admin-form-panel"><div className="admin-panel-heading"><div><h2>Domain Email Channels</h2><p>Automated Resend transactional identities configured for helloclothing.store</p></div><span className="admin-small-pill" style={{ background: '#052e16', color: '#4ade80', border: '1px solid #166534' }}>VERIFIED DOMAIN</span></div><div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}><div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#121215', padding: '12px 14px', borderRadius: '8px', border: '1px solid #27272a' }}><Mail size={18} color="#4ade80" style={{ marginTop: '2px', flexShrink: 0 }} /><div><strong style={{ fontSize: '13px', color: '#ffffff', display: 'block' }}>orders@helloclothing.store</strong><p style={{ margin: '2px 0 0', fontSize: '11px', color: '#a1a1aa', lineHeight: 1.5 }}>Automated customer receipts, fulfillment status updates (confirmed, courier tracking #, delivered), and admin new-order alerts.</p></div></div><div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#121215', padding: '12px 14px', borderRadius: '8px', border: '1px solid #27272a' }}><Mail size={18} color="#38bdf8" style={{ marginTop: '2px', flexShrink: 0 }} /><div><strong style={{ fontSize: '13px', color: '#ffffff', display: 'block' }}>support@helloclothing.store</strong><p style={{ margin: '2px 0 0', fontSize: '11px', color: '#a1a1aa', lineHeight: 1.5 }}>Storefront customer inquiries, support concierge auto-replies, and forward to management team.</p></div></div><div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', background: '#121215', padding: '12px 14px', borderRadius: '8px', border: '1px solid #27272a' }}><Mail size={18} color="#fbbf24" style={{ marginTop: '2px', flexShrink: 0 }} /><div><strong style={{ fontSize: '13px', color: '#ffffff', display: 'block' }}>drops@helloclothing.store</strong><p style={{ margin: '2px 0 0', fontSize: '11px', color: '#a1a1aa', lineHeight: 1.5 }}>VIP drop announcements, exclusive member early access, secret restocks, and welcome discount code (HELLO10).</p></div></div></div></section><section className="admin-panel admin-form-panel"><div className="admin-panel-heading"><div><h2>The everyday details.</h2><p>Your store’s name, contact, and preferences synced with Penetix Cloud.</p></div></div><div className="admin-fields"><label>Store name<input maxLength={100} required value={settings.storeName} onChange={e => setSettings({ ...settings, storeName: e.target.value })} /></label><label>Public contact email <span>(optional)</span><input type="email" maxLength={150} placeholder="orders@helloclothing.store" value={settings.email} onChange={e => setSettings({ ...settings, email: e.target.value })} /><small>Business address for customer receipts and notifications.</small></label><div className="admin-form-grid"><label>Currency<select value={settings.currency} onChange={e => setSettings({ ...settings, currency: e.target.value })}><option value="LKR">LKR — Sri Lankan Rupee</option></select></label><label>Planning delivery fee (LKR)<input required type="number" min="0" step="1" value={settings.deliveryFee} onChange={e => setSettings({ ...settings, deliveryFee: Math.max(0, Math.round(Number(e.target.value))) })} /><small>Planning only. Standard checkout uses LKR 500 islandwide fee (Free over LKR 10,000).</small></label></div></div></section><section className="admin-panel admin-form-panel"><div className="admin-panel-heading"><div><h2>A playful little Hello!</h2><p>Only the original logo’s exclamation mark moves. The store opens directly.</p></div><span className="admin-small-pill">LOGO MOTION</span></div><div className="admin-radio-options"><label className={settings.logoMotion ? "admin-radio-selected" : ""}><input type="radio" name="logo-motion" checked={settings.logoMotion} onChange={()=>setSettings({...settings,logoMotion:true})}/><span><strong>A little personality</strong><small>Play a short navbar hop, with a calm cooldown on hover or keyboard focus.</small></span></label><label className={!settings.logoMotion ? "admin-radio-selected" : ""}><input type="radio" name="logo-motion" checked={!settings.logoMotion} onChange={()=>setSettings({...settings,logoMotion:false})}/><span><strong>Keep it still</strong><small>Show the exact original logo without animation.</small></span></label></div><p className="admin-reduced-motion-note">Reduced-motion preferences always keep the logo still. This setting affects only this browser.</p></section><div className="admin-settings-save"><button className="admin-button" type="submit"><Check size={17} /> Save settings</button></div></div><aside><section className="admin-panel admin-mode-card"><ShieldCheck size={26} strokeWidth={1.2} /><h2>A little room to experiment.</h2><p>This is a live management workspace connected to Penetix Cloud.</p><div><span>Store mode</span><strong><span className="admin-status-dot" style={{ background: '#16a34a' }} /> LIVE PENETIX ENGINE</strong></div><div><span>Payment processing</span><strong>Cash on Delivery (COD) & Bank Transfer</strong></div><div><span>Database engine</span><strong>Penetix Engine v2.4</strong></div><div><span>Resend Email</span><strong>Active Domain</strong></div></section><section className="admin-panel admin-reset-card"><h3>A fresh start?</h3><p>Reset admin products, uploads, and preferences to the sample collection.</p><button type="button" className="admin-button admin-button-quiet" onClick={() => setResetOpen(true)}><RotateCcw size={15} /> Reset local workspace</button></section></aside></form>}
 
-    <footer className="admin-footer"><span className="admin-brand">Hello!</span><p>Heavyweight streetwear · Colombo</p><span>HELLO! CLOTHING · ALL-IN-ONE ADMIN PANEL · {new Date().getFullYear()}</span></footer>
+    {section === "team" && (
+      <AdminTeamSection
+        currentAdmin={session}
+        onNotice={(msg) => setNotice(msg)}
+      />
+    )}
+
+    <footer className="admin-footer"><span className="admin-brand"><img src="/branding/hello-light.webp" alt="HELLO!" style={{ height: "20px", width: "auto", verticalAlign: "middle" }} /></span><p>Heavyweight streetwear · Colombo</p><span>HELLO! CLOTHING · ALL-IN-ONE ADMIN PANEL · {new Date().getFullYear()}</span></footer>
     </main></div>
     {notice && <div className="admin-toast" role="status"><CheckCircle2 size={18} />{notice}<button aria-label="Dismiss notification" onClick={() => setNotice("")}><X size={15} /></button></div>}
     {editor && <ProductEditor product={editor === "new" ? null : editor} categories={categories} onSave={saveProduct} onClose={() => setEditor(null)} />}
-    {deleteProduct && <Modal title="Remove this essential?" onClose={() => setDeleteProduct(null)}><div className="admin-confirm-content"><p><strong>{deleteProduct.name}</strong> will be removed from your catalog and database.</p><div className="admin-modal-actions"><button className="admin-button admin-button-quiet" onClick={() => setDeleteProduct(null)}>Keep product</button><button className="admin-button admin-button-danger" onClick={async () => { const prodToDelete = deleteProduct; setProducts(current => current.filter(p => p.id !== prodToDelete.id)); log(`Removed ${prodToDelete.name}`); setDeleteProduct(null); setNotice("Deleting from Neon DB…"); try { await fetch(`/api/admin/products?id=${encodeURIComponent(prodToDelete.id)}`, { method: 'DELETE' }); setNotice(`"${prodToDelete.name}" deleted from Neon DB.`); } catch { setNotice("Product removed locally."); } }}>Remove product</button></div></div></Modal>}
-    {categoryEditor && <CategoryEditor category={categoryEditor === "new" ? null : categoryEditor} existing={categories} onClose={() => setCategoryEditor(null)} onSave={async category => { const previous = categoryEditor === "new" ? null : categoryEditor; setCategories(current => previous ? current.map(c => c.slug === previous.slug ? category : c) : [...current, category]); if (previous && previous.slug !== category.slug) setProducts(current => current.map(p => p.category === previous.slug ? { ...p, category: category.slug } : p)); setCategoryEditor(null); setNotice("Saving category to Neon DB…"); try { await fetch('/api/admin/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(category) }); setNotice(`Category "${category.name}" saved to Neon DB.`); log(`Saved category ${category.name}`); } catch { setNotice("Category saved locally."); } }} />}
-    {resetOpen && <Modal title="Say Hello! to a fresh start." onClose={() => setResetOpen(false)}><div className="admin-confirm-content"><p>This removes this browser’s admin edits and local media uploads, and restores the sample catalog and settings.</p><div className="admin-modal-actions"><button className="admin-button admin-button-quiet" onClick={() => setResetOpen(false)}>Keep my changes</button><button className="admin-button" onClick={() => { try { Object.values(KEYS).forEach(key => localStorage.removeItem(key)); setProducts(BASE_PRODUCTS); setCategories(BASE_CATEGORIES); setContent(DEFAULT_CONTENT); setSettings(DEFAULT_SETTINGS); setMedia([]); setInventory({}); setActivity([]); setVariantDrafts({}); setResetOpen(false); setNotice("Fresh start. Your demo workspace has been reset."); window.dispatchEvent(new Event("hello:demo-settings")); } catch { setNotice("Could not reset browser storage."); } }}>Reset workspace</button></div></div></Modal>}
+    {deleteProduct && <Modal title="Remove this essential?" onClose={() => setDeleteProduct(null)}><div className="admin-confirm-content"><p><strong>{deleteProduct.name}</strong> will be removed from your catalog and database.</p><div className="admin-modal-actions"><button className="admin-button admin-button-quiet" onClick={() => setDeleteProduct(null)}>Keep product</button><button className="admin-button admin-button-danger" onClick={async () => { const prodToDelete = deleteProduct; setProducts(current => current.filter(p => p.id !== prodToDelete.id)); log(`Removed ${prodToDelete.name}`); setDeleteProduct(null); setNotice("Deleting from Penetix…"); try { await fetch(`/api/admin/products?id=${encodeURIComponent(prodToDelete.id)}`, { method: 'DELETE' }); setNotice(`"${prodToDelete.name}" deleted from Penetix.`); } catch { setNotice("Product removed locally."); } }}>Remove product</button></div></div></Modal>}
+    {categoryEditor && <CategoryEditor category={categoryEditor === "new" ? null : categoryEditor} existing={categories} onClose={() => setCategoryEditor(null)} onSave={async category => { const previous = categoryEditor === "new" ? null : categoryEditor; setCategories(current => previous ? current.map(c => c.slug === previous.slug ? category : c) : [...current, category]); if (previous && previous.slug !== category.slug) setProducts(current => current.map(p => p.category === previous.slug ? { ...p, category: category.slug } : p)); setCategoryEditor(null); setNotice("Saving category to Penetix…"); try { await fetch('/api/admin/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(category) }); setNotice(`Category "${category.name}" saved to Penetix.`); log(`Saved category ${category.name}`); } catch { setNotice("Category saved locally."); } }} />}
+    {resetOpen && <Modal title="Say Hello! to a fresh start." onClose={() => setResetOpen(false)}><div className="admin-confirm-content"><p>This removes this browser’s admin edits and local media uploads, and restores the sample catalog and settings.</p><div className="admin-modal-actions"><button className="admin-button admin-button-quiet" onClick={() => setResetOpen(false)}>Keep my changes</button><button className="admin-button" onClick={() => { try { Object.values(KEYS).forEach(key => localStorage.removeItem(key)); setProducts(BASE_PRODUCTS); setCategories(BASE_CATEGORIES); setContent(DEFAULT_CONTENT); setSettings(DEFAULT_SETTINGS); setMedia([]); setInventory({}); setActivity([]); setVariantDrafts({}); setResetOpen(false); setNotice("Fresh start. Your workspace preferences have been reset."); window.dispatchEvent(new Event("hello:demo-settings")); } catch { setNotice("Could not reset browser storage."); } }}>Reset workspace</button></div></div></Modal>}
     {selectedOrder && <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} onUpdateStatus={updateOrderStatus} />}
-    </div>;
+    {orderToDelete && (
+      <Modal title="Permanently Delete Order?" onClose={() => setOrderToDelete(null)}>
+        <div className="admin-confirm-content">
+          <p>Are you sure you want to delete order <strong style={{ color: '#ef4444' }}>{orderToDelete.reference}</strong> ({orderToDelete.customer?.name || 'Customer'} · {money(orderToDelete.total || 0)})?</p>
+          <p style={{ fontSize: '11px', color: '#a1a1aa' }}>This order will be permanently erased from Penetix Cloud. This action cannot be undone.</p>
+          <div className="admin-modal-actions">
+            <button className="admin-button admin-button-quiet" onClick={() => setOrderToDelete(null)}>Cancel</button>
+            <button className="admin-button admin-button-danger" onClick={() => deleteOrder(orderToDelete.reference)}>
+              <Trash2 size={15} /> Permanently Delete
+            </button>
+          </div>
+        </div>
+      </Modal>
+    )}
+    {createOrderModalOpen && (
+      <OrderCreateModal
+        products={products}
+        onClose={() => setCreateOrderModalOpen(false)}
+        onCreated={() => {
+          setCreateOrderModalOpen(false);
+          fetchOrders();
+          setNotice("Order created and saved to Penetix Cloud!");
+        }}
+      />
+    )}
+    </div>
+  );
 }
 
 function CategoryEditor({ category, existing, onClose, onSave }: { category: Category | null; existing: Category[]; onClose: () => void; onSave: (category: Category) => void }) {
@@ -1156,11 +1796,19 @@ function OrderDetailsModal({
               Courier Partner
               <input
                 type="text"
+                list="sl-couriers-list"
                 value={courier}
                 onChange={e => setCourier(e.target.value)}
                 placeholder="e.g. PromptX Logistics"
                 style={{ padding: '8px 10px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px', fontSize: '12px' }}
               />
+              <datalist id="sl-couriers-list">
+                <option value="PromptX Logistics" />
+                <option value="Domex Courier" />
+                <option value="Pronto Lanka" />
+                <option value="Koombiyo Delivery" />
+                <option value="In-House Messenger (Colombo)" />
+              </datalist>
             </label>
 
             <label style={{ fontSize: '11px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -1209,6 +1857,380 @@ function OrderDetailsModal({
           </Link>
         </div>
       </div>
+    </Modal>
+  );
+}
+
+function OrderCreateModal({
+  products,
+  onClose,
+  onCreated,
+}: {
+  products: Product[];
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+  const [customerCity, setCustomerCity] = useState("Colombo");
+  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [orderStatus, setOrderStatus] = useState("confirmed");
+  const [courier, setCourier] = useState("PromptX Logistics");
+  const [notes, setNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  type OrderItemDraft = {
+    productId: string;
+    color: string;
+    size: string;
+    quantity: number;
+    unitPrice: number;
+  };
+
+  const defaultProduct = products[0];
+  const [items, setItems] = useState<OrderItemDraft[]>([
+    {
+      productId: defaultProduct?.id || "",
+      color: defaultProduct?.colors[0]?.name || "Black",
+      size: defaultProduct?.sizes[0] || "M",
+      quantity: 1,
+      unitPrice: defaultProduct?.price || 550000,
+    },
+  ]);
+
+  const handleProductChange = (index: number, prodId: string) => {
+    const prod = products.find(p => p.id === prodId);
+    if (!prod) return;
+    setItems(curr =>
+      curr.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              productId: prod.id,
+              color: prod.colors[0]?.name || "Black",
+              size: prod.sizes[0] || "M",
+              unitPrice: prod.price,
+            }
+          : item
+      )
+    );
+  };
+
+  const handleAddItem = () => {
+    const prod = products[0];
+    if (!prod) return;
+    setItems(curr => [
+      ...curr,
+      {
+        productId: prod.id,
+        color: prod.colors[0]?.name || "Black",
+        size: prod.sizes[0] || "M",
+        quantity: 1,
+        unitPrice: prod.price,
+      },
+    ]);
+  };
+
+  const handleRemoveItem = (index: number) => {
+    if (items.length <= 1) return;
+    setItems(curr => curr.filter((_, i) => i !== index));
+  };
+
+  const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const delivery = subtotal >= 1000000 ? 0 : 50000;
+  const total = subtotal + delivery;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!customerName.trim()) {
+      setError("Please provide customer name.");
+      return;
+    }
+    if (!customerPhone.trim()) {
+      setError("Please provide customer phone number.");
+      return;
+    }
+    if (!customerAddress.trim()) {
+      setError("Please provide delivery street address.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const formattedItems = items.map(item => {
+        const prod = products.find(p => p.id === item.productId);
+        return {
+          productId: item.productId,
+          name: prod?.name || "Apparel Essential",
+          color: item.color,
+          size: item.size,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          lineTotal: item.unitPrice * item.quantity,
+          image: prod?.image || "",
+        };
+      });
+
+      const res = await fetch('/api/admin/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          customer: {
+            name: customerName.trim(),
+            phone: customerPhone.trim(),
+            email: customerEmail.trim() || 'customer@helloclothing.store',
+            address: customerAddress.trim(),
+            city: customerCity.trim() || 'Colombo',
+          },
+          items: formattedItems,
+          subtotal,
+          delivery,
+          total,
+          paymentMethod,
+          status: orderStatus,
+          courier,
+          notes: notes.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to create order');
+      }
+
+      onCreated();
+    } catch (err: any) {
+      setError(err.message || 'Error creating order');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal title="Create New Order (Penetix)" onClose={onClose}>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '78vh', overflowY: 'auto', paddingRight: '4px' }}>
+        {error && (
+          <div style={{ background: '#7f1d1d', border: '1px solid #ef4444', color: '#fecaca', padding: '8px 12px', borderRadius: '6px', fontSize: '12px' }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ background: '#121215', border: '1px solid #27272a', borderRadius: '8px', padding: '14px' }}>
+          <strong style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px', color: '#fff' }}>
+            <UserRound size={15} color="#4ade80" /> Customer Information
+          </strong>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+            <label style={{ fontSize: '11px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              Full Name *
+              <input required type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="e.g. Kasun Fernando" style={{ padding: '8px 10px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px', fontSize: '12px' }} />
+            </label>
+            <label style={{ fontSize: '11px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              Phone Number *
+              <input required type="text" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} placeholder="e.g. 077 123 4567" style={{ padding: '8px 10px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px', fontSize: '12px' }} />
+            </label>
+            <label style={{ fontSize: '11px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              Email Address
+              <input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="customer@gmail.com" style={{ padding: '8px 10px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px', fontSize: '12px' }} />
+            </label>
+            <label style={{ fontSize: '11px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              City / District *
+              <input required type="text" value={customerCity} onChange={e => setCustomerCity(e.target.value)} placeholder="e.g. Colombo, Kandy, Galle" style={{ padding: '8px 10px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px', fontSize: '12px' }} />
+            </label>
+            <label style={{ gridColumn: '1 / -1', fontSize: '11px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              Street Delivery Address *
+              <textarea required rows={2} value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} placeholder="No. 45/2, Galle Road, Colombo 03" style={{ padding: '8px 10px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px', fontSize: '12px' }} />
+            </label>
+          </div>
+        </div>
+
+        <div style={{ background: '#121215', border: '1px solid #27272a', borderRadius: '8px', padding: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <strong style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', color: '#fff' }}>
+              <ShoppingBag size={15} color="#4ade80" /> Items & Variants ({items.length})
+            </strong>
+            <button
+              type="button"
+              onClick={handleAddItem}
+              className="admin-button admin-button-quiet"
+              style={{ fontSize: '11px', padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+            >
+              <Plus size={13} /> Add Product
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {items.map((item, idx) => {
+              const currentProd = products.find(p => p.id === item.productId);
+              return (
+                <div key={idx} style={{ display: 'grid', gridTemplateColumns: 'minmax(140px, 2fr) minmax(90px, 1fr) minmax(70px, 1fr) minmax(60px, 1fr) minmax(90px, 1fr) auto', gap: '8px', alignItems: 'flex-end', background: '#1a1a1e', padding: '10px', borderRadius: '6px' }}>
+                  <label style={{ fontSize: '10px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    Product
+                    <select
+                      value={item.productId}
+                      onChange={e => handleProductChange(idx, e.target.value)}
+                      style={{ padding: '6px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '4px', fontSize: '11px' }}
+                    >
+                      {products.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label style={{ fontSize: '10px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    Color
+                    <select
+                      value={item.color}
+                      onChange={e => setItems(curr => curr.map((it, i) => i === idx ? { ...it, color: e.target.value } : it))}
+                      style={{ padding: '6px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '4px', fontSize: '11px' }}
+                    >
+                      {(currentProd?.colors || [{ name: 'Default', hex: '#000' }]).map(c => (
+                        <option key={c.name} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label style={{ fontSize: '10px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    Size
+                    <select
+                      value={item.size}
+                      onChange={e => setItems(curr => curr.map((it, i) => i === idx ? { ...it, size: e.target.value } : it))}
+                      style={{ padding: '6px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '4px', fontSize: '11px' }}
+                    >
+                      {(currentProd?.sizes || ['M']).map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label style={{ fontSize: '10px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    Qty
+                    <input
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={e => setItems(curr => curr.map((it, i) => i === idx ? { ...it, quantity: Math.max(1, parseInt(e.target.value) || 1) } : it))}
+                      style={{ padding: '6px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '4px', fontSize: '11px' }}
+                    />
+                  </label>
+
+                  <label style={{ fontSize: '10px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    Price (LKR)
+                    <input
+                      type="number"
+                      step="100"
+                      value={item.unitPrice / 100}
+                      onChange={e => setItems(curr => curr.map((it, i) => i === idx ? { ...it, unitPrice: Math.round(Number(e.target.value) * 100) } : it))}
+                      style={{ padding: '6px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '4px', fontSize: '11px' }}
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveItem(idx)}
+                    disabled={items.length <= 1}
+                    className="admin-icon-button"
+                    style={{ height: '32px', color: items.length <= 1 ? '#555' : '#ef4444' }}
+                    title="Remove item"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid #27272a', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#a1a1aa' }}>
+              <span>Subtotal:</span>
+              <span>{money(subtotal)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#a1a1aa' }}>
+              <span>Islandwide Delivery:</span>
+              <span>{delivery === 0 ? 'FREE (Over LKR 10,000)' : money(delivery)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 700, color: '#4ade80' }}>
+              <span>Total Payable:</span>
+              <span>{money(total)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ background: '#121215', border: '1px solid #27272a', borderRadius: '8px', padding: '14px' }}>
+          <strong style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px', color: '#fff' }}>
+            <Truck size={15} color="#4ade80" /> Payment & Fulfillment Details
+          </strong>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+            <label style={{ fontSize: '11px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              Payment Method
+              <select
+                value={paymentMethod}
+                onChange={e => setPaymentMethod(e.target.value)}
+                style={{ padding: '8px 10px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px', fontSize: '12px' }}
+              >
+                <option value="cod">Cash on Delivery (COD)</option>
+                <option value="bank">Bank Transfer</option>
+                <option value="card">Card Payment</option>
+              </select>
+            </label>
+
+            <label style={{ fontSize: '11px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              Initial Status
+              <select
+                value={orderStatus}
+                onChange={e => setOrderStatus(e.target.value)}
+                style={{ padding: '8px 10px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px', fontSize: '12px' }}
+              >
+                <option value="confirmed">Confirmed</option>
+                <option value="processing">Processing</option>
+                <option value="production">In Production</option>
+                <option value="dispatched">Handed to Courier</option>
+                <option value="delivered">Delivered</option>
+              </select>
+            </label>
+
+            <label style={{ fontSize: '11px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              Courier Partner
+              <input
+                type="text"
+                value={courier}
+                onChange={e => setCourier(e.target.value)}
+                style={{ padding: '8px 10px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px', fontSize: '12px' }}
+              />
+            </label>
+
+            <label style={{ gridColumn: '1 / -1', fontSize: '11px', color: '#a1a1aa', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              Admin Internal Notes
+              <input
+                type="text"
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="e.g. Requested urgent weekend delivery, or VIP customer"
+                style={{ padding: '8px 10px', background: '#222', color: '#fff', border: '1px solid #444', borderRadius: '6px', fontSize: '12px' }}
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="admin-modal-actions">
+          <button type="button" className="admin-button admin-button-quiet" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="admin-button"
+            disabled={isSubmitting}
+            style={{ background: '#22c55e', color: '#000', fontWeight: 700 }}
+          >
+            {isSubmitting ? "Creating…" : "Save Order to Penetix"}
+          </button>
+        </div>
+      </form>
     </Modal>
   );
 }

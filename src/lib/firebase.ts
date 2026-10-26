@@ -3,6 +3,9 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
   onAuthStateChanged,
   type User
@@ -44,6 +47,23 @@ export async function getClientAnalytics() {
 export async function signInWithGoogle(): Promise<User> {
   const result = await signInWithPopup(auth, googleProvider);
   return result.user;
+}
+
+// Email & Password Sign-In
+export async function signInWithEmail(email: string, pass: string): Promise<User> {
+  const result = await signInWithEmailAndPassword(auth, email.trim(), pass);
+  return result.user;
+}
+
+// Create User with Email & Password
+export async function registerWithEmail(email: string, pass: string): Promise<User> {
+  const result = await createUserWithEmailAndPassword(auth, email.trim(), pass);
+  return result.user;
+}
+
+// Password Reset Email
+export async function resetPassword(email: string): Promise<void> {
+  await sendPasswordResetEmail(auth, email.trim());
 }
 
 // Sign-Out

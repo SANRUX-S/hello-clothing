@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Heart, Minus, Plus, ArrowUpRight, Maximize2, Check, Share2, Sparkles, Shield, Truck } from 'lucide-react';
+import { ArrowRight, Heart, Minus, Plus, ArrowUpRight, Maximize2, Check, Share2, Sparkles, Shield, Truck, Clock } from 'lucide-react';
 import { type Product, categories, products, money } from '@/lib/catalog';
 import { useStore } from '@/store/store';
 import { Modal } from '@/components/ui/Modal';
@@ -166,33 +166,46 @@ export default function ProductDetail({ product: p }: { product: Product }) {
               <div className="quantity">
                 <button
                   onClick={() => setQty(Math.max(1, qty - 1))}
-                  disabled={qty === 1}
+                  disabled={qty <= 1 || p.stock <= 0}
                   aria-label="Decrease quantity"
                 >
                   <Minus size={15} />
                 </button>
-                <span>{qty}</span>
+                <span>{p.stock > 0 ? qty : 0}</span>
                 <button
                   onClick={() => setQty(Math.min(10, p.stock, qty + 1))}
-                  disabled={qty >= Math.min(10, p.stock)}
+                  disabled={p.stock <= 0 || qty >= Math.min(10, p.stock)}
                   aria-label="Increase quantity"
                 >
                   <Plus size={15} />
                 </button>
               </div>
-              <button className="button dark" onClick={() => add()}>
-                ADD TO BAG <ArrowRight size={17} />
+              <button
+                className="button dark"
+                disabled={p.stock <= 0}
+                onClick={() => add()}
+              >
+                {p.stock > 0 ? 'ADD TO BAG' : 'OUT OF STOCK'} <ArrowRight size={17} />
               </button>
             </div>
 
-            <button className="button outline buy-now" onClick={() => add(true)}>
-              BUY NOW <ArrowUpRight size={17} />
-            </button>
+            {p.stock > 0 && (
+              <button className="button outline buy-now" onClick={() => add(true)}>
+                BUY NOW <ArrowUpRight size={17} />
+              </button>
+            )}
 
-            <div className="product-demo-note">
-              <Check size={14} />
-              <span>In Stock ({p.stock} available) · Ready for immediate dispatch islandwide</span>
-            </div>
+            {p.stock > 0 ? (
+              <div className="product-demo-note" style={{ color: '#16a34a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Check size={14} color="#16a34a" />
+                <span><strong>In Stock ({p.stock} available)</strong> · Dispatched within 24 hours from Colombo Hub</span>
+              </div>
+            ) : (
+              <div className="product-demo-note" style={{ color: '#dc2626', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Clock size={14} color="#dc2626" />
+                <span><strong>Temporarily Out of Stock</strong> · Next batch dropping soon</span>
+              </div>
+            )}
 
             <div className="product-accordions">
               {p.fabricDetails && (
@@ -213,10 +226,27 @@ export default function ProductDetail({ product: p }: { product: Product }) {
                 <summary>
                   SHIPPING & GUARANTEE <Plus size={14} />
                 </summary>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem', fontSize: '0.88rem', color: 'var(--muted)' }}>
-                  <p><Truck size={14} style={{ display: 'inline', marginRight: '6px' }} /> <strong>Islandwide Delivery:</strong> 1-2 business days in Colombo & suburbs, 2-4 business days outstation.</p>
-                  <p><Shield size={14} style={{ display: 'inline', marginRight: '6px' }} /> <strong>7-Day Easy Exchange:</strong> Unworn items with original tags can be exchanged hassle-free.</p>
-                  <p><Sparkles size={14} style={{ display: 'inline', marginRight: '6px' }} /> <strong>Cash on Delivery:</strong> Available across Sri Lanka with courier inspection.</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '0.85rem', fontSize: '0.85rem', color: 'var(--muted)', lineHeight: 1.6 }}>
+                  <p>
+                    <Truck size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: 'var(--fg)' }} />
+                    <strong>Islandwide Delivery:</strong> LKR 500 flat fee. <strong>FREE islandwide delivery</strong> automatically applied on orders over LKR 10,000.
+                  </p>
+                  <p>
+                    <Clock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: 'var(--fg)' }} />
+                    <strong>Timelines:</strong> 1–2 business days in Colombo & suburbs; 2–4 business days outstation islandwide. Next-day Express available in Western Province (LKR 750).
+                  </p>
+                  <p>
+                    <Shield size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: 'var(--fg)' }} />
+                    <strong>Courier Partners & Tracking:</strong> Handed over to PromptX Logistics or Domex Courier in sealed branded dust bags. Live SMS waybill tracking sent upon dispatch.
+                  </p>
+                  <p>
+                    <Sparkles size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: 'var(--fg)' }} />
+                    <strong>Payment Methods:</strong> Cash on Delivery (COD) across all 25 districts with parcel inspection, or Direct Bank Transfer (Commercial Bank / Sampath Bank).
+                  </p>
+                  <p>
+                    <ArrowRight size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: 'var(--fg)' }} />
+                    <strong>7-Day Doorstep Size Exchange:</strong> Unworn pieces with original swing tags can be swapped for another size. WhatsApp concierge: <strong>+94 78 619 1260</strong>.
+                  </p>
                 </div>
               </details>
             </div>

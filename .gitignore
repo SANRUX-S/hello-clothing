@@ -15,4 +15,6 @@ test-results/
 .neon
 
 .vercel
-.env*
+artifacts/home-*.png
+public/uploads/products/*
+!public/uploads/products/.gitkeep

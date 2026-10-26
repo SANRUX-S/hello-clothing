@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { neon, type NeonQueryFunction } from '@neondatabase/serverless';
 import { products as fallbackProducts, categories as fallbackCategories, type Product } from '@/lib/catalog';
 
@@ -340,4 +341,189 @@ export async function updateOrderStatusInDb(reference: string, status: string, c
         updated_at = NOW()
     WHERE reference = ${reference};
   `;
+}
+
+export async function deleteOrderFromDb(reference: string): Promise<void> {
+  const sql = getDb();
+  if (!sql) throw new Error('Database connection is not configured.');
+  await sql`DELETE FROM orders WHERE UPPER(reference) = ${reference.trim().toUpperCase()}`;
+}
+
+export async function deleteAllOrdersFromDb(): Promise<void> {
+  const sql = getDb();
+  if (!sql) throw new Error('Database connection is not configured.');
+  await sql`DELETE FROM orders`;
+}
+
+export async function getStoreSettingFromDb(key: string): Promise<any> {
+  const sql = getDb();
+  if (!sql) return null;
+  try {
+    const rows = await sql`SELECT value FROM store_settings WHERE key = ${key} LIMIT 1`;
+    if (!rows || rows.length === 0) return null;
+    const val = rows[0].value;
+    return typeof val === 'string' ? JSON.parse(val) : val;
+  } catch (err) {
+    console.error(`getStoreSettingFromDb error for ${key}:`, err);
+    return null;
+  }
+}
+
+export async function saveStoreSettingToDb(key: string, value: any): Promise<void> {
+  const sql = getDb();
+  if (!sql) throw new Error('Database connection is not configured.');
+  const valJson = JSON.stringify(value);
+  await sql`
+    INSERT INTO store_settings (key, value, updated_at)
+    VALUES (${key}, ${valJson}, NOW())
+    ON CONFLICT (key) DO UPDATE SET
+      value = EXCLUDED.value,
+      updated_at = NOW();
+  `;
+}
+
+export type DbAdminUser = {
+  id: string;
+  email: string;
+  name: string;
+  role: 'super_admin' | 'co_admin' | 'admin';
+  status: 'active' | 'suspended';
+  created_at?: string;
+  last_login?: string | null;
+  password_hash?: string | null;
+};
+
+export function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+export function verifyPassword(password: string, storedHash?: string | null): boolean {
+  if (!storedHash) return false;
+  try {
+    const [salt, key] = storedHash.split(':');
+    if (!salt || !key) return password === storedHash;
+    const keyBuffer = Buffer.from(key, 'hex');
+    const derivedKey = crypto.scryptSync(password, salt, 64);
+    return crypto.timingSafeEqual(keyBuffer, derivedKey);
+  } catch {
+    return false;
+  }
+}
+
+export async function verifyAdminCredentials(email: string, password: string): Promise<DbAdminUser | null> {
+  const sql = getDb();
+  if (!sql) return null;
+  try {
+    const cleanEmail = email.trim().toLowerCase();
+    const rows = await sql`
+      SELECT id, email, name, role, status, password_hash, created_at, last_login
+      FROM admin_users
+      WHERE LOWER(email) = ${cleanEmail}
+      LIMIT 1;
+    `;
+    if (!rows || rows.length === 0) return null;
+    const user = rows[0] as DbAdminUser;
+    if (user.status !== 'active') return null;
+
+    const isValid = verifyPassword(password, user.password_hash);
+    if (!isValid) return null;
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      status: user.status,
+      created_at: user.created_at,
+      last_login: user.last_login,
+    };
+  } catch (err) {
+    console.error('verifyAdminCredentials error:', err);
+    return null;
+  }
+}
+
+export async function getAdminUserByEmail(email: string): Promise<DbAdminUser | null> {
+  const sql = getDb();
+  if (!sql) return null;
+  try {
+    const cleanEmail = email.trim().toLowerCase();
+    const rows = await sql`
+      SELECT id, email, name, role, status, created_at, last_login
+      FROM admin_users
+      WHERE LOWER(email) = ${cleanEmail}
+      LIMIT 1;
+    `;
+    if (!rows || rows.length === 0) return null;
+    return rows[0] as DbAdminUser;
+  } catch (err) {
+    console.error('getAdminUserByEmail error:', err);
+    return null;
+  }
+}
+
+export async function getAllAdminUsers(): Promise<DbAdminUser[]> {
+  const sql = getDb();
+  if (!sql) return [];
+  try {
+    const rows = await sql`
+      SELECT id, email, name, role, status, created_at, last_login
+      FROM admin_users
+      ORDER BY 
+        CASE role 
+          WHEN 'super_admin' THEN 1 
+          WHEN 'co_admin' THEN 2 
+          ELSE 3 
+        END, created_at ASC;
+    `;
+    return (rows || []) as DbAdminUser[];
+  } catch (err) {
+    console.error('getAllAdminUsers error:', err);
+    return [];
+  }
+}
+
+export async function saveAdminUser(user: { id?: string; email: string; name: string; role: string; status?: string; password?: string }): Promise<void> {
+  const sql = getDb();
+  if (!sql) throw new Error('Database connection is not configured.');
+  const id = user.id || `admin-${Date.now()}`;
+  const cleanEmail = user.email.trim().toLowerCase();
+  const passwordHash = user.password ? hashPassword(user.password) : null;
+
+  if (passwordHash) {
+    await sql`
+      INSERT INTO admin_users (id, email, name, role, status, password_hash, created_at)
+      VALUES (${id}, ${cleanEmail}, ${user.name.trim()}, ${user.role}, ${user.status || 'active'}, ${passwordHash}, NOW())
+      ON CONFLICT (email) DO UPDATE SET
+        name = EXCLUDED.name,
+        role = EXCLUDED.role,
+        status = EXCLUDED.status,
+        password_hash = ${passwordHash};
+    `;
+  } else {
+    await sql`
+      INSERT INTO admin_users (id, email, name, role, status, created_at)
+      VALUES (${id}, ${cleanEmail}, ${user.name.trim()}, ${user.role}, ${user.status || 'active'}, NOW())
+      ON CONFLICT (email) DO UPDATE SET
+        name = EXCLUDED.name,
+        role = EXCLUDED.role,
+        status = EXCLUDED.status;
+    `;
+  }
+}
+
+export async function deleteAdminUser(email: string): Promise<void> {
+  const sql = getDb();
+  if (!sql) throw new Error('Database connection is not configured.');
+  await sql`DELETE FROM admin_users WHERE LOWER(email) = ${email.trim().toLowerCase()}`;
+}
+
+export async function updateAdminLastLogin(email: string): Promise<void> {
+  const sql = getDb();
+  if (!sql) return;
+  try {
+    await sql`UPDATE admin_users SET last_login = NOW() WHERE LOWER(email) = ${email.trim().toLowerCase()}`;
+  } catch {}
 }

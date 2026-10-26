@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import AdminApp, { type AdminSection } from "@/components/admin/AdminApp";
 import "../admin.css";
 
-const sections = ["products", "inventory", "orders", "categories", "content", "media", "settings"];
+const sections = ["products", "inventory", "orders", "categories", "content", "media", "settings", "team"];
 
 export const metadata = {
   title: "Admin Studio — HELLO! Clothing",
