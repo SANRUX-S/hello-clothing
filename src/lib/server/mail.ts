@@ -23,10 +23,20 @@ function formatLKR(amountMinorOrMajor: number): string {
   return `LKR ${val.toLocaleString('en-LK')}`;
 }
 
+export function getAbsoluteImageUrl(img?: string, slug?: string): string {
+  if (!img && slug) {
+    img = `/demo-products/${slug}.webp`;
+  }
+  if (!img) return 'https://www.helloclothing.store/demo-products/signature-tee.webp';
+  if (img.startsWith('http://') || img.startsWith('https://')) return img;
+  const cleanPath = img.startsWith('/') ? img : `/${img}`;
+  return `https://www.helloclothing.store${cleanPath}`;
+}
+
 const baseEmailStyle = `
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background-color: #0c0d0d;
-  color: #ededed;
+  background-color: #f4f5f7;
+  color: #1e293b;
   margin: 0;
   padding: 0;
   width: 100% !important;
@@ -67,17 +77,24 @@ export async function sendOrderConfirmationEmail(order: {
   const deliveryFormatted = (order.delivery === 0) ? 'FREE' : formatLKR(order.delivery || 50000);
   const totalFormatted = formatLKR(order.total || 0);
 
-  const itemsHtml = (order.items || []).map(item => `
+  const itemsHtml = (order.items || []).map(item => {
+    const itemImg = getAbsoluteImageUrl(item.image, (item as any).slug || (item as any).productId);
+    const linePrice = formatLKR(item.lineTotal || (item.unitPrice ? item.unitPrice * item.quantity : 0));
+    return `
     <tr>
-      <td style="padding: 12px 0; border-bottom: 1px solid #222; vertical-align: middle;">
-        <strong style="color: #ffffff; font-size: 14px; display: block;">${item.name}</strong>
-        <span style="color: #888888; font-size: 12px;">Color: ${item.color || 'Standard'} &middot; Size: ${item.size || 'M'} &middot; Qty: ${item.quantity}</span>
+      <td style="width: 64px; padding: 12px 14px 12px 0; border-bottom: 1px solid #eef2f6; vertical-align: middle;">
+        <img src="${itemImg}" alt="${item.name}" width="64" height="64" style="width: 64px; height: 64px; border-radius: 8px; object-fit: cover; display: block; background-color: #f8fafc; border: 1px solid #e2e8f0;" />
       </td>
-      <td style="padding: 12px 0; border-bottom: 1px solid #222; text-align: right; vertical-align: middle; color: #ffffff; font-weight: 600; font-size: 14px;">
-        ${formatLKR(item.lineTotal || (item.unitPrice ? item.unitPrice * item.quantity : 0))}
+      <td style="padding: 12px 0; border-bottom: 1px solid #eef2f6; vertical-align: middle;">
+        <strong style="color: #0f172a; font-size: 14px; display: block; line-height: 1.3;">${item.name}</strong>
+        <span style="color: #64748b; font-size: 12px; margin-top: 3px; display: block;">Color: <strong>${item.color || 'Standard'}</strong> &middot; Size: <strong>${item.size || 'M'}</strong> &middot; Qty: <strong>${item.quantity}</strong></span>
+      </td>
+      <td style="padding: 12px 0; border-bottom: 1px solid #eef2f6; text-align: right; vertical-align: middle; color: #0f172a; font-weight: 700; font-size: 14px;">
+        ${linePrice}
       </td>
     </tr>
-  `).join('');
+    `;
+  }).join('');
 
   const html = `
     <!DOCTYPE html>
@@ -86,42 +103,43 @@ export async function sendOrderConfirmationEmail(order: {
       <meta charset="utf-8">
       <title>HELLO! Order Confirmation</title>
     </head>
-    <body style="${baseEmailStyle}">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #0c0d0d; padding: 30px 15px;">
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f5f7; color: #1e293b; margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f4f5f7; padding: 36px 15px;">
         <tr>
           <td align="center">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 580px; background-color: #141515; border: 1px solid #262727; border-radius: 12px; overflow: hidden; padding: 32px 28px; text-align: left;">
-              <!-- Header -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 580px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; padding: 36px 32px; text-align: left; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);">
+              
+              <!-- Brand Header -->
               <tr>
-                <td style="border-bottom: 1px solid #262727; padding-bottom: 20px;">
-                  <span style="font-size: 26px; font-weight: 900; letter-spacing: 2px; color: #ffffff; display: block;">HELLO!</span>
-                  <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #888888;">Heavyweight Streetwear &middot; Colombo</span>
+                <td style="border-bottom: 1px solid #f1f5f9; padding-bottom: 20px;">
+                  <span style="font-size: 26px; font-weight: 900; letter-spacing: 2px; color: #0f172a; display: block; font-family: -apple-system, sans-serif;">HELLO!</span>
+                  <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; font-weight: 600;">Official Order Receipt &middot; Colombo</span>
                 </td>
               </tr>
 
               <!-- Greeting -->
               <tr>
                 <td style="padding: 24px 0 16px;">
-                  <span style="display: inline-block; background: #052e16; border: 1px solid #166534; color: #4ade80; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">Order Confirmed</span>
-                  <h1 style="color: #ffffff; font-size: 22px; font-weight: 800; margin: 0 0 8px; letter-spacing: -0.5px;">LOOKING GOOD, ${order.customer?.name || 'VALUED CUSTOMER'}.</h1>
-                  <p style="color: #aaaaaa; font-size: 14px; line-height: 1.5; margin: 0;">
-                    Thank you for shopping with HELLO! Clothing. Your order has been registered in our fulfillment hub and is being prepared for dispatch.
+                  <span style="display: inline-block; background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">Order Confirmed</span>
+                  <h1 style="color: #0f172a; font-size: 22px; font-weight: 900; margin: 0 0 8px; letter-spacing: -0.5px;">LOOKING GOOD, ${order.customer?.name || 'VALUED CUSTOMER'}.</h1>
+                  <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin: 0;">
+                    Thank you for shopping with HELLO! Clothing. Your order has been placed and is being hand-packed for delivery.
                   </p>
                 </td>
               </tr>
 
               <!-- Order Ref Banner -->
               <tr>
-                <td style="background: #1c1d1d; border: 1px solid #2e3030; border-radius: 8px; padding: 14px 18px; margin: 12px 0;">
-                  <div style="font-size: 11px; color: #888888; text-transform: uppercase; letter-spacing: 0.5px;">Your Order Reference</div>
-                  <div style="font-size: 20px; font-weight: 900; color: #ffffff; letter-spacing: 1px;">${order.reference}</div>
+                <td style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; margin: 12px 0;">
+                  <div style="font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Your Order Reference</div>
+                  <div style="font-size: 22px; font-weight: 900; color: #0f172a; letter-spacing: 1.5px; font-family: monospace;">${order.reference}</div>
                 </td>
               </tr>
 
               <!-- Items List -->
               <tr>
                 <td style="padding-top: 20px;">
-                  <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #888888; display: block; margin-bottom: 8px;">Parcel Contents</span>
+                  <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; display: block; margin-bottom: 8px;">Parcel Contents</span>
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                     ${itemsHtml}
                   </table>
@@ -131,18 +149,18 @@ export async function sendOrderConfirmationEmail(order: {
               <!-- Summary -->
               <tr>
                 <td style="padding-top: 16px;">
-                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-size: 13px; color: #aaaaaa;">
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-size: 13px; color: #64748b;">
                     <tr>
-                      <td style="padding: 4px 0;">Subtotal</td>
-                      <td style="padding: 4px 0; text-align: right; color: #ffffff;">${subtotalFormatted}</td>
+                      <td style="padding: 5px 0;">Subtotal</td>
+                      <td style="padding: 5px 0; text-align: right; color: #0f172a; font-weight: 600;">${subtotalFormatted}</td>
                     </tr>
                     <tr>
-                      <td style="padding: 4px 0;">Islandwide Courier Delivery</td>
-                      <td style="padding: 4px 0; text-align: right; color: #ffffff;">${deliveryFormatted}</td>
+                      <td style="padding: 5px 0;">Islandwide Courier Delivery</td>
+                      <td style="padding: 5px 0; text-align: right; color: #0f172a; font-weight: 600;">${deliveryFormatted}</td>
                     </tr>
-                    <tr style="border-top: 1px solid #262727; font-size: 16px; font-weight: 800;">
-                      <td style="padding: 12px 0 6px; color: #ffffff;">Total Amount</td>
-                      <td style="padding: 12px 0 6px; text-align: right; color: #4ade80;">${totalFormatted}</td>
+                    <tr style="border-top: 1px solid #e2e8f0; font-size: 16px; font-weight: 800;">
+                      <td style="padding: 12px 0 6px; color: #0f172a;">Total Amount</td>
+                      <td style="padding: 12px 0 6px; text-align: right; color: #16a34a; font-size: 18px;">${totalFormatted}</td>
                     </tr>
                   </table>
                 </td>
@@ -151,12 +169,12 @@ export async function sendOrderConfirmationEmail(order: {
               <!-- Delivery & Payment Info -->
               <tr>
                 <td style="padding-top: 20px;">
-                  <div style="background: #181919; border: 1px solid #262727; border-radius: 8px; padding: 14px 16px; font-size: 13px; line-height: 1.5; color: #cccccc;">
-                    <strong style="color: #ffffff; display: block; margin-bottom: 4px;">Delivery Address:</strong>
+                  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; font-size: 13px; line-height: 1.5; color: #475569;">
+                    <strong style="color: #0f172a; display: block; margin-bottom: 4px;">Delivery Address:</strong>
                     ${order.customer?.address || 'Address on file'}, ${order.customer?.city || 'Colombo'}<br>
-                    <span style="color: #888888;">Phone: ${order.customer?.phone || 'N/A'}</span>
-                    <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #262727;">
-                      <strong style="color: #ffffff;">Payment Method:</strong> ${payLabel}
+                    <span style="color: #64748b;">Phone: ${order.customer?.phone || 'N/A'}</span>
+                    <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #e2e8f0;">
+                      <strong style="color: #0f172a;">Payment Method:</strong> ${payLabel}
                     </div>
                   </div>
                 </td>
@@ -166,12 +184,12 @@ export async function sendOrderConfirmationEmail(order: {
               <!-- Bank Transfer Instructions -->
               <tr>
                 <td style="padding-top: 16px;">
-                  <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 14px 16px; font-size: 13px; color: #e2e8f0;">
-                    <strong style="color: #38bdf8; display: block; margin-bottom: 6px;">Bank Transfer Instructions:</strong>
-                    Bank: Commercial Bank of Ceylon | Branch: Colombo City<br>
-                    Account Name: HELLO! CLOTHING PVT LTD<br>
-                    Account No: 1000 2489 1234<br>
-                    <span style="font-size: 12px; color: #94a3b8; display: block; margin-top: 6px;">
+                  <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 14px 16px; font-size: 13px; color: #1e40af;">
+                    <strong style="color: #1e3a8a; display: block; margin-bottom: 6px;">Commercial Bank of Ceylon Deposit Details:</strong>
+                    Bank: Commercial Bank of Ceylon &middot; Branch: Colombo City Branch<br>
+                    Account Name: <strong>HELLO! CLOTHING PVT LTD</strong><br>
+                    Account No: <strong>1000 2489 1234</strong><br>
+                    <span style="font-size: 12px; color: #2563eb; display: block; margin-top: 8px;">
                       Please WhatsApp your deposit slip with reference <strong>${order.reference}</strong> to <strong>+94 78 619 1260</strong>.
                     </span>
                   </div>
@@ -181,20 +199,20 @@ export async function sendOrderConfirmationEmail(order: {
               <!-- CTA Buttons -->
               <tr>
                 <td style="padding-top: 28px; text-align: center;">
-                  <a href="${trackUrl}" target="_blank" style="display: inline-block; background-color: #ffffff; color: #000000; font-size: 13px; font-weight: 800; letter-spacing: 0.5px; text-decoration: none; padding: 13px 24px; border-radius: 6px; text-transform: uppercase; margin: 4px;">
-                    Track Order Live &rarr;
-                  </a>
-                  <a href="${receiptUrl}" target="_blank" style="display: inline-block; background-color: #1f2022; border: 1px solid #383a3e; color: #4ade80; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; text-decoration: none; padding: 12px 22px; border-radius: 6px; text-transform: uppercase; margin: 4px;">
+                  <a href="${receiptUrl}" target="_blank" style="display: inline-block; background-color: #0f172a; color: #ffffff; font-size: 12px; font-weight: 800; letter-spacing: 0.5px; text-decoration: none; padding: 13px 24px; border-radius: 6px; text-transform: uppercase; margin: 4px;">
                     View / Print Receipt &rarr;
+                  </a>
+                  <a href="${trackUrl}" target="_blank" style="display: inline-block; background-color: #f1f5f9; border: 1px solid #cbd5e1; color: #0f172a; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-decoration: none; padding: 12px 22px; border-radius: 6px; text-transform: uppercase; margin: 4px;">
+                    Track Order Live &rarr;
                   </a>
                 </td>
               </tr>
 
               <!-- Footer -->
               <tr>
-                <td style="padding-top: 36px; border-top: 1px solid #262727; margin-top: 28px; font-size: 11px; color: #666666; line-height: 1.6; text-align: center;">
-                  HELLO! Clothing Sri Lanka &middot; Designed & Dispatched from Colombo<br>
-                  Need assistance? Reply to this email or reach us at <a href="mailto:support@helloclothing.store" style="color: #888888; text-decoration: underline;">support@helloclothing.store</a><br>
+                <td style="padding-top: 32px; border-top: 1px solid #f1f5f9; margin-top: 28px; font-size: 11px; color: #94a3b8; line-height: 1.6; text-align: center;">
+                  HELLO! Clothing Sri Lanka &middot; Designed & Hand-Packed in Colombo<br>
+                  Need assistance? Reply to this email or reach us at <a href="mailto:support@helloclothing.store" style="color: #64748b; text-decoration: underline;">support@helloclothing.store</a><br>
                   &copy; ${new Date().getFullYear()} HELLO! CLOTHING. All rights reserved.
                 </td>
               </tr>
@@ -386,23 +404,23 @@ export async function sendOrderStatusUpdateEmail(order: {
   const html = `
     <!DOCTYPE html>
     <html lang="en">
-    <body style="${baseEmailStyle}">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #0c0d0d; padding: 30px 15px;">
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f5f7; color: #1e293b; margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f4f5f7; padding: 36px 15px;">
         <tr>
           <td align="center">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 580px; background-color: #141515; border: 1px solid #262727; border-radius: 12px; padding: 32px 28px; color: #ededed;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 580px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; padding: 36px 32px; color: #1e293b; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);">
               <tr>
-                <td style="border-bottom: 1px solid #262727; padding-bottom: 20px;">
-                  <span style="font-size: 26px; font-weight: 900; letter-spacing: 2px; color: #ffffff; display: block;">HELLO!</span>
-                  <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #888888;">Order Status Notification</span>
+                <td style="border-bottom: 1px solid #f1f5f9; padding-bottom: 20px;">
+                  <span style="font-size: 26px; font-weight: 900; letter-spacing: 2px; color: #0f172a; display: block;">HELLO!</span>
+                  <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; font-weight: 600;">Order Status Notification &middot; Colombo</span>
                 </td>
               </tr>
 
               <tr>
                 <td style="padding: 24px 0;">
-                  <span style="display: inline-block; background: #052e16; border: 1px solid #166534; color: #4ade80; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">${statusBadge}</span>
-                  <h1 style="color: #ffffff; font-size: 22px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">${statusTitle}</h1>
-                  <p style="color: #cccccc; font-size: 14px; line-height: 1.6; margin: 0;">
+                  <span style="display: inline-block; background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">${statusBadge}</span>
+                  <h1 style="color: #0f172a; font-size: 22px; font-weight: 900; margin: 0 0 12px; letter-spacing: -0.5px;">${statusTitle}</h1>
+                  <p style="color: #475569; font-size: 14px; line-height: 1.6; margin: 0;">
                     Hello ${order.customer?.name || 'Valued Customer'},<br><br>
                     ${statusMessage}
                   </p>
@@ -410,20 +428,20 @@ export async function sendOrderStatusUpdateEmail(order: {
               </tr>
 
               <tr>
-                <td style="background: #1c1d1d; border: 1px solid #2e3030; border-radius: 8px; padding: 16px 18px;">
+                <td style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 18px;">
                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-size: 13px;">
                     <tr>
-                      <td style="color: #888888;">Order Reference:</td>
-                      <td style="text-align: right; color: #ffffff; font-weight: 700;">${order.reference}</td>
+                      <td style="color: #64748b;">Order Reference:</td>
+                      <td style="text-align: right; color: #0f172a; font-weight: 800; font-family: monospace;">${order.reference}</td>
                     </tr>
                     <tr>
-                      <td style="color: #888888; padding-top: 6px;">Courier Partner:</td>
-                      <td style="text-align: right; color: #ffffff; padding-top: 6px;">${courierName}</td>
+                      <td style="color: #64748b; padding-top: 8px;">Courier Partner:</td>
+                      <td style="text-align: right; color: #0f172a; font-weight: 600; padding-top: 8px;">${courierName}</td>
                     </tr>
                     ${waybill ? `
                     <tr>
-                      <td style="color: #888888; padding-top: 6px;">Waybill Tracking #:</td>
-                      <td style="text-align: right; color: #4ade80; font-weight: 700; padding-top: 6px;">#${waybill}</td>
+                      <td style="color: #64748b; padding-top: 8px;">Waybill Tracking #:</td>
+                      <td style="text-align: right; color: #16a34a; font-weight: 800; padding-top: 8px;">#${waybill}</td>
                     </tr>` : ''}
                   </table>
                 </td>
@@ -431,19 +449,19 @@ export async function sendOrderStatusUpdateEmail(order: {
 
               <tr>
                 <td style="padding-top: 28px; text-align: center;">
-                  <a href="${trackUrl}" target="_blank" style="display: inline-block; background-color: #ffffff; color: #000000; font-size: 13px; font-weight: 800; letter-spacing: 0.5px; text-decoration: none; padding: 13px 24px; border-radius: 6px; text-transform: uppercase; margin: 4px;">
+                  <a href="${trackUrl}" target="_blank" style="display: inline-block; background-color: #0f172a; color: #ffffff; font-size: 12px; font-weight: 800; letter-spacing: 0.5px; text-decoration: none; padding: 13px 24px; border-radius: 6px; text-transform: uppercase; margin: 4px;">
                     View Live Courier Progress &rarr;
                   </a>
-                  <a href="${receiptUrl}" target="_blank" style="display: inline-block; background-color: #1f2022; border: 1px solid #383a3e; color: #4ade80; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; text-decoration: none; padding: 12px 22px; border-radius: 6px; text-transform: uppercase; margin: 4px;">
+                  <a href="${receiptUrl}" target="_blank" style="display: inline-block; background-color: #f1f5f9; border: 1px solid #cbd5e1; color: #0f172a; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-decoration: none; padding: 12px 22px; border-radius: 6px; text-transform: uppercase; margin: 4px;">
                     View Official Receipt &rarr;
                   </a>
                 </td>
               </tr>
 
               <tr>
-                <td style="padding-top: 36px; border-top: 1px solid #262727; margin-top: 28px; font-size: 11px; color: #666666; line-height: 1.6; text-align: center;">
+                <td style="padding-top: 32px; border-top: 1px solid #f1f5f9; margin-top: 28px; font-size: 11px; color: #94a3b8; line-height: 1.6; text-align: center;">
                   HELLO! Clothing Sri Lanka &middot; Dispatched from Colombo<br>
-                  Questions? Reach us at <a href="mailto:orders@helloclothing.store" style="color: #888888; text-decoration: underline;">orders@helloclothing.store</a>
+                  Questions? Reach us at <a href="mailto:orders@helloclothing.store" style="color: #64748b; text-decoration: underline;">orders@helloclothing.store</a>
                 </td>
               </tr>
             </table>
