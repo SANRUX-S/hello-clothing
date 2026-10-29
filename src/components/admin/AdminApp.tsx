@@ -381,7 +381,18 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
-  const [galleryImages, setGalleryImages] = useState<string[]>(() => draft.gallery?.length ? draft.gallery : (draft.image ? [draft.image] : []));
+  const [galleryImages, setGalleryImages] = useState<string[]>(() => {
+    const raw = draft.gallery?.length ? draft.gallery : (draft.image ? [draft.image] : []);
+    const isCustom = draft.image?.startsWith('/api/media/') || draft.image?.startsWith('/uploads/') || !draft.isDemo;
+    const clean = raw.filter(img => {
+      if (!img) return false;
+      if (isCustom && (img.includes('/campaign/real/') || img.includes('/categories/') || img.includes('/hero/') || img.includes('/demo-products/'))) {
+        return false;
+      }
+      return true;
+    });
+    return clean.length > 0 ? clean : (draft.image ? [draft.image] : []);
+  });
   const [selectedSizes, setSelectedSizes] = useState<string[]>(() => draft.sizes && draft.sizes.length ? draft.sizes : ['S', 'M', 'L', 'XL']);
   const [selectedColors, setSelectedColors] = useState<Color[]>(() => draft.colors && draft.colors.length ? draft.colors : [{ name: 'Black', hex: '#181918' }]);
   const [customColorName, setCustomColorName] = useState("");
@@ -430,7 +441,7 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
       const permanentUrl = await uploadOrCompressImage(file);
       setDraft(d => ({ ...d, image: permanentUrl }));
       setGalleryImages(g => {
-        const withoutLocal = g.filter(src => src !== localPreview);
+        const withoutLocal = g.filter(src => src !== localPreview && !src.includes('/campaign/real/') && !src.includes('/categories/') && !src.includes('/hero/') && !src.includes('/demo-products/'));
         return withoutLocal.length > 0 ? [permanentUrl, ...withoutLocal.slice(1)] : [permanentUrl];
       });
       setUploadStatus("✓ Photo attached & optimized");
@@ -605,15 +616,27 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
             <label style={{ margin: 0 }}>Additional Angle Photos ({galleryImages.length})</label>
-            <button
-              type="button"
-              className="admin-button admin-button-quiet"
-              style={{ minHeight: '26px', padding: '3px 8px', fontSize: '9px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-              onClick={() => galleryImageInputRef.current?.click()}
-              disabled={isUploading}
-            >
-              <Plus size={12} /> Add Angles
-            </button>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {galleryImages.length > 1 && (
+                <button
+                  type="button"
+                  className="admin-button admin-button-quiet"
+                  style={{ minHeight: '26px', padding: '3px 8px', fontSize: '9px', color: '#f87171' }}
+                  onClick={() => setGalleryImages([draft.image || galleryImages[0]])}
+                >
+                  Clear other photos
+                </button>
+              )}
+              <button
+                type="button"
+                className="admin-button admin-button-quiet"
+                style={{ minHeight: '26px', padding: '3px 8px', fontSize: '9px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                onClick={() => galleryImageInputRef.current?.click()}
+                disabled={isUploading}
+              >
+                <Plus size={12} /> Add Angles
+              </button>
+            </div>
             <input
               ref={galleryImageInputRef}
               type="file"

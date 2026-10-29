@@ -8,7 +8,7 @@ import { useStore } from '@/store/store';
 import { Modal } from '@/components/ui/Modal';
 import { ProductCard } from './ProductCard';
 
-export default function ProductDetail({ product: p }: { product: Product }) {
+export default function ProductDetail({ product: p, allProducts }: { product: Product; allProducts?: Product[] }) {
   const store = useStore();
   const router = useRouter();
   const [size, setSize] = useState(p.sizes && p.sizes.length === 1 ? p.sizes[0] : '');
@@ -23,12 +23,32 @@ export default function ProductDetail({ product: p }: { product: Product }) {
   const cat = categories.find((c) => c.slug === p.category) || {
     slug: p.category || 'all',
     name: p.category ? p.category.toUpperCase() : 'COLLECTION',
-    image: p.image || '/demo-products/essential-tee.webp',
+    image: p.image || '/branding/hello-word.webp',
     caption: 'HELLO! Colombo',
     description: ''
   };
-  const gallery = useMemo(() => (p.gallery && p.gallery.length ? p.gallery : [p.image || cat.image, cat.image]), [p.gallery, p.image, cat.image]);
-  const related = products.filter((x) => x.id !== p.id).slice(0, 4);
+
+  // Clean gallery strictly showing only this product's actual uploaded images
+  const gallery = useMemo(() => {
+    const raw = Array.isArray(p.gallery) && p.gallery.length ? p.gallery : [p.image];
+    const isCustom = p.image?.startsWith('/api/media/') || p.image?.startsWith('/uploads/') || !p.isDemo;
+    const filtered = raw.filter((img) => {
+      if (!img || typeof img !== 'string') return false;
+      if (isCustom && (img.includes('/campaign/real/') || img.includes('/categories/') || img.includes('/hero/') || img.includes('/demo-products/'))) {
+        return false;
+      }
+      return true;
+    });
+    const unique = Array.from(new Set([p.image, ...filtered])).filter(Boolean);
+    return unique.length > 0 ? unique : [p.image];
+  }, [p.gallery, p.image, p.isDemo]);
+
+  // Use real products from database for related items instead of stale static demo products
+  const related = useMemo(() => {
+    const source = (allProducts && allProducts.length > 0) ? allProducts : products;
+    return source.filter((x) => x.id !== p.id).slice(0, 4);
+  }, [allProducts, p.id]);
+
   const saved = store.wishlist.includes(p.id);
 
   function handleColorSelect(colorName: string) {

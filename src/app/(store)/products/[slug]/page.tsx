@@ -3,12 +3,11 @@ import { notFound } from 'next/navigation';
 import { getProductBySlugFromDb, getProductsFromDb } from '@/lib/server/db';
 import ProductDetail from '@/components/shop/ProductDetail';
 
-export const revalidate = 60;
-export const dynamicParams = true;
+export const dynamic = 'force-dynamic';
 
-const getProduct = cache(async (slug: string) => {
+const getProduct = async (slug: string) => {
   return await getProductBySlugFromDb(slug);
-});
+};
 
 export async function generateStaticParams() {
   try {
@@ -30,8 +29,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const p = await getProduct(slug);
+  const [p, allProducts] = await Promise.all([
+    getProduct(slug),
+    getProductsFromDb(),
+  ]);
   if (!p) notFound();
-  return <ProductDetail product={p} />;
+  return <ProductDetail product={p} allProducts={allProducts} />;
 }
 

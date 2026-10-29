@@ -23,16 +23,9 @@ export const products: Product[] = [
     id: 'essential-tee', slug: 'essential-tee', name: 'Essential Tee', price: 349000, category: 't-shirts',
     image: '/demo-products/essential-tee.webp',
     colors: [black, white, gray],
-    colorImages: {
-      'Black': '/demo-products/essential-tee.webp',
-      'Off White': '/campaign/real/man-white-tee.webp',
-      'Ash': '/campaign/real/woman-black-tee.webp'
-    },
+    colorImages: {},
     gallery: [
-      '/demo-products/essential-tee.webp',
-      '/campaign/real/man-white-tee.webp',
-      '/campaign/real/woman-black-tee.webp',
-      '/categories/t-shirts.webp'
+      '/demo-products/essential-tee.webp'
     ],
     sizes, stock: 24,
     description: 'Our core staple in 240 GSM heavy combed cotton. Cut boxy with relaxed drop shoulders and a snug ribbed collar that won’t lose shape after washing.',
@@ -49,15 +42,9 @@ export const products: Product[] = [
     id: 'signature-tee', slug: 'signature-tee', name: 'Signature Tee', price: 399000, category: 't-shirts',
     image: '/demo-products/signature-tee.webp',
     colors: [white, black],
-    colorImages: {
-      'Off White': '/demo-products/signature-tee.webp',
-      'Black': '/campaign/real/man-graphic-tee-back.webp'
-    },
+    colorImages: {},
     gallery: [
-      '/demo-products/signature-tee.webp',
-      '/campaign/real/man-graphic-tee-back.webp',
-      '/campaign/real/man-graphic-tee-side.webp',
-      '/campaign/real/couple-graphic-tees.webp'
+      '/demo-products/signature-tee.webp'
     ],
     sizes, stock: 18,
     description: 'Heavyweight 260 GSM jersey featuring our high-density screen-printed HELLO! graphic. A relaxed boxy cut that drapes cleanly without clinging in the humidity.',
@@ -74,14 +61,9 @@ export const products: Product[] = [
     id: 'cargo-pants', slug: 'cargo-pants', name: 'Cargo Pants', price: 599000, category: 'pants',
     image: '/demo-products/cargo-pants.webp',
     colors: [black, gray],
-    colorImages: {
-      'Black': '/demo-products/cargo-pants.webp',
-      'Ash': '/categories/pants.webp'
-    },
+    colorImages: {},
     gallery: [
-      '/demo-products/cargo-pants.webp',
-      '/categories/pants.webp',
-      '/hero/campaign.webp'
+      '/demo-products/cargo-pants.webp'
     ],
     sizes: ['S', 'M', 'L', 'XL'], stock: 16,
     description: 'Wide-leg utility cargos cut from durable 290 GSM stretch-cotton twill. Finished with deep gusset cargo pockets, an elasticated waistband, and adjustable hem drawcords to toggle your stack.',
@@ -98,16 +80,9 @@ export const products: Product[] = [
     id: 'oversized-hoodie', slug: 'oversized-hoodie', name: 'Oversized Hoodie', price: 699000, category: 'hoodies',
     image: '/demo-products/oversized-hoodie.webp',
     colors: [black, gray],
-    colorImages: {
-      'Black': '/campaign/real/man-black-hoodie.webp',
-      'Ash': '/campaign/real/man-charcoal-hoodie.webp'
-    },
+    colorImages: {},
     gallery: [
-      '/demo-products/oversized-hoodie.webp',
-      '/campaign/real/man-black-hoodie.webp',
-      '/campaign/real/man-charcoal-hoodie.webp',
-      '/campaign/real/woman-white-hoodie.webp',
-      '/campaign/real/woman-white-hoodie-profile.webp'
+      '/demo-products/oversized-hoodie.webp'
     ],
     sizes, stock: 12,
     description: 'Heavy 380 GSM brushed fleece with a structured double-layer hood that actually stays up. Dropped shoulders, seamless kangaroo pocket, and thick ribbed cuffs built for cool evenings and AC chill.',
@@ -124,13 +99,9 @@ export const products: Product[] = [
     id: 'classic-cap', slug: 'classic-cap', name: 'Classic Cap', price: 299000, category: 'accessories',
     image: '/demo-products/classic-cap.webp',
     colors: [white, black],
-    colorImages: {
-      'Off White': '/demo-products/classic-cap.webp',
-      'Black': '/categories/accessories.webp'
-    },
+    colorImages: {},
     gallery: [
-      '/demo-products/classic-cap.webp',
-      '/categories/accessories.webp'
+      '/demo-products/classic-cap.webp'
     ],
     sizes: ['One Size'], stock: 30,
     description: 'Low-profile 6-panel dad cap made from washed cotton chino twill. Features clean raised HELLO! 3D embroidery on the front and an adjustable brass buckle strap at the back.',
@@ -147,12 +118,9 @@ export const products: Product[] = [
     id: 'sling-bag', slug: 'sling-bag', name: 'Sling Bag', price: 499000, category: 'accessories',
     image: '/demo-products/sling-bag.webp',
     colors: [black],
-    colorImages: {
-      'Black': '/demo-products/sling-bag.webp'
-    },
+    colorImages: {},
     gallery: [
-      '/demo-products/sling-bag.webp',
-      '/categories/accessories.webp'
+      '/demo-products/sling-bag.webp'
     ],
     sizes: ['One Size'], stock: 14,
     description: 'Weather-resistant 600D Cordura crossbody bag with dual zip compartments, quick-release seatbelt strap, and internal mesh organizers sized for your phone, keys, wallet, and charger.',

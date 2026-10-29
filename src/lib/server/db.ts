@@ -244,9 +244,28 @@ export async function saveProductToDb(p: Partial<Product> & { id: string; name: 
     rawGallery.map(img => (typeof img === 'string' && img.startsWith('data:image/')) ? persistDataUrlIfPresent(img) : Promise.resolve(img))
   );
 
-  const gallery = JSON.stringify(persistedGallery);
+  const isCustomPiece = finalImage.startsWith('/api/media/') || finalImage.startsWith('/uploads/') || !p.isDemo;
+  const cleanGalleryList = persistedGallery.filter(img => {
+    if (!img || typeof img !== 'string') return false;
+    if (isCustomPiece && (img.includes('/campaign/real/') || img.includes('/categories/') || img.includes('/hero/') || img.includes('/demo-products/'))) {
+      return false;
+    }
+    return true;
+  });
+  const finalCleanGallery = cleanGalleryList.length > 0 ? cleanGalleryList : [finalImage];
+
+  let safeColorImages: Record<string, string> = {};
+  if (p.colorImages && typeof p.colorImages === 'object') {
+    for (const [k, v] of Object.entries(p.colorImages)) {
+      if (typeof v === 'string' && (!isCustomPiece || (!v.includes('/campaign/real/') && !v.includes('/categories/') && !v.includes('/demo-products/')))) {
+        safeColorImages[k] = v;
+      }
+    }
+  }
+
+  const gallery = JSON.stringify(finalCleanGallery);
   const colors = JSON.stringify(Array.isArray(p.colors) && p.colors.length > 0 ? p.colors : [{ name: 'Black', hex: '#181918' }]);
-  const colorImages = JSON.stringify(p.colorImages && typeof p.colorImages === 'object' ? p.colorImages : {});
+  const colorImages = JSON.stringify(safeColorImages);
   const sizes = JSON.stringify(Array.isArray(p.sizes) && p.sizes.length > 0 ? p.sizes : ['S', 'M', 'L', 'XL']);
   const tags = JSON.stringify(Array.isArray(p.tags) && p.tags.length > 0 ? p.tags : ['essential']);
   const fabricDetails = JSON.stringify(p.fabricDetails && typeof p.fabricDetails === 'object' ? p.fabricDetails : {});
