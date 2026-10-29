@@ -305,17 +305,28 @@ export default function ShopListing({
             </div>
           ) : (
             <div className="empty-state">
-              <span className="empty-script">Hello?</span>
-              <h2>{wishlist ? 'Your favorites start here.' : 'A little too specific?'}</h2>
+              <span className="empty-script">HELLO!</span>
+              <h2>{wishlist ? 'Your favorites start here.' : `${cat?.name ? cat.name + ' Drop Coming Soon.' : 'A little too specific?'}`}</h2>
               <p>
                 {wishlist
                   ? 'Tap the heart on a piece you love. We’ll save it here.'
+                  : cat?.name
+                  ? `Our atelier is currently crafting the next drop of ${cat.name}. Check out our live Heavyweight Hoodies drop in the meantime!`
                   : 'Try another search or give your filters a fresh start.'}
               </p>
               {wishlist ? (
                 <Link className="button dark" href="/shop">
                   EXPLORE THE COLLECTION <ArrowRight size={17} />
                 </Link>
+              ) : cat?.name ? (
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '12px' }}>
+                  <Link className="button dark" href="/collections/hoodies">
+                    SHOP HOODIES DROP <ArrowRight size={17} />
+                  </Link>
+                  <Link className="button" style={{ border: '1px solid var(--line)', background: 'transparent' }} href="/shop">
+                    ALL PIECES
+                  </Link>
+                </div>
               ) : (
                 <button className="button dark" onClick={clear}>
                   CLEAR FILTERS <ArrowRight size={17} />

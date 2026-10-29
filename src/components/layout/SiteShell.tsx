@@ -100,7 +100,51 @@ export function Footer() {
    <div className="preview-note"><span className="status-dot" style={{ background: '#22c55e' }}/> HELLO! OFFICIAL STORE <span>Heavyweight Streetwear · Islandwide Delivery across Sri Lanka</span></div>
  </footer>;
 }
+
 export default function SiteShell({children}:{children:ReactNode}) {
- const pathname=usePathname();
- return <><div id="site-content"><a className="skip-link" href="#main">Skip to content</a><Header/><main id="main">{children}</main>{pathname!=='/'&&<Footer/>}</div></>;
+  const pathname=usePathname();
+  const isAdminOrCheckout = pathname?.startsWith('/admin') || pathname?.startsWith('/checkout');
+
+  return (
+    <>
+      <div id="site-content">
+        <a className="skip-link" href="#main">Skip to content</a>
+        <Header/>
+        <main id="main">{children}</main>
+        {pathname!=='/'&&<Footer/>}
+        {!isAdminOrCheckout && (
+          <a
+            href="https://wa.me/94786191260?text=Hi%20HELLO!%20Clothing%2C%20I%20have%20a%20question%20about%20your%20hoodies%20and%20sizing%20%F0%9F%96%A4"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Chat with HELLO! Colombo on WhatsApp"
+            style={{
+              position: 'fixed',
+              bottom: '22px',
+              right: '22px',
+              zIndex: 99,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 16px',
+              borderRadius: '9999px',
+              background: '#25D366',
+              color: '#000000',
+              fontWeight: 700,
+              fontSize: '12px',
+              letterSpacing: '0.5px',
+              boxShadow: '0 8px 24px rgba(37, 211, 102, 0.4), 0 2px 6px rgba(0, 0, 0, 0.2)',
+              textDecoration: 'none',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.101.005.232-.039.363.275.145.347.494 1.201.537 1.289.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.087-.179.18-.077.355.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.087.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.144.39-.086s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824zM12 2C6.477 2 2 6.477 2 12c0 1.891.526 3.66 1.438 5.168L2 22l4.988-1.309C8.441 21.539 10.165 22 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
+            </svg>
+            <span>WhatsApp Us</span>
+          </a>
+        )}
+      </div>
+    </>
+  );
 }
