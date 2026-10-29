@@ -13,7 +13,7 @@
 .hello-review-card>img{width:100%;height:clamp(112px,10vw,155px);object-fit:cover;object-position:center 32%}
 .hello-review-copy{padding:11px 13px 13px;flex:1}
 .hello-review-rating{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
-.hello-review-stars{display:flex;color:#e93236;gap:1px}
+.hello-review-stars{display:none}
 .hello-review-rating>span:last-child{font-size:8px;letter-spacing:.2px;color:#85857c}
 .hello-review-copy h3{font-size:12px;line-height:1.4;font-weight:650;margin-bottom:5px}
 .hello-review-copy p{font-size:10px;line-height:1.65;color:#696b63;max-width:34ch}

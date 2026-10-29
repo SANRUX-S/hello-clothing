@@ -12,7 +12,6 @@ import {
   Truck,
   ShoppingBag,
   Printer,
-  Sparkles,
   Copy,
   Mail,
   ExternalLink,
@@ -319,7 +318,6 @@ export default function Checkout() {
                   checked={deliveryMethod === 'express'}
                   onChange={() => setDeliveryMethod('express')}
                 />
-                <Sparkles size={20} />
                 <div>
                   <strong>Express Colombo & Suburbs Priority</strong>
                   <p>Next-day guaranteed delivery across Western Province</p>

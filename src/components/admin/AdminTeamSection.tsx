@@ -14,8 +14,7 @@ import {
   RefreshCw,
   X,
   UserCheck,
-  Building,
-  Sparkles
+  Building
 } from 'lucide-react';
 import type { AdminUserSession } from './AdminLogin';
 
@@ -421,7 +420,6 @@ export default function AdminTeamSection({ currentAdmin, onNotice }: AdminTeamSe
 
             <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ background: '#09090b', border: '1px solid #27272a', borderRadius: '6px', padding: '10px 12px', fontSize: '12px', color: '#a1a1aa', lineHeight: 1.5 }}>
-                <Sparkles size={14} color="#4ade80" style={{ display: 'inline', marginRight: '6px' }} />
                 Adding a staff member stores their credentials directly in the database. They can immediately log in at <strong>/admin</strong> using their email and assigned password.
               </div>
 

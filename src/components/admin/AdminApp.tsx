@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, Check, CheckCircle2, Copy, ExternalLink, ImagePlus, Images, LayoutDashboard, Menu, Package, PackageCheck, Plus, Search, Settings2, ShoppingBag, SlidersHorizontal, Tags, Trash2, Type, X, Pencil, Save, RotateCcw, ShieldCheck, Boxes, MessageCircle, Truck, UserRound, Eye, MapPin, Mail, Printer, RefreshCw, AlertCircle, Phone, CreditCard, Sparkles, PlusCircle, Users, LogOut, KeyRound, ShieldAlert, Send, Star } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, Check, CheckCircle2, Copy, ExternalLink, ImagePlus, Images, LayoutDashboard, Menu, Package, PackageCheck, Plus, Search, Settings2, ShoppingBag, SlidersHorizontal, Tags, Trash2, Type, X, Pencil, Save, RotateCcw, ShieldCheck, Boxes, MessageCircle, Truck, UserRound, Eye, MapPin, Mail, Printer, RefreshCw, AlertCircle, Phone, CreditCard, PlusCircle, Users, LogOut, KeyRound, ShieldAlert, Send, Star } from "lucide-react";
 import { products as catalogProducts } from "@/lib/catalog";
 import AdminLogin, { type AdminUserSession } from "./AdminLogin";
 import AdminTeamSection from "./AdminTeamSection";

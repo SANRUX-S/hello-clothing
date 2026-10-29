@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   Clock,
   MapPin,
-  Sparkles,
   ArrowRight,
   ArrowUpRight,
   MessageCircle,
@@ -541,7 +540,6 @@ export default function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
             {/* Member Perks Card */}
             <div className="profile-perks-card">
               <div className="perks-heading">
-                <Sparkles size={16} color="#16a34a" />
                 <strong>Streetwear Member Perks</strong>
               </div>
               <ul>

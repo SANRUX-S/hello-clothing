@@ -240,12 +240,7 @@ export default function CommunityReviews() {
               />
               <div className="hello-review-copy">
                 <div className="hello-review-rating">
-                  <span className="hello-review-stars" aria-hidden="true">
-                    {Array.from({ length: review.rating || 5 }).map((_, star) => (
-                      <Star key={star} size={11} fill="currentColor" strokeWidth={0}/>
-                    ))}
-                  </span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#16a34a', fontWeight: 600 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontWeight: 600, fontSize: '9px', letterSpacing: '0.4px', textTransform: 'uppercase' }}>
                     <CheckCircle size={11} /> Verified Buyer
                   </span>
                 </div>

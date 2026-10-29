@@ -8,7 +8,6 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
-  Sparkles,
   AlertCircle,
   ArrowLeft
 } from 'lucide-react';
@@ -192,7 +191,6 @@ export default function AdminLogin({ onSuccess }: AdminLoginProps) {
         {/* Quick Roles Preset Selector */}
         <div className="admin-presets-section">
           <div className="admin-presets-header">
-            <Sparkles size={14} color="#eab308" />
             <span>INSTANT TEST CREDENTIALS (CLICK TO FILL)</span>
           </div>
 

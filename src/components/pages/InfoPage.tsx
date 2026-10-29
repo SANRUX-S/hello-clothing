@@ -18,7 +18,6 @@ import {
   Clock,
   MapPin,
   ExternalLink,
-  Sparkles,
   Printer,
 } from 'lucide-react';
 import { money } from '@/lib/catalog';
@@ -380,7 +379,7 @@ export default function InfoPage({ kind }: { kind: string }) {
           <img src="/campaign/real/man-black-hoodie.webp" alt="HELLO! Streetwear member" width={800} height={600} />
           <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--panel)', borderRadius: '8px', fontSize: '0.85rem' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#16a34a', fontWeight: 600 }}>
-              <Sparkles size={16} /> VIP Streetwear Member
+              VIP Streetwear Member
             </span>
             <p style={{ marginTop: '6px', color: 'var(--muted)' }}>
               Active member benefits: Priority dispatch on new drops, 10% welcome discount, and 7-day courier exchange guarantee.
