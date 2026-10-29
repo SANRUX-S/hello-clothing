@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, Check, CheckCircle2, Copy, ExternalLink, ImagePlus, Images, LayoutDashboard, Menu, Package, PackageCheck, Plus, Search, Settings2, ShoppingBag, SlidersHorizontal, Tags, Trash2, Type, X, Pencil, Save, RotateCcw, ShieldCheck, Boxes, MessageCircle, Truck, UserRound, Eye, MapPin, Mail, Printer, RefreshCw, AlertCircle, Phone, CreditCard, Sparkles, PlusCircle, Users, LogOut, KeyRound, ShieldAlert, Send } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, Check, CheckCircle2, Copy, ExternalLink, ImagePlus, Images, LayoutDashboard, Menu, Package, PackageCheck, Plus, Search, Settings2, ShoppingBag, SlidersHorizontal, Tags, Trash2, Type, X, Pencil, Save, RotateCcw, ShieldCheck, Boxes, MessageCircle, Truck, UserRound, Eye, MapPin, Mail, Printer, RefreshCw, AlertCircle, Phone, CreditCard, Sparkles, PlusCircle, Users, LogOut, KeyRound, ShieldAlert, Send, Star } from "lucide-react";
 import { products as catalogProducts } from "@/lib/catalog";
 import AdminLogin, { type AdminUserSession } from "./AdminLogin";
 import AdminTeamSection from "./AdminTeamSection";
@@ -183,13 +183,14 @@ export function getOrderWhatsAppUrl(order: AdminOrder, targetStageKey?: string):
   }
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
-export type AdminSection = "overview" | "products" | "inventory" | "orders" | "categories" | "content" | "media" | "settings" | "team";
+export type AdminSection = "overview" | "products" | "inventory" | "orders" | "reviews" | "categories" | "content" | "media" | "settings" | "team";
 
 const NAV: { id: AdminSection; label: string; icon: typeof Package; minRole?: "admin" | "co_admin" | "super_admin" }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "products", label: "Products", icon: ShoppingBag, minRole: "co_admin" },
   { id: "inventory", label: "Inventory", icon: Boxes },
   { id: "orders", label: "Orders", icon: Package },
+  { id: "reviews", label: "Reviews", icon: Star, minRole: "co_admin" },
   { id: "categories", label: "Categories", icon: Tags, minRole: "co_admin" },
   { id: "content", label: "Store content", icon: Type, minRole: "co_admin" },
   { id: "media", label: "Media library", icon: Images },
@@ -858,6 +859,148 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
   );
 }
 
+function ReviewEditorModal({
+  review,
+  onClose,
+  onSave
+}: {
+  review: any | null;
+  onClose: () => void;
+  onSave: (data: any) => Promise<void>;
+}) {
+  const [author, setAuthor] = useState(review?.author || "");
+  const [location, setLocation] = useState(review?.location || "Colombo 07");
+  const [rating, setRating] = useState(review?.rating || 5);
+  const [title, setTitle] = useState(review?.title || "");
+  const [body, setBody] = useState(review?.body || "");
+  const [image, setImage] = useState(review?.image || "/campaign/real/couple-graphic-tees.webp");
+  const [status, setStatus] = useState(review?.status || "published");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const imagesList = [
+    { label: 'Graphic Tees Pair', src: '/campaign/real/couple-graphic-tees.webp' },
+    { label: 'Black Tee Woman', src: '/campaign/real/woman-black-tee.webp' },
+    { label: 'Black Hoodie Man', src: '/campaign/real/man-black-hoodie.webp' },
+    { label: 'White Hoodie Woman', src: '/campaign/real/woman-white-hoodie.webp' },
+    { label: 'White Tee Man', src: '/campaign/real/man-white-tee.webp' },
+  ];
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!author.trim() || !title.trim() || !body.trim()) return;
+    setIsSubmitting(true);
+    try {
+      await onSave({
+        id: review?.id,
+        author: author.trim(),
+        location: location.trim(),
+        rating,
+        title: title.trim(),
+        body: body.trim(),
+        image,
+        status
+      });
+      onClose();
+    } catch (err: any) {
+      alert("Error saving review: " + (err?.message || 'Failed'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal title={review ? "Edit Customer Review" : "Add Customer Review"} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="admin-fields" style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '10px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <label>
+            <span>Customer name</span>
+            <input required placeholder="e.g. Kasun Perera" value={author} onChange={e => setAuthor(e.target.value)} />
+          </label>
+          <label>
+            <span>Location / City</span>
+            <input required placeholder="e.g. Colombo 07" value={location} onChange={e => setLocation(e.target.value)} />
+          </label>
+        </div>
+
+        <div>
+          <span style={{ display: 'block', fontSize: '11px', color: '#a1a1aa', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Star Rating</span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {[1, 2, 3, 4, 5].map(num => (
+              <button
+                type="button"
+                key={num}
+                onClick={() => setRating(num)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}
+                aria-label={`${num} stars`}
+              >
+                <Star
+                  size={24}
+                  fill={num <= rating ? "#eab308" : "none"}
+                  color={num <= rating ? "#eab308" : "#52525b"}
+                  strokeWidth={1.5}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <label>
+          <span>Review Headline</span>
+          <input required placeholder="e.g. Collar stays completely flat after multiple washes." value={title} onChange={e => setTitle(e.target.value)} />
+        </label>
+
+        <label>
+          <span>Review Body</span>
+          <textarea required rows={4} placeholder="What did the customer say about the heavyweight cotton, sizing, or delivery..." value={body} onChange={e => setBody(e.target.value)} />
+        </label>
+
+        <div>
+          <span style={{ display: 'block', fontSize: '11px', color: '#a1a1aa', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Attached Photo</span>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+            {imagesList.map(img => (
+              <button
+                type="button"
+                key={img.src}
+                onClick={() => setImage(img.src)}
+                style={{
+                  border: image === img.src ? '2px solid #eab308' : '1px solid #3f3f46',
+                  borderRadius: '6px',
+                  overflow: 'hidden',
+                  background: '#18181b',
+                  cursor: 'pointer',
+                  padding: 0,
+                  flexShrink: 0
+                }}
+              >
+                <img src={img.src} alt={img.label} style={{ width: '56px', height: '44px', objectFit: 'cover', display: 'block' }} />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <label>
+            <span>Status</span>
+            <select value={status} onChange={e => setStatus(e.target.value)}>
+              <option value="published">Published (Visible on storefront)</option>
+              <option value="hidden">Hidden (Draft / Archive)</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="admin-modal-actions" style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+          <button type="button" className="admin-button admin-button-quiet" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </button>
+          <button type="submit" className="admin-button" disabled={isSubmitting}>
+            <Check size={16} /> {isSubmitting ? "Saving..." : review ? "Update Review" : "Publish Review"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 export function AdminDisabled() {
   return (
     <div className="admin-locked">
@@ -873,7 +1016,10 @@ export function AdminDisabled() {
 }
 
 export default function AdminApp({ initialSection = "overview" }: { initialSection?: AdminSection }) {
-  const section = initialSection;
+  const [section, setSection] = useState<AdminSection>(initialSection);
+  useEffect(() => {
+    setSection(initialSection);
+  }, [initialSection]);
   const [session, setSession] = useState<AdminUserSession | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
   const [products, setProducts] = useState<Product[]>(BASE_PRODUCTS);
@@ -890,6 +1036,12 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<AdminOrder | null>(null);
   const [createOrderModalOpen, setCreateOrderModalOpen] = useState(false);
+  const [adminReviews, setAdminReviews] = useState<any[]>([]);
+  const [isFetchingReviews, setIsFetchingReviews] = useState(false);
+  const [reviewSearch, setReviewSearch] = useState("");
+  const [reviewStatusFilter, setReviewStatusFilter] = useState("all");
+  const [reviewEditor, setReviewEditor] = useState<any | "new" | null>(null);
+  const [reviewToDelete, setReviewToDelete] = useState<any | null>(null);
   const [ready, setReady] = useState(false);
   const [notice, setNotice] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -905,6 +1057,19 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
   const uploadRef = useRef<HTMLInputElement>(null);
 
   // Authentication check on mount
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      const match = path.match(/\/admin(?:\/([a-z0-9_-]+))?/i);
+      const targetSec = (match && match[1]) ? match[1] : 'overview';
+      if (NAV.some(n => n.id === targetSec)) {
+        setSection(targetSec as AdminSection);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
     try {
@@ -1032,6 +1197,93 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
     }
   };
 
+  const fetchReviews = async () => {
+    setIsFetchingReviews(true);
+    try {
+      const res = await fetch('/api/admin/reviews');
+      const data = await res.json();
+      if (data && Array.isArray(data.reviews)) {
+        setAdminReviews(data.reviews);
+      }
+    } catch (err: any) {
+      console.error('Failed to load reviews from Penetix:', err);
+    } finally {
+      setIsFetchingReviews(false);
+    }
+  };
+
+  const saveReviewItem = async (revData: any) => {
+    setNotice("Saving review to Penetix Cloud…");
+    try {
+      const res = await fetch('/api/admin/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(revData),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setNotice(`Review by "${revData.author}" saved successfully.`);
+        log(`Saved review by ${revData.author}`);
+        await fetchReviews();
+      } else {
+        setNotice(`Failed to save review: ${json.error || 'Server error'}`);
+      }
+    } catch (err: any) {
+      setNotice(`Network error saving review: ${err.message}`);
+    }
+  };
+
+  const deleteReviewItem = async (id: string) => {
+    setAdminReviews(prev => prev.filter(r => r.id !== id));
+    setReviewToDelete(null);
+    setNotice("Deleting review from Penetix Cloud…");
+    try {
+      const res = await fetch(`/api/admin/reviews?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setNotice("Review deleted successfully.");
+        log(`Deleted review ${id}`);
+        await fetchReviews();
+      } else {
+        setNotice("Failed to delete review.");
+      }
+    } catch (err: any) {
+      setNotice(`Error deleting review: ${err.message}`);
+    }
+  };
+
+  const toggleReviewStatus = async (rev: any) => {
+    const nextStatus = rev.status === 'published' ? 'hidden' : 'published';
+    setAdminReviews(prev => prev.map(r => r.id === rev.id ? { ...r, status: nextStatus } : r));
+    try {
+      await fetch('/api/admin/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...rev, status: nextStatus }),
+      });
+      setNotice(`Review status updated to ${nextStatus}.`);
+    } catch {
+      setNotice("Failed to update review status.");
+    }
+  };
+
+  const filteredReviews = useMemo(() => {
+    return adminReviews.filter(r => {
+      if (reviewStatusFilter !== "all" && r.status !== reviewStatusFilter) return false;
+      if (reviewSearch.trim()) {
+        const q = reviewSearch.toLowerCase();
+        return (
+          (r.author && r.author.toLowerCase().includes(q)) ||
+          (r.location && r.location.toLowerCase().includes(q)) ||
+          (r.title && r.title.toLowerCase().includes(q)) ||
+          (r.body && r.body.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    });
+  }, [adminReviews, reviewStatusFilter, reviewSearch]);
+
   const saveStoreContent = async (e: FormEvent) => {
     e.preventDefault();
     setNotice("Saving content to Penetix…");
@@ -1138,6 +1390,16 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
           if (active && d) {
             if (d.settings) setSettings(prev => ({ ...prev, ...d.settings }));
             if (d.content) setContent(prev => ({ ...prev, ...d.content }));
+          }
+        })
+        .catch(() => {});
+
+      // Fetch live customer reviews from Penetix Cloud / Neon DB
+      fetch('/api/admin/reviews')
+        .then(r => r.json())
+        .then(d => {
+          if (active && d && Array.isArray(d.reviews)) {
+            setAdminReviews(d.reviews);
           }
         })
         .catch(() => {});
@@ -1316,7 +1578,12 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
               href={id === "overview" ? "/admin" : `/admin/${id}`}
               aria-current={section === id ? "page" : undefined}
               className={section === id ? "admin-nav-active" : ""}
-              onClick={() => setMenuOpen(false)}
+              onClick={(e) => {
+                e.preventDefault();
+                setSection(id as AdminSection);
+                window.history.pushState(null, '', id === "overview" ? "/admin" : `/admin/${id}`);
+                setMenuOpen(false);
+              }}
             >
               <Icon size={18} strokeWidth={1.5} />
               {label}
@@ -1400,6 +1667,7 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
                 products: "Good essentials. Great first impressions. Your collection starts here.",
                 inventory: "Keep every color and size ready for their next everyday.",
                 orders: "Every great brand starts with its first order.",
+                reviews: "Real customer reviews, testimonials and wear-test ratings synced with Penetix Cloud.",
                 categories: "A place for every piece in your collection.",
                 content: "A few words. A whole lot of personality.",
                 media: "The images that bring your brand to life.",
@@ -1408,6 +1676,7 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
               })[section]}</p>
             </div>
             {section === "products" && <button className="admin-button" onClick={() => setEditor("new")}><Plus size={17} /> Add product</button>}
+            {section === "reviews" && <button className="admin-button" onClick={() => setReviewEditor("new")}><Plus size={17} /> Add review</button>}
             {section === "categories" && <button className="admin-button" onClick={() => setCategoryEditor("new")}><Plus size={17} /> Add category</button>}
             {section === "media" && <button className="admin-button" onClick={() => uploadRef.current?.click()}><ImagePlus size={17} /> Upload image</button>}
           </div>
@@ -1718,6 +1987,123 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
       </section>
     </>}
 
+    {section === "reviews" && (
+      <section className="admin-panel">
+        <div className="admin-list-toolbar">
+          <div className="admin-filter-tabs">
+            <button className={reviewStatusFilter === "all" ? "admin-filter-active" : ""} onClick={() => setReviewStatusFilter("all")}>
+              All reviews <span>{adminReviews.length}</span>
+            </button>
+            <button className={reviewStatusFilter === "published" ? "admin-filter-active" : ""} onClick={() => setReviewStatusFilter("published")}>
+              Published <span>{adminReviews.filter(r => r.status === "published").length}</span>
+            </button>
+            <button className={reviewStatusFilter === "hidden" ? "admin-filter-active" : ""} onClick={() => setReviewStatusFilter("hidden")}>
+              Hidden <span>{adminReviews.filter(r => r.status === "hidden").length}</span>
+            </button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              className="admin-button admin-button-quiet"
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', height: '36px' }}
+              onClick={fetchReviews}
+              disabled={isFetchingReviews}
+            >
+              <RefreshCw size={13} className={isFetchingReviews ? "admin-spin" : ""} />
+              {isFetchingReviews ? "Syncing…" : "Refresh"}
+            </button>
+            <label className="admin-search">
+              <Search size={17} />
+              <span className="admin-sr-only">Search reviews</span>
+              <input placeholder="Search by author, city, text…" value={reviewSearch} onChange={e => setReviewSearch(e.target.value)} />
+            </label>
+          </div>
+        </div>
+
+        <div className="admin-table-scroll">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>CUSTOMER</th>
+                <th>RATING</th>
+                <th>HEADLINE &amp; REVIEW</th>
+                <th>STATUS</th>
+                <th>DATE</th>
+                <th><span className="admin-sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredReviews.map(r => (
+                <tr key={r.id}>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <img src={r.image || '/campaign/real/couple-graphic-tees.webp'} alt="" style={{ width: '38px', height: '38px', borderRadius: '6px', objectFit: 'cover' }} />
+                      <div>
+                        <strong style={{ color: '#fff', fontSize: '13px' }}>{r.author}</strong>
+                        <small style={{ display: 'block', color: '#a1a1aa', fontSize: '11px' }}>{r.location || 'Sri Lanka'}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '2px', color: '#eab308' }}>
+                      {Array.from({ length: r.rating || 5 }).map((_, i) => (
+                        <Star key={i} size={13} fill="currentColor" strokeWidth={0} />
+                      ))}
+                    </div>
+                  </td>
+                  <td style={{ maxWidth: '340px' }}>
+                    <strong style={{ color: '#e4e4e7', fontSize: '12px', display: 'block', marginBottom: '2px' }}>{r.title}</strong>
+                    <p style={{ margin: 0, color: '#a1a1aa', fontSize: '11px', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                      {r.body}
+                    </p>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      onClick={() => toggleReviewStatus(r)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                      title="Click to toggle status"
+                    >
+                      <span className={`admin-status-pill admin-status-${r.status === 'published' ? 'published' : 'draft'}`}>
+                        <span />{r.status === 'published' ? 'Published' : 'Hidden'}
+                      </span>
+                    </button>
+                  </td>
+                  <td style={{ fontSize: '11px', color: '#71717a', whiteSpace: 'nowrap' }}>
+                    {r.created_at ? new Date(r.created_at).toLocaleDateString('en-LK', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent'}
+                  </td>
+                  <td>
+                    <div className="admin-row-actions">
+                      <button className="admin-icon-button" onClick={() => setReviewEditor(r)} title="Edit review">
+                        <Pencil size={15} />
+                      </button>
+                      <button className="admin-icon-button" onClick={() => setReviewToDelete(r)} title="Delete review">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {!filteredReviews.length && (
+          <div className="admin-empty">
+            <Star size={32} strokeWidth={1.2} />
+            <h3>No reviews found.</h3>
+            <p>Add real customer wear tests and verified reviews to display on the storefront.</p>
+            <button className="admin-button" onClick={() => setReviewEditor("new")}>
+              <Plus size={16} /> Add first review
+            </button>
+          </div>
+        )}
+
+        <div className="admin-table-footer">
+          {filteredReviews.length} of {adminReviews.length} review(s) <span style={{ color: '#4ade80' }}>Synced live with Neon PostgreSQL</span>
+        </div>
+      </section>
+    )}
+
     {section === "categories" && <div className="admin-category-grid">{categories.map(category => { const members = products.filter(p => p.category === category.slug); return <section className="admin-panel admin-category-card" key={category.slug}><div className="admin-category-image">{members[0]?.image ? <img src={members[0].image} alt={category.name} /> : <Tags size={40} strokeWidth={1} />}<span>{String(members.length).padStart(2, "0")} PRODUCTS</span></div><div className="admin-category-copy"><h2>{category.name}</h2><p>{category.description}</p><div><code>/{category.slug}</code><button className="admin-icon-button" aria-label={`Edit ${category.name}`} onClick={() => setCategoryEditor(category)}><Pencil size={16} /></button><button className="admin-icon-button" aria-label={`Delete ${category.name}`} disabled={members.length > 0} title={members.length ? "Move products out of this category before deleting it" : "Delete empty category"} onClick={async () => { setCategories(current => current.filter(c => c.slug !== category.slug)); setNotice("Removing category from Penetix…"); try { await fetch(`/api/admin/categories?slug=${encodeURIComponent(category.slug)}`, { method: 'DELETE' }); setNotice("Category removed from Penetix."); log(`Removed category ${category.name}`); } catch { setNotice("Removed locally."); } }}><Trash2 size={16} /></button></div></div></section>; })}<button className="admin-category-add" onClick={() => setCategoryEditor("new")}><Plus size={26} strokeWidth={1.2} /><strong>Make room for more.</strong><span>Add a category</span></button></div>}
 
     {section === "content" && <form onSubmit={saveStoreContent} className="admin-content-editor"><section className="admin-panel admin-form-panel"><div className="admin-panel-heading"><div><h2>The words behind the wardrobe.</h2><p>Customize your storefront copy synced with Penetix Cloud.</p></div></div><div className="admin-fields"><label>Announcement bar<input maxLength={140} value={content.announcement} onChange={e => setContent({ ...content, announcement: e.target.value })} /><small>A short note for the top of your store.</small></label><label>Hero headline<input maxLength={100} required value={content.heroTitle} onChange={e => setContent({ ...content, heroTitle: e.target.value })} /></label><label>Hero supporting line<textarea rows={2} maxLength={200} value={content.heroSubtitle} onChange={e => setContent({ ...content, heroSubtitle: e.target.value })} /></label><label>Brand story<textarea rows={5} maxLength={1200} value={content.aboutText} onChange={e => setContent({ ...content, aboutText: e.target.value })} /></label></div><div className="admin-form-footer"><span className="admin-muted" style={{ color: '#4ade80' }}>Synced with Penetix Cloud</span><button className="admin-button"><Check size={16} /> Save content</button></div></section><aside className="admin-content-preview"><span className="admin-eyebrow">LIVE COPY PREVIEW</span><div className="admin-mini-store"><div className="admin-mini-announcement">{content.announcement}</div><div className="admin-mini-nav"><span>SHOP</span><strong className="admin-brand"><img src="/branding/hello-light.webp" alt="HELLO!" style={{ height: "14px", width: "auto", verticalAlign: "middle" }} /></strong><ShoppingBag size={14} /></div><div className="admin-mini-hero"><span className="admin-eyebrow">THE EVERYDAY COLLECTION</span><h2>{content.heroTitle}</h2><p>{content.heroSubtitle}</p><span className="admin-mini-cta">SHOP NOW <ArrowRight size={13} /></span></div><div className="admin-mini-story"><h3>Built for real people.</h3><p>{content.aboutText}</p></div></div><p className="admin-preview-hint">The preview updates as you type. Save to keep your words.</p></aside></form>}
@@ -1765,6 +2151,27 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
           setNotice("Order created and saved to Penetix Cloud!");
         }}
       />
+    )}
+    {reviewEditor && (
+      <ReviewEditorModal
+        review={reviewEditor === "new" ? null : reviewEditor}
+        onClose={() => setReviewEditor(null)}
+        onSave={saveReviewItem}
+      />
+    )}
+    {reviewToDelete && (
+      <Modal title="Delete Customer Review?" onClose={() => setReviewToDelete(null)}>
+        <div className="admin-confirm-content">
+          <p>Are you sure you want to delete the review by <strong style={{ color: '#ef4444' }}>{reviewToDelete.author}</strong> ({reviewToDelete.location})?</p>
+          <p style={{ fontSize: '11px', color: '#a1a1aa' }}>This review will be permanently erased from Neon PostgreSQL. This action cannot be undone.</p>
+          <div className="admin-modal-actions">
+            <button className="admin-button admin-button-quiet" onClick={() => setReviewToDelete(null)}>Cancel</button>
+            <button className="admin-button admin-button-danger" onClick={() => deleteReviewItem(reviewToDelete.id)}>
+              <Trash2 size={15} /> Permanently Delete
+            </button>
+          </div>
+        </div>
+      </Modal>
     )}
     </div>
   );

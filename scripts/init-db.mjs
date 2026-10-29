@@ -63,6 +63,21 @@ export async function initDb() {
   `;
 
   await sql`
+    CREATE TABLE IF NOT EXISTS reviews (
+      id TEXT PRIMARY KEY,
+      author TEXT NOT NULL,
+      location TEXT DEFAULT 'Sri Lanka',
+      rating INTEGER NOT NULL DEFAULT 5,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      image TEXT DEFAULT '/campaign/real/couple-graphic-tees.webp',
+      status TEXT NOT NULL DEFAULT 'published',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS store_settings (
       key TEXT PRIMARY KEY,
       value JSONB NOT NULL,

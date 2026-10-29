@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import {usePathname,useRouter} from 'next/navigation';
 import {useState,type ReactNode} from 'react';
-import {Search,UserRound,ShoppingBag,Menu,ArrowRight,Minus,Plus,Trash2,ArrowUpRight,Heart} from 'lucide-react';
+import {Search,UserRound,ShoppingBag,Menu,ArrowRight,Minus,Plus,Trash2,ArrowUpRight,Heart,Lock} from 'lucide-react';
 import {products,categories,money,searchProducts} from '@/lib/catalog';
 import {lineKey,cartSubtotal} from '@/lib/cart';
 import {useStore} from '@/store/store';
@@ -83,7 +83,20 @@ export function Footer() {
        <Link className="footer-contact-link" href="/contact">LET’S TALK <ArrowUpRight size={16}/></Link>
      </nav>
    </div>
-   <div className="footer-bottom"><span>© {new Date().getFullYear()} HELLO! CLOTHING. All rights reserved.</span><div><Link href="/refund-policy">Refund Policy</Link><Link href="/privacy-policy">Privacy Policy</Link><Link href="/terms-and-conditions">Terms & Conditions</Link><Link href="/admin">Store Admin <ArrowUpRight size={12}/></Link></div></div>
+   <div className="footer-bottom">
+     <span>© {new Date().getFullYear()} HELLO! CLOTHING. All rights reserved.</span>
+     <div className="footer-bottom-actions">
+       <a
+         href="https://www.penetix.com/"
+         target="_blank"
+         rel="noopener noreferrer"
+         className="penetix-credit"
+         title="Designed & Developed by Penetix Cybersecurity Solutions"
+       >
+         Made by <span className="penetix-brand">Penetix Cybersecurity Solutions</span>
+       </a>
+     </div>
+   </div>
    <div className="preview-note"><span className="status-dot" style={{ background: '#22c55e' }}/> HELLO! OFFICIAL STORE <span>Heavyweight Streetwear · Islandwide Delivery across Sri Lanka</span></div>
  </footer>;
 }

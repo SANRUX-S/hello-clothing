@@ -4,10 +4,15 @@ import { products as fallbackProducts, categories as fallbackCategories, type Pr
 
 let cachedSql: NeonQueryFunction<false, false> | null = null;
 
-// In-Memory cache for catalog & categories to eliminate transatlantic network roundtrips
+// High-Performance In-Memory cache for all entities to eliminate transatlantic latency
 let cachedProducts: { data: Product[]; timestamp: number } | null = null;
 let cachedCategories: { data: any[]; timestamp: number } | null = null;
-const CACHE_TTL_MS = 60_000; // 60s cache; immediately invalidated on admin updates
+let cachedOrders: { data: any[]; timestamp: number } | null = null;
+let cachedPublishedReviews: { data: any[]; timestamp: number } | null = null;
+let cachedAllReviews: { data: any[]; timestamp: number } | null = null;
+let cachedSettings: { data: Record<string, any>; timestamp: number } | null = null;
+const CACHE_TTL_MS = 60_000;
+const FAST_CACHE_TTL_MS = 20_000;
 
 export function invalidateProductsCache() {
   cachedProducts = null;
@@ -17,10 +22,24 @@ export function invalidateCategoriesCache() {
   cachedCategories = null;
 }
 
+export function invalidateOrdersCache() {
+  cachedOrders = null;
+}
+
+export function invalidateReviewsCache() {
+  cachedPublishedReviews = null;
+  cachedAllReviews = null;
+}
+
+export function invalidateSettingsCache() {
+  cachedSettings = null;
+}
+
 export function getDb() {
   if (cachedSql) return cachedSql;
-  const url = process.env.DATABASE_URL || process.env.DATABASE_URL_UNPOOLED;
-  if (!url) return null;
+  const rawUrl = process.env.DATABASE_URL || process.env.DATABASE_URL_UNPOOLED;
+  if (!rawUrl) return null;
+  const url = rawUrl.trim().replace(/^["']|["']$/g, '');
   try {
     cachedSql = neon(url);
     return cachedSql;
@@ -227,9 +246,13 @@ export async function deleteCategoryFromDb(slug: string) {
   invalidateCategoriesCache();
 }
 
-export async function getOrdersFromDb(): Promise<DbOrder[]> {
+export async function getOrdersFromDb(forceFresh = false): Promise<DbOrder[]> {
+  const now = Date.now();
+  if (!forceFresh && cachedOrders && (now - cachedOrders.timestamp) < FAST_CACHE_TTL_MS) {
+    return cachedOrders.data;
+  }
   const sql = getDb();
-  if (!sql) return [];
+  if (!sql) return cachedOrders ? cachedOrders.data : [];
   try {
     const rows = await sql`
       SELECT reference, customer, items, subtotal, delivery, total,
@@ -238,7 +261,7 @@ export async function getOrdersFromDb(): Promise<DbOrder[]> {
       FROM orders
       ORDER BY created_at DESC
     `;
-    return rows.map((r: any) => ({
+    const res = rows.map((r: any) => ({
       reference: r.reference,
       customer: typeof r.customer === 'string' ? JSON.parse(r.customer) : r.customer,
       items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items,
@@ -253,9 +276,11 @@ export async function getOrdersFromDb(): Promise<DbOrder[]> {
       created_at: r.created_at,
       updated_at: r.updated_at
     }));
+    cachedOrders = { data: res, timestamp: now };
+    return res;
   } catch (err) {
     console.error('getOrdersFromDb error:', err);
-    return [];
+    return cachedOrders ? cachedOrders.data : [];
   }
 }
 
@@ -296,6 +321,7 @@ export async function getOrderFromDb(reference: string): Promise<DbOrder | null>
 }
 
 export async function createOrderInDb(order: Omit<DbOrder, 'created_at' | 'updated_at'>): Promise<void> {
+  invalidateOrdersCache();
   const sql = getDb();
   if (!sql) throw new Error('Database connection is not configured.');
   await sql`
@@ -334,6 +360,7 @@ export async function createOrderInDb(order: Omit<DbOrder, 'created_at' | 'updat
 }
 
 export async function updateOrderStatusInDb(reference: string, status: string, courier?: string, trackingNumber?: string) {
+  invalidateOrdersCache();
   const sql = getDb();
   if (!sql) throw new Error('Database connection is not configured.');
   await sql`
@@ -347,12 +374,14 @@ export async function updateOrderStatusInDb(reference: string, status: string, c
 }
 
 export async function deleteOrderFromDb(reference: string): Promise<void> {
+  invalidateOrdersCache();
   const sql = getDb();
   if (!sql) throw new Error('Database connection is not configured.');
   await sql`DELETE FROM orders WHERE UPPER(reference) = ${reference.trim().toUpperCase()}`;
 }
 
 export async function deleteAllOrdersFromDb(): Promise<void> {
+  invalidateOrdersCache();
   const sql = getDb();
   if (!sql) throw new Error('Database connection is not configured.');
   await sql`DELETE FROM orders`;
@@ -530,3 +559,109 @@ export async function updateAdminLastLogin(email: string): Promise<void> {
     await sql`UPDATE admin_users SET last_login = NOW() WHERE LOWER(email) = ${email.trim().toLowerCase()}`;
   } catch {}
 }
+
+export type DbReview = {
+  id: string;
+  author: string;
+  location: string;
+  rating: number;
+  title: string;
+  body: string;
+  image: string;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export async function getPublishedReviews(): Promise<DbReview[]> {
+  const now = Date.now();
+  if (cachedPublishedReviews && (now - cachedPublishedReviews.timestamp) < FAST_CACHE_TTL_MS) {
+    return cachedPublishedReviews.data;
+  }
+  const sql = getDb();
+  if (!sql) return cachedPublishedReviews ? cachedPublishedReviews.data : [];
+  try {
+    const rows = await sql`
+      SELECT id, author, location, rating, title, body, image, status, created_at
+      FROM reviews
+      WHERE status = 'published'
+      ORDER BY created_at DESC;
+    `;
+    const res = (rows || []) as DbReview[];
+    cachedPublishedReviews = { data: res, timestamp: now };
+    return res;
+  } catch (err) {
+    console.error('getPublishedReviews error:', err);
+    return cachedPublishedReviews ? cachedPublishedReviews.data : [];
+  }
+}
+
+export async function getAllReviews(): Promise<DbReview[]> {
+  const now = Date.now();
+  if (cachedAllReviews && (now - cachedAllReviews.timestamp) < FAST_CACHE_TTL_MS) {
+    return cachedAllReviews.data;
+  }
+  const sql = getDb();
+  if (!sql) return cachedAllReviews ? cachedAllReviews.data : [];
+  try {
+    const rows = await sql`
+      SELECT id, author, location, rating, title, body, image, status, created_at, updated_at
+      FROM reviews
+      ORDER BY created_at DESC;
+    `;
+    const res = (rows || []) as DbReview[];
+    cachedAllReviews = { data: res, timestamp: now };
+    return res;
+  } catch (err) {
+    console.error('getAllReviews error:', err);
+    return cachedAllReviews ? cachedAllReviews.data : [];
+  }
+}
+
+export async function saveReview(review: {
+  id?: string;
+  author: string;
+  location?: string;
+  rating?: number;
+  title: string;
+  body: string;
+  image?: string;
+  status?: string;
+}): Promise<void> {
+  invalidateReviewsCache();
+  const sql = getDb();
+  if (!sql) throw new Error('Database connection is not configured.');
+  const id = review.id || `rev-${Date.now()}`;
+  await sql`
+    INSERT INTO reviews (id, author, location, rating, title, body, image, status, created_at, updated_at)
+    VALUES (
+      ${id},
+      ${review.author.trim()},
+      ${review.location?.trim() || 'Sri Lanka'},
+      ${Number(review.rating) || 5},
+      ${review.title.trim()},
+      ${review.body.trim()},
+      ${review.image?.trim() || '/campaign/real/couple-graphic-tees.webp'},
+      ${review.status || 'published'},
+      NOW(),
+      NOW()
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      author = EXCLUDED.author,
+      location = EXCLUDED.location,
+      rating = EXCLUDED.rating,
+      title = EXCLUDED.title,
+      body = EXCLUDED.body,
+      image = EXCLUDED.image,
+      status = EXCLUDED.status,
+      updated_at = NOW();
+  `;
+}
+
+export async function deleteReview(id: string): Promise<void> {
+  invalidateReviewsCache();
+  const sql = getDb();
+  if (!sql) throw new Error('Database connection is not configured.');
+  await sql`DELETE FROM reviews WHERE id = ${id}`;
+}
+

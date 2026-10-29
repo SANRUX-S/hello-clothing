@@ -21,7 +21,7 @@ export function ProductCard({
   return (
     <article className="product-card" style={{ animationDelay: `${index * 45}ms` }}>
       <div className="product-visual">
-        <Link href={`/products/${p.slug}`} prefetch={true} aria-label={`View ${p.name}`}>
+        <Link href={`/products/${p.slug}`} prefetch={true} aria-label={`View ${p.name}`} className="product-image-link">
           <img
             src={p.image || '/demo-products/essential-tee.webp'}
             alt={`${p.name}, ${p.colors?.[0]?.name || ''}, streetwear product photo`}
@@ -39,8 +39,8 @@ export function ProductCard({
         >
           <Heart size={17} fill={saved ? 'currentColor' : 'none'} strokeWidth={1.3} />
         </button>
-        <Link className="quick-add" href={`/products/${p.slug}`} prefetch={true}>
-          CHOOSE YOUR FIT <ArrowUpRight size={15} />
+        <Link className="product-center-shop-btn" href={`/products/${p.slug}`} prefetch={true}>
+          SHOP NOW <ArrowUpRight size={13} />
         </Link>
       </div>
       <div className="product-meta">

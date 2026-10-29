@@ -137,15 +137,44 @@ export default function Checkout() {
         })),
       };
 
+      // Format structured WhatsApp order message
+      const paymentText = paymentMethod === 'cod' ? 'Cash on Delivery (COD)' : paymentMethod === 'bank' ? 'Direct Bank Transfer' : 'Card / Online';
+      const itemsList = fullOrder.items
+        .map(it => `• *${it.name}* (${it.size} / ${it.color}) x ${it.quantity} - LKR ${(it.lineTotal / 100).toLocaleString()}`)
+        .join('\n');
+
+      const wpMessage = `🛒 *NEW ORDER - HELLO! CLOTHING*\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `*Order Reference:* #${fullOrder.reference}\n` +
+        `*Date:* ${new Date().toLocaleDateString('en-LK', { dateStyle: 'medium' })}\n\n` +
+        `👤 *Customer Details:*\n` +
+        `• Name: ${customerData.name}\n` +
+        `• Phone: ${customerData.phone}\n` +
+        `• Delivery Address: ${customerData.address}, ${customerData.city}\n` +
+        `• Payment Method: ${paymentText}\n\n` +
+        `📦 *Items Ordered:*\n` +
+        `${itemsList}\n\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `*Subtotal:* LKR ${(fullOrder.subtotal / 100).toLocaleString()}\n` +
+        `*Delivery:* LKR ${(fullOrder.delivery / 100).toLocaleString()} (${deliveryMethod === 'express' ? 'Express 24h' : 'Standard 48-72h'})\n` +
+        `*TOTAL AMOUNT:* LKR ${(fullOrder.total / 100).toLocaleString()}\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `Please confirm my order and courier dispatch details. Thank you!`;
+
+      const wpUrl = `https://wa.me/94786191260?text=${encodeURIComponent(wpMessage)}`;
+
       saveOrder(fullOrder);
 
-      // Save customer profile locally for convenience in account/checkout
       try {
         localStorage.setItem('hello-customer-profile', JSON.stringify(customerData));
       } catch {}
 
-      // Clear the cart
       store.clear();
+
+      // Launch WhatsApp automatically
+      try {
+        window.open(wpUrl, '_blank');
+      } catch {}
 
       router.push(`/order-confirmation/${fullOrder.reference}`);
     } catch (e) {
@@ -414,12 +443,19 @@ export default function Checkout() {
             </p>
           )}
 
-          <button disabled={busy || !store.ready} className="button dark" type="submit">
-            {busy ? 'CONFIRMING ORDER…' : 'PLACE ORDER NOW'} <ArrowRight size={17} />
+          <button
+            disabled={busy || !store.ready}
+            className="button dark"
+            type="submit"
+            style={{ background: '#16a34a', borderColor: '#15803d', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', minHeight: '48px', fontSize: '12px', letterSpacing: '1px' }}
+          >
+            <MessageCircle size={18} />
+            <span>{busy ? 'PREPARING ORDER…' : 'PLACE ORDER VIA WHATSAPP'}</span>
+            <ArrowRight size={17} />
           </button>
 
-          <p className="small muted">
-            Protected by SSL encryption. You will receive an SMS confirmation and real-time courier tracking reference.
+          <p className="small muted" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
+            <ShieldCheck size={14} color="#22c55e" /> Order will be saved and confirmed directly on HELLO! Official WhatsApp (+94 78 619 1260).
           </p>
         </aside>
       </form>
@@ -546,9 +582,20 @@ export function OrderConfirmation({ reference }: { reference: string }) {
 
   const cleanPhone = (order?.customer?.phone || '').replace(/[^0-9]/g, '');
   const wpPhone = cleanPhone.startsWith('0') ? '94' + cleanPhone.slice(1) : cleanPhone;
-  const whatsappUrl = `https://wa.me/94786191260?text=${encodeURIComponent(
-    `Hello HELLO! Clothing, I have a query regarding my order receipt ${order?.reference || reference}.`
-  )}`;
+  const wpItems = (order?.items || [])
+    .map(it => `• *${it.name}* (${it.size} / ${it.color}) x ${it.quantity} - LKR ${(it.lineTotal / 100).toLocaleString()}`)
+    .join('\n');
+
+  const fullWpMsg = `🛒 *ORDER CONFIRMATION - HELLO! CLOTHING*\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `*Order Reference:* #${order?.reference || reference}\n` +
+    `*Customer:* ${order?.customer?.name || 'Customer'} (${order?.customer?.phone || ''})\n` +
+    `*Delivery Address:* ${order?.customer?.address || ''}, ${order?.customer?.city || ''}\n` +
+    `*Total:* LKR ${((order?.total || 0) / 100).toLocaleString()}\n\n` +
+    `*Items:*\n${wpItems}\n\n` +
+    `Please confirm my dispatch and tracking details. Thank you!`;
+
+  const whatsappUrl = `https://wa.me/94786191260?text=${encodeURIComponent(fullWpMsg)}`;
 
   return (
     <section className="receipt-page-wrapper">
@@ -560,6 +607,29 @@ export function OrderConfirmation({ reference }: { reference: string }) {
           </p>
         </div>
       ) : order ? (
+        <>
+        <div className="receipt-whatsapp-banner no-print" style={{ background: 'linear-gradient(135deg, rgba(22, 101, 52, 0.3) 0%, rgba(20, 83, 45, 0.2) 100%)', border: '1px solid rgba(74, 222, 128, 0.35)', borderRadius: '12px', padding: '18px 22px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#4ade80', fontSize: '11px', fontWeight: 700, letterSpacing: '1.2px' }}>
+              <MessageCircle size={15} /> ORDER SAVED & WHATSAPP READY
+            </span>
+            <h3 style={{ margin: '6px 0 2px', fontSize: '15px', color: '#ffffff', fontWeight: 650 }}>Order #{order.reference} is ready for dispatch confirmation.</h3>
+            <p style={{ margin: 0, fontSize: '12.5px', color: '#d1d5db' }}>
+              If WhatsApp didn't open automatically, click the button to send your receipt to our team (+94 78 619 1260).
+            </p>
+          </div>
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#22c55e', color: '#052e16', fontWeight: 750, padding: '11px 20px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', letterSpacing: '0.4px', flexShrink: 0 }}
+          >
+            <MessageCircle size={18} />
+            OPEN IN WHATSAPP
+            <ArrowRight size={16} />
+          </a>
+        </div>
+
         <div id="hello-printable-receipt" className="luxury-receipt-card">
           {/* Top Document Header */}
           <div className="receipt-header-row">
@@ -699,6 +769,7 @@ export function OrderConfirmation({ reference }: { reference: string }) {
             </div>
           )}
         </div>
+        </>
       ) : (
         <div className="luxury-receipt-card" style={{ textAlign: 'center', padding: '50px 20px' }}>
           <p style={{ color: '#9ca3af', fontSize: '15px', marginBottom: '20px' }}>
@@ -718,6 +789,17 @@ export function OrderConfirmation({ reference }: { reference: string }) {
               ✓ {emailNotice}
             </div>
           )}
+
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="receipt-action-btn whatsapp"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', borderColor: '#22c55e', color: '#4ade80' }}
+          >
+            <MessageCircle size={15} />
+            CHAT ON WHATSAPP
+          </a>
 
           <button
             type="button"

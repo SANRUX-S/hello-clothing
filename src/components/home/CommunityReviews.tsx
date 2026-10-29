@@ -1,63 +1,103 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { ArrowLeft, ArrowRight, Pause, Play, Star, CheckCircle, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Star, CheckCircle, Plus } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import './community.css';
 
-type Review = {
-  id?: string;
-  image: string;
-  alt: string;
+export type Review = {
+  id: string;
+  image?: string;
   author: string;
-  location: string;
+  location?: string;
   rating: number;
   title: string;
   body: string;
-  date: string;
+  created_at?: string;
 };
 
 const initialReviews: Review[] = [
-  { image: '/campaign/real/woman-black-tee.webp', alt: 'HELLO! black oversized tee styled outdoors', author: 'Sanduni M.', location: 'Colombo 07', rating: 5, date: '2 days ago', title: 'Collar stays completely flat after multiple washes.', body: 'Finally a local brand doing actual heavyweight cotton. The 240 GSM has structure without feeling hot in Colombo. The drop-shoulder cut is spot on.' },
-  { image: '/campaign/real/man-black-hoodie.webp', alt: 'HELLO! black hoodie from brand photo shoot', author: 'Kavindu P.', location: 'Kandy', rating: 5, date: '1 week ago', title: 'Got to Kandy in 48 hours. Proper heavy fleece.', body: 'The hood is double-layered so it stays structured instead of drooping flat. Delivery was super quick with PromptX COD.' },
-  { image: '/campaign/real/woman-white-hoodie.webp', alt: 'HELLO! white hoodie styled outdoors', author: 'Dilki R.', location: 'Negombo', rating: 5, date: '2 weeks ago', title: 'Boxy fit without looking sloppy.', body: 'Grabbed the white hoodie for an oversized look. Fleece is soft on the inside and the ribbed cuffs keep the sleeves stacked nicely.' },
-  { image: '/campaign/real/man-white-tee.webp', alt: 'HELLO! white tee with olive trousers', author: 'Shenal W.', location: 'Battaramulla', rating: 5, date: '3 weeks ago', title: 'Doesn’t shrink or bacon around the neck.', body: 'Washed this tee three times now—collar ribbing didn’t lose shape at all. Best heavyweight tee I’ve bought in SL so far.' },
-  { image: '/campaign/real/couple-graphic-tees.webp', alt: 'Two people wearing HELLO! graphic tees', author: 'Amesh & Tharushi', location: 'Galle', rating: 5, date: '1 month ago', title: 'Screen print quality is top notch.', body: 'Got matching signature graphic tees. Thick screen print that doesn’t crack or peel. WhatsApp support replied to our sizing question in minutes.' },
+  {
+    id: 'rev-01',
+    author: 'Sanduni M.',
+    location: 'Colombo 07',
+    rating: 5,
+    title: 'Collar stays completely flat after multiple washes.',
+    body: 'Finally a local brand doing actual heavyweight cotton. The 240 GSM has structure without feeling hot in Colombo. The drop-shoulder cut is spot on.',
+    image: '/campaign/real/woman-black-tee.webp',
+  },
+  {
+    id: 'rev-02',
+    author: 'Kavindu P.',
+    location: 'Kandy',
+    rating: 5,
+    title: 'Got to Kandy in 48 hours. Proper heavy fleece.',
+    body: 'The hood is double-layered so it stays structured instead of drooping flat. Delivery was super quick with PromptX COD.',
+    image: '/campaign/real/man-black-hoodie.webp',
+  },
+  {
+    id: 'rev-03',
+    author: 'Dilki R.',
+    location: 'Negombo',
+    rating: 5,
+    title: 'Boxy fit without looking sloppy.',
+    body: 'Grabbed the white hoodie for an oversized look. Fleece is soft on the inside and the ribbed cuffs keep the sleeves stacked nicely.',
+    image: '/campaign/real/woman-white-hoodie.webp',
+  },
+  {
+    id: 'rev-04',
+    author: 'Shenal W.',
+    location: 'Battaramulla',
+    rating: 5,
+    title: 'Doesn’t shrink or bacon around the neck.',
+    body: 'Washed this tee three times now—collar ribbing didn’t lose shape at all. Best heavyweight tee I’ve bought in SL so far.',
+    image: '/campaign/real/man-white-tee.webp',
+  },
+  {
+    id: 'rev-05',
+    author: 'Amesh & Tharushi',
+    location: 'Galle',
+    rating: 5,
+    title: 'Screen print quality is top notch.',
+    body: 'Got matching signature graphic tees. Thick screen print that doesn’t crack or peel. WhatsApp support replied to our sizing question in minutes.',
+    image: '/campaign/real/couple-graphic-tees.webp',
+  },
 ];
 
 export default function CommunityReviews() {
   const sectionRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
-  const hovering = useRef(false);
-  const focusing = useRef(false);
-  const inView = useRef(false);
   const manualUntil = useRef(0);
-  const [paused, setPaused] = useState(false);
   const [reviews, setReviews] = useState<Review[]>(initialReviews);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [newRating, setNewRating] = useState(5);
-  const [submittedMessage, setSubmittedMessage] = useState('');
 
-  useEffect(() => {
-    let active = true;
-    queueMicrotask(() => {
-      if (!active) return;
-      try {
-        const stored = localStorage.getItem('hello-custom-reviews');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length) {
-            setReviews([...parsed, ...initialReviews]);
-          }
+  // Write Review Modal State
+  const [modalOpen, setModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submittedMessage, setSubmittedMessage] = useState('');
+  const [newRating, setNewRating] = useState(5);
+  const [formData, setFormData] = useState({
+    author: '',
+    location: '',
+    title: '',
+    body: '',
+  });
+
+  const loadReviews = useCallback(() => {
+    fetch('/api/reviews')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.reviews) && data.reviews.length > 0) {
+          setReviews(data.reviews);
         }
-      } catch {}
-    });
-    return () => {
-      active = false;
-    };
+      })
+      .catch(err => console.error('Failed to load reviews from Neon DB:', err));
   }, []);
 
-  const move = useCallback((direction: number, automatic = false) => {
+  useEffect(() => {
+    loadReviews();
+  }, [loadReviews]);
+
+  const move = useCallback((direction: number) => {
     const track = trackRef.current;
     if (!track) return;
     const card = track.firstElementChild as HTMLElement | null;
@@ -68,93 +108,140 @@ export default function CommunityReviews() {
     const step = card.getBoundingClientRect().width + gap;
     const endReached = track.scrollLeft >= maximum - 2;
     const startReached = track.scrollLeft <= 2;
-    const target = direction > 0 && endReached ? 0 : direction < 0 && startReached ? maximum : Math.min(maximum, Math.max(0, track.scrollLeft + step * direction));
-    track.scrollTo({ left: target, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
-    if (!automatic) manualUntil.current = Date.now() + 8000;
+    const target = direction > 0 && endReached
+      ? 0
+      : direction < 0 && startReached
+      ? maximum
+      : Math.min(maximum, Math.max(0, track.scrollLeft + step * direction));
+    track.scrollTo({
+      left: target,
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
+    });
   }, []);
 
+  // Automatic smooth scroll every 6 seconds
   useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
-    const observer = new IntersectionObserver(([entry]) => { inView.current = entry.isIntersecting; }, { threshold: 0.25 });
-    observer.observe(section);
-    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const timer = window.setInterval(() => {
-      if (!paused && !motion.matches && !document.hidden && inView.current && !hovering.current && !focusing.current && Date.now() >= manualUntil.current) move(1, true);
-    }, 5000);
-    return () => { observer.disconnect(); window.clearInterval(timer); };
-  }, [move, paused]);
+    const interval = window.setInterval(() => {
+      if (Date.now() >= manualUntil.current && !document.hidden) {
+        move(1);
+      }
+    }, 6000);
+    return () => window.clearInterval(interval);
+  }, [move]);
 
-  function handleAddReview(e: FormEvent<HTMLFormElement>) {
+  async function handleAddReview(e: FormEvent) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const author = String(fd.get('author') || '').trim();
-    const location = String(fd.get('location') || '').trim();
-    const title = String(fd.get('title') || '').trim();
-    const body = String(fd.get('body') || '').trim();
+    if (submitting) return;
+    setSubmitting(true);
 
-    if (!author || !body) return;
-
-    const newRev: Review = {
-      id: String(Date.now()),
-      image: '/campaign/real/couple-graphic-tees.webp',
-      alt: `${author}'s review photo`,
-      author,
-      location: location || 'Sri Lanka',
-      rating: newRating,
-      date: 'Just now',
-      title: title || 'Exceptional quality.',
-      body
-    };
-
-    const updated = [newRev, ...reviews];
-    setReviews(updated);
     try {
-      const stored = JSON.parse(localStorage.getItem('hello-custom-reviews') || '[]');
-      localStorage.setItem('hello-custom-reviews', JSON.stringify([newRev, ...stored]));
-    } catch {}
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          author: formData.author,
+          location: formData.location || 'Colombo',
+          rating: newRating,
+          title: formData.title,
+          body: formData.body,
+          image: '/campaign/real/couple-graphic-tees.webp',
+        }),
+      });
 
-    setSubmittedMessage('Thank you! Your verified review has been published.');
-    setTimeout(() => {
-      setSubmittedMessage('');
-      setModalOpen(false);
-    }, 1800);
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setSubmittedMessage('Thank you! Your review has been saved to the database and published.');
+        // Add immediately to the beginning of local state
+        if (result.review) {
+          setReviews(prev => [result.review, ...prev]);
+        }
+        // Reset form after delay
+        setTimeout(() => {
+          setSubmittedMessage('');
+          setFormData({ author: '', location: '', title: '', body: '' });
+          setNewRating(5);
+          setModalOpen(false);
+          // Scroll to the new review at the very start
+          if (trackRef.current) {
+            trackRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+          }
+        }, 1600);
+      } else {
+        alert(result.error || 'Failed to submit review. Please try again.');
+      }
+    } catch (err: any) {
+      console.error('Review submit error:', err);
+      alert('Network error while submitting review.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <>
-      <section ref={sectionRef} className="hello-community" aria-labelledby="community-title"
-        onMouseEnter={() => { hovering.current = true; }} onMouseLeave={() => { hovering.current = false; }}
-        onFocusCapture={() => { focusing.current = true; }}
-        onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) focusing.current = false; }}>
+      <section ref={sectionRef} className="hello-community" aria-labelledby="community-title">
         <div className="hello-community-heading">
           <div>
             <p className="hello-community-kicker">COMMUNITY FEEDBACK</p>
             <h2 id="community-title">Heard on the street.</h2>
-            <p className="hello-community-disclosure">Real reviews from people wearing HELLO! daily across Sri Lanka.</p>
+            <p className="hello-community-disclosure">Verified reviews from people wearing HELLO! daily across Sri Lanka.</p>
           </div>
           <div className="hello-community-controls">
             <button
               type="button"
-              className="text-link"
+              className="hello-write-review-btn"
               onClick={() => setModalOpen(true)}
-              style={{ fontSize: '0.8rem', marginRight: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+              aria-label="Write a community review"
             >
-              <Plus size={14} /> WRITE A REVIEW
+              <Plus size={13} strokeWidth={2.5} />
+              <span>WRITE A REVIEW</span>
             </button>
-            <button className="hello-review-autoplay" type="button" aria-label={paused ? 'Resume review slideshow' : 'Pause review slideshow'} aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? <Play size={15}/> : <Pause size={15}/>}</button>
-            <button type="button" aria-label="Previous reviews" aria-controls="hello-review-track" onClick={() => move(-1)}><ArrowLeft size={17}/></button>
-            <button type="button" aria-label="Next reviews" aria-controls="hello-review-track" onClick={() => move(1)}><ArrowRight size={17}/></button>
+            <button
+              type="button"
+              aria-label="Previous reviews"
+              aria-controls="hello-review-track"
+              onClick={() => {
+                manualUntil.current = Date.now() + 8000;
+                move(-1);
+              }}
+            >
+              <ArrowLeft size={17}/>
+            </button>
+            <button
+              type="button"
+              aria-label="Next reviews"
+              aria-controls="hello-review-track"
+              onClick={() => {
+                manualUntil.current = Date.now() + 8000;
+                move(1);
+              }}
+            >
+              <ArrowRight size={17}/>
+            </button>
           </div>
         </div>
-        <div ref={trackRef} id="hello-review-track" className="hello-review-track" role="region" aria-label="Customer review slideshow" tabIndex={0} onPointerDown={() => { manualUntil.current = Date.now() + 8000; }}>
+        <div
+          ref={trackRef}
+          id="hello-review-track"
+          className="hello-review-track"
+          role="region"
+          aria-label="Customer review slider"
+          tabIndex={0}
+          onPointerDown={() => { manualUntil.current = Date.now() + 8000; }}
+        >
           {reviews.map((review, idx) => (
-            <article className="hello-review-card" key={review.id ?? review.image + idx}>
-              <img src={review.image} alt={review.alt} width={480} height={320} loading="lazy"/>
+            <article className="hello-review-card" key={review.id || idx}>
+              <img
+                src={review.image || '/campaign/real/couple-graphic-tees.webp'}
+                alt={`${review.author}'s review`}
+                width={480}
+                height={320}
+                loading="lazy"
+              />
               <div className="hello-review-copy">
                 <div className="hello-review-rating">
                   <span className="hello-review-stars" aria-hidden="true">
-                    {Array.from({ length: review.rating }).map((_, star) => (
+                    {Array.from({ length: review.rating || 5 }).map((_, star) => (
                       <Star key={star} size={11} fill="currentColor" strokeWidth={0}/>
                     ))}
                   </span>
@@ -165,8 +252,8 @@ export default function CommunityReviews() {
                 <h3>{review.title}</h3>
                 <p>{review.body}</p>
                 <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: 'var(--muted)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>{review.author} · {review.location}</span>
-                  <span>{review.date}</span>
+                  <span>{review.author} · {review.location || 'Sri Lanka'}</span>
+                  <span>{review.created_at ? new Date(review.created_at).toLocaleDateString('en-LK', { month: 'short', day: 'numeric' }) : 'Verified'}</span>
                 </div>
               </div>
             </article>
@@ -174,16 +261,17 @@ export default function CommunityReviews() {
         </div>
       </section>
 
+      {/* Write a Review Modal */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Share Your Experience">
         <form onSubmit={handleAddReview} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
           {submittedMessage ? (
-            <div style={{ padding: '1rem', background: '#ecfdf5', color: '#065f46', borderRadius: '6px', textAlign: 'center', fontWeight: 600 }}>
-              {submittedMessage}
+            <div style={{ padding: '1.25rem', background: '#ecfdf5', color: '#065f46', borderRadius: '6px', textAlign: 'center', fontWeight: 600, fontSize: '0.9rem' }}>
+              ✓ {submittedMessage}
             </div>
           ) : (
             <>
               <div>
-                <label style={{ display: 'block', fontSize: '0.82rem', marginBottom: '4px', fontWeight: 600 }}>Rating</label>
+                <label style={{ display: 'block', fontSize: '0.82rem', marginBottom: '6px', fontWeight: 600 }}>Rating</label>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   {[1, 2, 3, 4, 5].map(num => (
                     <button
@@ -193,7 +281,12 @@ export default function CommunityReviews() {
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
                       aria-label={`${num} stars`}
                     >
-                      <Star size={22} fill={num <= newRating ? 'currentColor' : 'none'} color={num <= newRating ? '#eab308' : 'var(--muted)'} strokeWidth={1.5} />
+                      <Star
+                        size={24}
+                        fill={num <= newRating ? '#eab308' : 'none'}
+                        color={num <= newRating ? '#eab308' : '#a1a1aa'}
+                        strokeWidth={1.5}
+                      />
                     </button>
                   ))}
                 </div>
@@ -201,28 +294,71 @@ export default function CommunityReviews() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <label>
-                  <span style={{ display: 'block', fontSize: '0.82rem', marginBottom: '4px' }}>Your name</span>
-                  <input required name="author" placeholder="e.g. Kasun D." style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--line)', borderRadius: '4px' }} />
+                  <span style={{ display: 'block', fontSize: '0.82rem', marginBottom: '4px', fontWeight: 600 }}>Your Name</span>
+                  <input
+                    required
+                    name="author"
+                    placeholder="e.g. Kasun D."
+                    value={formData.author}
+                    onChange={e => setFormData({ ...formData, author: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--line, #e4e4e7)', borderRadius: '4px', fontSize: '0.88rem' }}
+                  />
                 </label>
                 <label>
-                  <span style={{ display: 'block', fontSize: '0.82rem', marginBottom: '4px' }}>City / Town</span>
-                  <input required name="location" placeholder="e.g. Colombo 03" style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--line)', borderRadius: '4px' }} />
+                  <span style={{ display: 'block', fontSize: '0.82rem', marginBottom: '4px', fontWeight: 600 }}>City / Town</span>
+                  <input
+                    required
+                    name="location"
+                    placeholder="e.g. Colombo 03"
+                    value={formData.location}
+                    onChange={e => setFormData({ ...formData, location: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--line, #e4e4e7)', borderRadius: '4px', fontSize: '0.88rem' }}
+                  />
                 </label>
               </div>
 
               <label>
-                <span style={{ display: 'block', fontSize: '0.82rem', marginBottom: '4px' }}>Headline</span>
-                <input required name="title" placeholder="e.g. Loved the fit and fabric quality" style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--line)', borderRadius: '4px' }} />
+                <span style={{ display: 'block', fontSize: '0.82rem', marginBottom: '4px', fontWeight: 600 }}>Review Headline</span>
+                <input
+                  required
+                  name="title"
+                  placeholder="e.g. Loved the structured collar and heavy fleece"
+                  value={formData.title}
+                  onChange={e => setFormData({ ...formData, title: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--line, #e4e4e7)', borderRadius: '4px', fontSize: '0.88rem' }}
+                />
               </label>
 
               <label>
-                <span style={{ display: 'block', fontSize: '0.82rem', marginBottom: '4px' }}>Your review</span>
-                <textarea required name="body" rows={4} placeholder="Tell us how the garment fits, feels, and looks..." style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--line)', borderRadius: '4px' }} />
+                <span style={{ display: 'block', fontSize: '0.82rem', marginBottom: '4px', fontWeight: 600 }}>Your Review</span>
+                <textarea
+                  required
+                  name="body"
+                  rows={4}
+                  placeholder="Tell us about the fabric weight, GSM, fit, and how it holds up after washes..."
+                  value={formData.body}
+                  onChange={e => setFormData({ ...formData, body: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--line, #e4e4e7)', borderRadius: '4px', fontSize: '0.88rem', resize: 'vertical' }}
+                />
               </label>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <button type="button" className="button outline" onClick={() => setModalOpen(false)}>Cancel</button>
-                <button type="submit" className="button dark">Submit Review</button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="button outline"
+                  onClick={() => setModalOpen(false)}
+                  style={{ padding: '8px 16px', fontSize: '0.82rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="button dark"
+                  disabled={submitting}
+                  style={{ padding: '8px 20px', fontSize: '0.82rem', background: '#111', color: '#fff' }}
+                >
+                  {submitting ? 'Submitting...' : 'Submit Review'}
+                </button>
               </div>
             </>
           )}
