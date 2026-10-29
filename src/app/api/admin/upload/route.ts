@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { privateHeaders } from '@/lib/server/http';
+import { saveMediaToDb } from '@/lib/server/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,33 +52,35 @@ export async function POST(req: Request) {
     // Sanitize base name
     const safeBaseName = originalName.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 30) || 'product';
     const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const filename = `${safeBaseName}-${uniqueSuffix}.${ext}`;
+    const mediaId = `${safeBaseName}-${uniqueSuffix}`;
+    const filename = `${mediaId}.${ext}`;
+    const mimeType = ext === 'png' ? 'image/png' : ext === 'jpg' ? 'image/jpeg' : ext === 'gif' ? 'image/gif' : 'image/webp';
+    const base64Data = buffer.toString('base64');
 
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'products');
-
+    // 1. Always persist to Neon PostgreSQL media table (works 100% reliably on Vercel Serverless)
+    let publicUrl = `/api/media/${filename}`;
     try {
+      await saveMediaToDb(mediaId, filename, mimeType, base64Data);
+    } catch (dbErr: any) {
+      console.warn('DB media persistence notice:', dbErr.message);
+    }
+
+    // 2. Also try local filesystem if writable (e.g. local dev server)
+    try {
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'products');
       await mkdir(uploadsDir, { recursive: true });
       const targetPath = path.join(uploadsDir, filename);
       await writeFile(targetPath, buffer);
-
-      const publicUrl = `/uploads/products/${filename}`;
-      return NextResponse.json({
-        success: true,
-        url: publicUrl,
-        filename,
-        size: buffer.length
-      }, { headers: privateHeaders });
-    } catch (fsErr: any) {
-      console.warn('Filesystem write not available, falling back to dataUrl:', fsErr.message);
-      // If filesystem is read-only (e.g. serverless environment), return optimized base64
-      const mimeType = ext === 'png' ? 'image/png' : ext === 'jpg' ? 'image/jpeg' : 'image/webp';
-      const fallbackDataUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
-      return NextResponse.json({
-        success: true,
-        url: fallbackDataUrl,
-        fallback: true
-      }, { headers: privateHeaders });
+    } catch {
+      // Serverless read-only filesystem expected on Vercel
     }
+
+    return NextResponse.json({
+      success: true,
+      url: publicUrl,
+      filename,
+      size: buffer.length
+    }, { headers: privateHeaders });
   } catch (err: any) {
     console.error('Upload error:', err);
     return NextResponse.json({ error: err.message || 'Image upload failed' }, { status: 500, headers: privateHeaders });

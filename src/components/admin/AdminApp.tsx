@@ -251,7 +251,7 @@ const PRESET_COLORS = [
   { name: 'Brown', hex: '#5c4033' },
 ];
 
-async function compressImage(file: File, maxDim = 1920, quality = 0.92): Promise<string> {
+async function compressImage(file: File, maxDim = 1200, quality = 0.82): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Failed to read image file"));
@@ -1469,8 +1469,18 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
         setNotice(previous ? `"${product.name}" updated in Penetix & Live Storefront!` : `"${product.name}" published to Penetix & Live Storefront!`);
         log(`${previous ? "Updated" : "Added"} ${product.name} (Penetix)`);
       } else {
-        const errJson = await res.json().catch(() => ({}));
-        setNotice(`Save failed: ${errJson.error || res.statusText || 'Database error'}`);
+        let errMessage = 'Database error';
+        try {
+          const errJson = await res.json();
+          errMessage = errJson.error || errMessage;
+        } catch {
+          if (res.status === 413) {
+            errMessage = 'Photo file is too large for upload (exceeds server limits).';
+          } else {
+            errMessage = res.statusText || `Server error (${res.status})`;
+          }
+        }
+        setNotice(`Save failed: ${errMessage}`);
       }
     } catch (err: any) {
       setNotice(`Network error: ${err.message || 'Could not connect to database'}`);

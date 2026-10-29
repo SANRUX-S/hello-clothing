@@ -141,17 +141,124 @@ export async function getProductBySlugFromDb(slug: string): Promise<Product | nu
   return all.find(p => p.slug === slug) || null;
 }
 
+// In-memory cache for media items to deliver 0ms images
+const mediaCache = new Map<string, { buffer: Buffer; mimeType: string }>();
+
+export async function saveMediaToDb(id: string, filename: string, mimeType: string, base64Data: string): Promise<string> {
+  const sql = getDb();
+  if (!sql) throw new Error('Database connection is not configured.');
+
+  try {
+    const buf = Buffer.from(base64Data, 'base64');
+    mediaCache.set(id, { buffer: buf, mimeType });
+  } catch {}
+
+  await sql`
+    INSERT INTO media (id, filename, mime_type, data, created_at)
+    VALUES (${id}, ${filename}, ${mimeType}, ${base64Data}, NOW())
+    ON CONFLICT (id) DO UPDATE SET
+      filename = EXCLUDED.filename,
+      mime_type = EXCLUDED.mime_type,
+      data = EXCLUDED.data,
+      created_at = NOW();
+  `;
+  return `/api/media/${id}`;
+}
+
+export async function getMediaFromDb(id: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
+  const cleanId = id.replace(/\.[^/.]+$/, ""); // strip extension if present
+  if (mediaCache.has(cleanId)) {
+    return mediaCache.get(cleanId)!;
+  }
+  const sql = getDb();
+  if (!sql) return null;
+  try {
+    const rows = await sql`SELECT mime_type, data FROM media WHERE id = ${cleanId} LIMIT 1`;
+    if (!rows || rows.length === 0) return null;
+    const row = rows[0];
+    const buffer = Buffer.from(row.data, 'base64');
+    const result = { buffer, mimeType: row.mime_type };
+    mediaCache.set(cleanId, result);
+    return result;
+  } catch (err) {
+    console.error('getMediaFromDb error:', err);
+    return null;
+  }
+}
+
+// Convert any base64 dataUrl into a persistent /api/media/... link
+export async function persistDataUrlIfPresent(urlOrData: string): Promise<string> {
+  if (!urlOrData || typeof urlOrData !== 'string') return urlOrData || '';
+  if (!urlOrData.startsWith('data:image/')) return urlOrData;
+
+  const match = urlOrData.match(/^data:([a-zA-Z0-9\/\+]+);base64,(.+)$/);
+  if (!match) return urlOrData;
+
+  const mimeType = match[1];
+  const base64Data = match[2];
+  const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg';
+  const mediaId = `med-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const filename = `${mediaId}.${ext}`;
+
+  try {
+    await saveMediaToDb(mediaId, filename, mimeType, base64Data);
+    return `/api/media/${mediaId}.${ext}`;
+  } catch (err) {
+    console.error('Failed to persist base64 data url to media table:', err);
+    return urlOrData;
+  }
+}
+
 export async function saveProductToDb(p: Partial<Product> & { id: string; name: string }): Promise<void> {
   const sql = getDb();
   if (!sql) throw new Error('Database connection is not configured.');
 
-  const slug = p.slug || p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  const gallery = JSON.stringify(p.gallery || [p.image || '']);
-  const colors = JSON.stringify(p.colors || [{ name: 'Black', hex: '#181918' }]);
-  const colorImages = JSON.stringify(p.colorImages || {});
-  const sizes = JSON.stringify(p.sizes || ['S', 'M', 'L', 'XL']);
-  const tags = JSON.stringify(p.tags || ['essential']);
-  const fabricDetails = JSON.stringify(p.fabricDetails || {});
+  const id = p.id || `prod-${Date.now()}`;
+  const name = (p.name || 'Untitled Essential').trim();
+
+  // Robust slug generation
+  let baseSlug = (p.slug || name)
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || `item-${Date.now().toString().slice(-4)}`;
+
+  // Ensure slug uniqueness to prevent duplicate key constraint crashes
+  try {
+    const existingWithSlug = await sql`SELECT id FROM products WHERE slug = ${baseSlug} AND id != ${id} LIMIT 1`;
+    if (existingWithSlug && existingWithSlug.length > 0) {
+      baseSlug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+    }
+  } catch (slugErr) {
+    console.warn('Slug collision check notice:', slugErr);
+  }
+
+  // Auto-persist base64 data URLs to avoid huge payloads and payload limit failures
+  let finalImage = p.image || '/demo-products/essential-tee.webp';
+  if (finalImage.startsWith('data:image/')) {
+    finalImage = await persistDataUrlIfPresent(finalImage);
+  }
+
+  let rawGallery = Array.isArray(p.gallery) && p.gallery.length > 0 ? p.gallery : [finalImage];
+  const persistedGallery = await Promise.all(
+    rawGallery.map(img => (typeof img === 'string' && img.startsWith('data:image/')) ? persistDataUrlIfPresent(img) : Promise.resolve(img))
+  );
+
+  const gallery = JSON.stringify(persistedGallery);
+  const colors = JSON.stringify(Array.isArray(p.colors) && p.colors.length > 0 ? p.colors : [{ name: 'Black', hex: '#181918' }]);
+  const colorImages = JSON.stringify(p.colorImages && typeof p.colorImages === 'object' ? p.colorImages : {});
+  const sizes = JSON.stringify(Array.isArray(p.sizes) && p.sizes.length > 0 ? p.sizes : ['S', 'M', 'L', 'XL']);
+  const tags = JSON.stringify(Array.isArray(p.tags) && p.tags.length > 0 ? p.tags : ['essential']);
+  const fabricDetails = JSON.stringify(p.fabricDetails && typeof p.fabricDetails === 'object' ? p.fabricDetails : {});
+
+  // Ensure price and stock are clean integers
+  const price = Math.round(Number(p.price) || 0);
+  const stock = Math.max(0, Math.floor(Number(p.stock) || 0));
+  const category = p.category || 't-shirts';
+  const status = p.status || 'published';
+  const isDemo = Boolean(p.isDemo);
+  const gender = p.gender || 'unisex';
+  const description = p.description || '';
 
   await sql`
     INSERT INTO products (
@@ -159,9 +266,9 @@ export async function saveProductToDb(p: Partial<Product> & { id: string; name: 
       sizes, stock, description, tags, status, is_demo, gender, fabric_details, updated_at
     )
     VALUES (
-      ${p.id}, ${slug}, ${p.name}, ${p.price ?? 349000}, ${p.category || 't-shirts'}, ${p.image || '/demo-products/essential-tee.webp'},
-      ${gallery}, ${colors}, ${colorImages}, ${sizes}, ${p.stock ?? 0}, ${p.description || ''},
-      ${tags}, ${p.status || 'published'}, ${Boolean(p.isDemo)}, ${p.gender || 'unisex'}, ${fabricDetails}, NOW()
+      ${id}, ${baseSlug}, ${name}, ${price}, ${category}, ${finalImage},
+      ${gallery}, ${colors}, ${colorImages}, ${sizes}, ${stock}, ${description},
+      ${tags}, ${status}, ${isDemo}, ${gender}, ${fabricDetails}, NOW()
     )
     ON CONFLICT (id) DO UPDATE SET
       slug = EXCLUDED.slug,

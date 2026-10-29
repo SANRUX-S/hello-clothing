@@ -23,6 +23,7 @@ export async function POST(req: Request) {
     await saveProductToDb({ ...data, id });
     return NextResponse.json({ success: true, id }, { headers: privateHeaders });
   } catch (err: any) {
+    console.error('POST /api/admin/products error:', err);
     return NextResponse.json({ error: err.message || 'Failed to save product' }, { status: 500, headers: privateHeaders });
   }
 }
