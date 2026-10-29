@@ -899,6 +899,8 @@ function ReviewEditorModal({
   const [image, setImage] = useState(review?.image || "/campaign/real/couple-graphic-tees.webp");
   const [status, setStatus] = useState(review?.status || "published");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const imagesList = [
     { label: 'Graphic Tees Pair', src: '/campaign/real/couple-graphic-tees.webp' },
@@ -907,6 +909,28 @@ function ReviewEditorModal({
     { label: 'White Hoodie Woman', src: '/campaign/real/woman-white-hoodie.webp' },
     { label: 'White Tee Man', src: '/campaign/real/man-white-tee.webp' },
   ];
+
+  const handleCustomUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/admin/upload', { method: 'POST', body: fd });
+      const json = await res.json();
+      if (res.ok && json.url) {
+        setImage(json.url);
+      } else {
+        alert("Upload failed: " + (json.error || "Could not upload image"));
+      }
+    } catch (err: any) {
+      alert("Upload failed: " + (err?.message || "Network error"));
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -979,6 +1003,25 @@ function ReviewEditorModal({
 
         <div>
           <span style={{ display: 'block', fontSize: '11px', color: '#a1a1aa', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Attached Photo</span>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px', background: '#18181b', padding: '10px', borderRadius: '8px', border: '1px solid #27272a' }}>
+            <img src={image} alt="Preview" style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #3f3f46' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCustomUpload} />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="admin-button"
+                style={{ fontSize: '12px', padding: '6px 12px', width: 'fit-content' }}
+              >
+                <ImagePlus size={14} /> {isUploading ? "Uploading photo…" : "Upload Customer Photo"}
+              </button>
+              <span style={{ fontSize: '11px', color: '#71717a' }}>Supports JPG, PNG, WebP (camera or screenshot)</span>
+            </div>
+          </div>
+
+          <span style={{ display: 'block', fontSize: '10px', color: '#71717a', marginBottom: '6px' }}>Or pick a catalog photoshoot look:</span>
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
             {imagesList.map(img => (
               <button
@@ -1012,10 +1055,10 @@ function ReviewEditorModal({
         </div>
 
         <div className="admin-modal-actions" style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-          <button type="button" className="admin-button admin-button-quiet" onClick={onClose} disabled={isSubmitting}>
+          <button type="button" className="admin-button admin-button-quiet" onClick={onClose} disabled={isSubmitting || isUploading}>
             Cancel
           </button>
-          <button type="submit" className="admin-button" disabled={isSubmitting}>
+          <button type="submit" className="admin-button" disabled={isSubmitting || isUploading}>
             <Check size={16} /> {isSubmitting ? "Saving..." : review ? "Update Review" : "Publish Review"}
           </button>
         </div>
