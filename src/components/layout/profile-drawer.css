@@ -1,39 +1,89 @@
-/* HELLO! Clothing — Account & Tracking Drawer */
+/* ==========================================================================
+   HELLO! CLOTHING — BESPOKE STREETWEAR ACCOUNT & TRACKING DRAWER
+   Ultra-clean, dark/light contrast, editorial streetwear aesthetics.
+   ========================================================================== */
 
 .profile-drawer-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
   color: var(--ink, #141614);
   font-family: inherit;
-  padding-bottom: 10px;
+  padding-bottom: 20px;
 }
 
-/* User Identity Hero Card */
+/* --------------------------------------------------------------------------
+   STREETWEAR VIP PASS / HERO CARD
+   -------------------------------------------------------------------------- */
 .profile-hero-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  background: #0d0f0d;
+  color: #f4f3ed;
+  border: 1px solid #232723;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+}
+
+.profile-hero-card::after {
+  content: 'HELLO!';
+  position: absolute;
+  right: -8px;
+  bottom: -15px;
+  font-size: 58px;
+  font-weight: 900;
+  letter-spacing: -2px;
+  color: rgba(255, 255, 255, 0.03);
+  pointer-events: none;
+  line-height: 1;
+}
+
+.profile-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.profile-pass-title {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #8e9189;
+  text-transform: uppercase;
+}
+
+.profile-hero-main {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px 18px;
-  background: #ffffff;
-  border: 1px solid #e2e0d8;
-  border-radius: 4px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 }
 
 .profile-avatar {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: #141614;
-  color: #f4f2ec;
+  background: #1b1e1b;
+  color: #ffffff;
+  border: 2px solid #2e342e;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 13px;
+  font-weight: 800;
+  font-size: 14px;
   letter-spacing: 0.5px;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .profile-info {
@@ -44,17 +94,17 @@
 .profile-header-title {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 3px;
+  gap: 8px;
+  margin-bottom: 4px;
   flex-wrap: wrap;
 }
 
 .profile-header-title h3 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: -0.2px;
-  color: #141614;
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: -0.3px;
+  color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -62,39 +112,124 @@
 
 .profile-badge {
   font-size: 8px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.8px;
   padding: 3px 8px;
-  border-radius: 2px;
+  border-radius: 3px;
   text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.profile-badge.guest {
-  background: #eae8e1;
-  color: #555750;
-  border: 1px solid #dcd9d0;
+.profile-badge.verified {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.35);
 }
 
 .profile-badge.member {
-  background: #141614;
-  color: #f4f2ec;
+  background: #222622;
+  color: #dad9d0;
+  border: 1px solid #333833;
+}
+
+.profile-badge.guest {
+  background: #1c1f1c;
+  color: #9a9d94;
+  border: 1px solid #2c302c;
 }
 
 .profile-email {
   margin: 0;
   font-size: 11px;
-  color: #72746c;
+  color: #9da097;
   line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Clean Minimal Tabs */
+.profile-logout-btn {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #c4c7be;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.profile-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* --------------------------------------------------------------------------
+   GOOGLE ONE-TAP AUTH BANNER
+   -------------------------------------------------------------------------- */
+.google-auth-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.google-signin-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 18px;
+  background: #ffffff;
+  color: #111311;
+  border: 1px solid #e2e0d8;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.google-signin-btn:hover:not(:disabled) {
+  border-color: #111311;
+  background: #fafaf8;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+}
+
+.google-signin-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.google-auth-error {
+  margin: 0;
+  font-size: 10px;
+  color: #b91c1c;
+  line-height: 1.4;
+  background: #fef2f2;
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid #fecaca;
+}
+
+/* --------------------------------------------------------------------------
+   SEGMENTED TABS
+   -------------------------------------------------------------------------- */
 .profile-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 6px;
-  background: #eae8e1;
+  gap: 4px;
+  background: #ece9e2;
   padding: 4px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 .profile-tab-btn {
@@ -102,55 +237,59 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px 8px;
+  padding: 10px 6px;
   background: transparent;
   border: 0;
-  color: #666860;
+  color: #6a6c64;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.6px;
   text-transform: uppercase;
-  border-radius: 2px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .profile-tab-btn:hover {
-  color: #141614;
+  color: #111311;
 }
 
 .profile-tab-btn.active {
-  background: #ffffff;
-  color: #141614;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  background: #0d0f0d;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
-/* Tab Content Areas */
+/* --------------------------------------------------------------------------
+   TAB CONTENT
+   -------------------------------------------------------------------------- */
 .profile-tab-content {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-height: 240px;
+  min-height: 250px;
 }
 
 .track-section-intro h4,
 .profile-form-intro h4 {
   margin: 0 0 4px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 750;
   letter-spacing: -0.2px;
-  color: #141614;
+  color: #111311;
 }
 
 .track-section-intro p,
 .profile-form-intro p {
   margin: 0;
   font-size: 11px;
-  color: #72746c;
-  line-height: 1.6;
+  color: #6b6d65;
+  line-height: 1.5;
 }
 
-/* Tracking Input Group */
+/* --------------------------------------------------------------------------
+   TRACKING INPUT & BUTTON
+   -------------------------------------------------------------------------- */
 .track-input-group {
   display: flex;
   gap: 8px;
@@ -166,7 +305,7 @@
 .track-input-icon {
   position: absolute;
   left: 12px;
-  color: #888a80;
+  color: #7b7e74;
   pointer-events: none;
 }
 
@@ -174,34 +313,35 @@
   width: 100%;
   padding: 11px 12px 11px 36px;
   background: #ffffff;
-  border: 1px solid #d6d4cb;
-  border-radius: 2px;
+  border: 1px solid #d4d2c8;
+  border-radius: 4px;
   font-size: 12px;
-  color: #141614;
+  color: #111311;
   outline: none;
-  transition: border-color 0.2s;
+  transition: all 0.2s ease;
 }
 
 .track-text-input:focus {
-  border-color: #141614;
+  border-color: #0d0f0d;
+  box-shadow: 0 0 0 2px rgba(13, 15, 13, 0.08);
 }
 
 .track-action-btn {
   padding: 0 18px;
-  background: #141614;
+  background: #0d0f0d;
   color: #ffffff;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 750;
   letter-spacing: 1px;
   border: 0;
-  border-radius: 2px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s ease;
   white-space: nowrap;
 }
 
 .track-action-btn:hover:not(:disabled) {
-  background: #2b3027;
+  background: #252925;
 }
 
 .track-action-btn:disabled {
@@ -209,61 +349,61 @@
   cursor: not-allowed;
 }
 
-/* Recent order chips */
 .recent-order-chips {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
   font-size: 10px;
 }
 
 .recent-chips-label {
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.8px;
-  color: #888a80;
+  color: #8b8e84;
 }
 
 .order-chip-btn {
   padding: 4px 10px;
   background: #ffffff;
   border: 1px solid #dcd9d0;
-  border-radius: 2px;
+  border-radius: 3px;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   color: #141614;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.15s ease;
 }
 
 .order-chip-btn:hover {
-  border-color: #141614;
-  background: #141614;
+  border-color: #0d0f0d;
+  background: #0d0f0d;
   color: #ffffff;
 }
 
-/* Error box */
 .track-error-box {
   padding: 12px 14px;
   background: #fdf2f2;
   border: 1px solid #fecaca;
   color: #b91c1c;
   font-size: 11px;
-  border-radius: 2px;
+  border-radius: 4px;
   line-height: 1.5;
 }
 
-/* Tracking Result Card */
+/* --------------------------------------------------------------------------
+   TRACKING RESULT CARD & TIMELINE
+   -------------------------------------------------------------------------- */
 .track-result-card {
   display: flex;
   flex-direction: column;
   gap: 14px;
   padding: 18px;
   background: #ffffff;
-  border: 1px solid #e0ded6;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #dedcd4;
+  border-radius: 6px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
 
 .track-result-header {
@@ -272,35 +412,35 @@
   align-items: flex-start;
   gap: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #eeeeea;
+  border-bottom: 1px solid #eae8e1;
 }
 
 .track-eyebrow {
   display: block;
   font-size: 8px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 1px;
-  color: #888a80;
+  color: #8b8e84;
   margin-bottom: 4px;
 }
 
 .track-result-header h5 {
   margin: 0;
   font-size: 16px;
-  font-weight: 750;
+  font-weight: 800;
   letter-spacing: -0.3px;
-  color: #141614;
+  color: #0d0f0d;
 }
 
 .track-status-pill {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 9px;
+  font-weight: 800;
   letter-spacing: 0.5px;
   padding: 4px 10px;
   background: #ecfdf5;
   color: #047857;
   border: 1px solid #a7f3d0;
-  border-radius: 12px;
+  border-radius: 20px;
   white-space: nowrap;
 }
 
@@ -309,31 +449,31 @@
   justify-content: space-between;
   font-size: 11px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #eeeeea;
+  border-bottom: 1px solid #eae8e1;
 }
 
 .track-muted-label {
   display: block;
   font-size: 8px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.8px;
-  color: #888a80;
+  color: #8b8e84;
   margin-bottom: 3px;
 }
 
 .track-courier-row strong {
   font-size: 12px;
-  font-weight: 600;
-  color: #141614;
+  font-weight: 700;
+  color: #111311;
 }
 
-/* Progress Steps */
+/* Stepper Timeline */
 .track-progress-steps {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
   position: relative;
-  margin: 6px 0 10px;
+  margin: 8px 0 12px;
 }
 
 .step-item {
@@ -349,59 +489,59 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #d8d6cd;
+  background: #d4d2c8;
   border: 2px solid #ffffff;
-  box-shadow: 0 0 0 1px #d8d6cd;
+  box-shadow: 0 0 0 1px #d4d2c8;
   transition: all 0.2s;
   z-index: 1;
 }
 
 .step-label {
   font-size: 8px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.4px;
-  color: #888a80;
+  color: #8b8e84;
+  line-height: 1.2;
 }
 
 .step-item.done .step-dot {
-  background: #141614;
-  box-shadow: 0 0 0 1px #141614;
+  background: #0d0f0d;
+  box-shadow: 0 0 0 1px #0d0f0d;
 }
 
 .step-item.done .step-label {
-  color: #141614;
+  color: #0d0f0d;
 }
 
 .step-item.active .step-dot {
-  background: #047857;
+  background: #059669;
   box-shadow: 0 0 0 2px #a7f3d0;
 }
 
 .step-item.active .step-label {
-  color: #047857;
-  font-weight: 700;
+  color: #059669;
+  font-weight: 800;
 }
 
-/* Items summary in tracking card */
 .track-items-summary {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: #f8f7f2;
+  background: #f7f6f0;
   padding: 10px 12px;
-  border-radius: 2px;
+  border-radius: 4px;
 }
 
 .track-item-line {
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: #444640;
+  color: #40433d;
 }
 
 .track-item-line strong {
-  font-weight: 600;
-  color: #141614;
+  font-weight: 700;
+  color: #111311;
 }
 
 .track-full-page-link {
@@ -410,19 +550,21 @@
   justify-content: center;
   gap: 6px;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 750;
   letter-spacing: 0.8px;
-  color: #141614;
+  color: #111311;
   padding-top: 4px;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-/* TAB 2: Profile Form */
+/* --------------------------------------------------------------------------
+   PROFILE FORM (MY DETAILS)
+   -------------------------------------------------------------------------- */
 .profile-edit-form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 13px;
 }
 
 .profile-field {
@@ -433,7 +575,7 @@
 
 .profile-field span {
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.8px;
   text-transform: uppercase;
   color: #555750;
@@ -442,16 +584,17 @@
 .profile-field input {
   padding: 11px 12px;
   background: #ffffff;
-  border: 1px solid #d6d4cb;
-  border-radius: 2px;
+  border: 1px solid #d4d2c8;
+  border-radius: 4px;
   font-size: 12px;
-  color: #141614;
+  color: #111311;
   outline: none;
-  transition: border-color 0.2s;
+  transition: all 0.2s ease;
 }
 
 .profile-field input:focus {
-  border-color: #141614;
+  border-color: #0d0f0d;
+  box-shadow: 0 0 0 2px rgba(13, 15, 13, 0.08);
 }
 
 .profile-form-row {
@@ -467,66 +610,117 @@
   gap: 8px;
   min-height: 44px;
   margin-top: 6px;
-  background: #141614;
+  background: #0d0f0d;
   color: #ffffff;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 1.2px;
   border: 0;
-  border-radius: 2px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s ease;
 }
 
 .profile-save-btn:hover {
-  background: #2b3027;
+  background: #252925;
 }
 
 .profile-save-btn.saved {
-  background: #047857;
+  background: #059669;
 }
 
-/* TAB 3: Orders List */
-.orders-list {
+.profile-perks-card {
+  padding: 14px 16px;
+  background: #f7f6f0;
+  border: 1px solid #e2e0d8;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.perks-heading strong {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #111311;
+  text-transform: uppercase;
+}
+
+.profile-perks-card ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 11px;
+  color: #5c5e56;
+  line-height: 1.6;
+}
+
+/* --------------------------------------------------------------------------
+   ORDERS LIST (TAB 3)
+   -------------------------------------------------------------------------- */
+.profile-orders-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.order-history-card {
+.profile-order-card {
   padding: 14px 16px;
   background: #ffffff;
-  border: 1px solid #e0ded6;
-  border-radius: 4px;
+  border: 1px solid #dedcd4;
+  border-radius: 6px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 }
 
-.order-card-top {
+.order-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
 }
 
-.order-card-ref {
+.order-card-header strong {
   font-size: 13px;
-  font-weight: 750;
-  color: #141614;
+  font-weight: 800;
+  color: #0d0f0d;
+  display: block;
 }
 
 .order-card-date {
   font-size: 10px;
-  color: #888a80;
+  color: #8b8e84;
   margin-top: 2px;
+  display: block;
 }
 
-.order-card-items-preview {
+.order-status-tag {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: 3px 8px;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.order-items-preview {
   display: flex;
   flex-direction: column;
   gap: 4px;
   font-size: 11px;
-  color: #555750;
+  color: #40433d;
+  background: #f7f6f0;
+  padding: 8px 10px;
+  border-radius: 4px;
+}
+
+.order-mini-item {
+  display: flex;
+  justify-content: space-between;
 }
 
 .order-card-footer {
@@ -534,33 +728,36 @@
   justify-content: space-between;
   align-items: center;
   padding-top: 8px;
-  border-top: 1px solid #f0eee8;
-  font-size: 11px;
+  border-top: 1px solid #eae8e1;
 }
 
 .order-card-total {
-  font-size: 12px;
-  font-weight: 700;
-  color: #141614;
+  font-size: 13px;
+  font-weight: 800;
+  color: #0d0f0d;
 }
 
-.order-track-link {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  color: #141614;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-  background: none;
+.order-track-btn {
+  padding: 6px 12px;
+  background: #0d0f0d;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
   border: 0;
-  padding: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s ease;
 }
 
-/* Empty Orders State */
+.order-track-btn:hover {
+  background: #252925;
+}
+
+/* Empty Orders */
 .profile-empty-orders {
   text-align: center;
-  padding: 40px 16px;
+  padding: 36px 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -568,50 +765,57 @@
 }
 
 .profile-empty-orders svg {
-  color: #999a92;
-  margin-bottom: 6px;
+  color: #8b8e84;
 }
 
 .profile-empty-orders h5 {
   margin: 0;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 800;
+  color: #0d0f0d;
 }
 
 .profile-empty-orders p {
   margin: 0;
   font-size: 11px;
-  color: #72746c;
-  max-width: 280px;
-  line-height: 1.6;
+  color: #6b6d65;
+  max-width: 260px;
+  line-height: 1.5;
 }
 
 .profile-shop-btn {
-  margin-top: 12px;
-  padding: 0 20px;
-  min-height: 40px;
-  background: #141614;
+  margin-top: 8px;
+  padding: 0 18px;
+  min-height: 38px;
+  background: #0d0f0d;
   color: #ffffff;
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 1px;
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  border-radius: 2px;
+  gap: 8px;
+  border-radius: 4px;
+  text-decoration: none;
 }
 
-/* Bottom Concierge Card */
+.profile-shop-btn:hover {
+  background: #252925;
+}
+
+/* --------------------------------------------------------------------------
+   BOTTOM CONCIERGE ASSISTANCE CARD
+   -------------------------------------------------------------------------- */
 .profile-concierge-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 16px;
-  background: #ffffff;
-  border: 1px solid #e0ded6;
-  border-radius: 4px;
-  margin-top: 6px;
+  padding: 13px 16px;
+  background: #f7f6f0;
+  border: 1px solid #dedcd4;
+  border-radius: 6px;
+  margin-top: 4px;
 }
 
 .concierge-left {
@@ -621,21 +825,21 @@
 }
 
 .concierge-left svg {
-  color: #16a34a;
+  color: #25d366;
   flex-shrink: 0;
 }
 
 .concierge-text strong {
   display: block;
   font-size: 11px;
-  font-weight: 700;
-  color: #141614;
+  font-weight: 800;
+  color: #111311;
 }
 
 .concierge-text p {
   margin: 2px 0 0;
   font-size: 10px;
-  color: #72746c;
+  color: #6b6d65;
 }
 
 .concierge-btn {
@@ -643,101 +847,19 @@
   align-items: center;
   gap: 5px;
   padding: 6px 12px;
-  background: #16a34a;
+  background: #25d366;
   color: #ffffff;
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.8px;
-  border-radius: 2px;
+  border-radius: 4px;
+  text-decoration: none;
   white-space: nowrap;
-  transition: background 0.2s;
+  transition: opacity 0.2s ease;
 }
 
 .concierge-btn:hover {
-  background: #15803d;
-}
-
-/* Google Auth Integration */
-.profile-avatar-img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.profile-badge.verified {
-  background: #141614;
-  color: #fff;
-  border: 1px solid #141614;
-}
-
-.profile-logout-btn {
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  background: transparent;
-  border: 1px solid #dcd9d0;
-  color: #72746c;
-  padding: 4px 8px;
-  border-radius: 2px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-left: auto;
-  align-self: flex-start;
-}
-
-.profile-logout-btn:hover {
-  border-color: #141614;
-  color: #141614;
-  background: #f4f2ec;
-}
-
-.google-auth-banner {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.google-signin-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  padding: 11px 16px;
-  background: #ffffff;
-  color: #141614;
-  border: 1px solid #dcd9d0;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: all 0.2s ease;
-}
-
-.google-signin-btn:hover:not(:disabled) {
-  border-color: #141614;
-  background: #fbfbfa;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-}
-
-.google-signin-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.google-auth-error {
-  margin: 0;
-  font-size: 10px;
-  color: #b91c1c;
-  line-height: 1.4;
-  background: #fef2f2;
-  padding: 8px 10px;
-  border-radius: 3px;
-  border: 1px solid #fecaca;
+  opacity: 0.9;
 }
 
 .google-connected-pill {
@@ -747,8 +869,8 @@
   padding: 11px 13px;
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
-  border-radius: 4px;
-  margin-bottom: 16px;
+  border-radius: 6px;
+  margin-bottom: 14px;
 }
 
 .google-connected-pill strong {
@@ -771,35 +893,35 @@
   gap: 12px;
   padding: 11px 13px;
   background: #ffffff;
-  border: 1px solid #e2e0d8;
-  border-radius: 4px;
-  margin-bottom: 16px;
+  border: 1px solid #dedcd4;
+  border-radius: 6px;
+  margin-bottom: 14px;
 }
 
 .google-connect-prompt .prompt-text strong {
   display: block;
   font-size: 11px;
-  color: #141614;
+  color: #111311;
   margin-bottom: 2px;
 }
 
 .google-connect-prompt .prompt-text span {
   display: block;
   font-size: 10px;
-  color: #72746c;
+  color: #6b6d65;
   line-height: 1.4;
 }
 
 .google-connect-btn {
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.8px;
   text-transform: uppercase;
-  background: #141614;
+  background: #0d0f0d;
   color: #fff;
   border: none;
-  padding: 6px 11px;
-  border-radius: 2px;
+  padding: 6px 12px;
+  border-radius: 4px;
   cursor: pointer;
   white-space: nowrap;
   transition: opacity 0.2s ease;
@@ -808,4 +930,3 @@
 .google-connect-btn:hover {
   opacity: 0.85;
 }
-

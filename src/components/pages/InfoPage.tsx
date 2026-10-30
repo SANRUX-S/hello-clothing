@@ -376,13 +376,26 @@ export default function InfoPage({ kind }: { kind: string }) {
             <br />
             SEE YOU.
           </h1>
-          <img src="/campaign/real/man-black-hoodie.webp" alt="HELLO! Streetwear member" width={800} height={600} />
-          <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--panel)', borderRadius: '8px', fontSize: '0.85rem' }}>
+          <div style={{ marginTop: '1.25rem', padding: '1.25rem', background: '#0d0f0d', color: '#f5f5f0', borderRadius: '8px', border: '1px solid #242924', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <span style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '1.5px', color: '#8e9189' }}>HELLO! CREW PASS</span>
+              <span style={{ fontSize: '8px', fontWeight: 800, padding: '3px 8px', borderRadius: '3px', background: 'rgba(34,197,94,0.15)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.35)' }}>
+                ● VERIFIED MEMBER
+              </span>
+            </div>
+            <strong style={{ display: 'block', fontSize: '1rem', color: '#fff', marginBottom: '4px' }}>
+              {firebaseUser?.displayName || profile.name || 'Colombo Streetwear Club'}
+            </strong>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: '#9da097' }}>
+              {firebaseUser?.email || profile.email || 'Islandwide Delivery · 7-Day Size Exchanges'}
+            </p>
+          </div>
+          <div style={{ marginTop: '1.25rem', padding: '1rem', background: 'var(--panel)', borderRadius: '8px', fontSize: '0.85rem' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#16a34a', fontWeight: 600 }}>
-              VIP Streetwear Member
+              Member Privileges
             </span>
-            <p style={{ marginTop: '6px', color: 'var(--muted)' }}>
-              Active member benefits: Priority dispatch on new drops, 10% welcome discount, and 7-day courier exchange guarantee.
+            <p style={{ marginTop: '6px', color: 'var(--muted)', lineHeight: 1.5 }}>
+              Active member benefits: Priority dispatch on new drops, automated tracking, and 7-day courier doorstep size exchanges.
             </p>
           </div>
         </div>

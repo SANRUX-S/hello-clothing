@@ -97,7 +97,6 @@ export function Footer() {
        </a>
      </div>
    </div>
-   <div className="preview-note"><span className="status-dot" style={{ background: '#22c55e' }}/> HELLO! OFFICIAL STORE <span>Heavyweight Streetwear · Islandwide Delivery across Sri Lanka</span></div>
  </footer>;
 }
 

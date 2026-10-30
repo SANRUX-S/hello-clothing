@@ -211,42 +211,48 @@ export default function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
       <div className="profile-drawer-container">
         {/* User Card */}
         <div className="profile-hero-card">
-          <div className="profile-avatar">
-            {firebaseUser?.photoURL ? (
-              <img
-                src={firebaseUser.photoURL}
-                alt={firebaseUser.displayName || 'Profile'}
-                className="profile-avatar-img"
-              />
-            ) : profile.name ? (
-              profile.name.slice(0, 2).toUpperCase()
-            ) : (
-              <UserRound size={20} />
+          <div className="profile-hero-top">
+            <span className="profile-pass-title">HELLO! CREW PASS</span>
+            <span className={`profile-badge ${firebaseUser ? 'verified' : isGuest ? 'guest' : 'member'}`}>
+              ● {firebaseUser ? 'GOOGLE VERIFIED' : isGuest ? 'GUEST PASS' : 'STREETWEAR MEMBER'}
+            </span>
+          </div>
+
+          <div className="profile-hero-main">
+            <div className="profile-avatar">
+              {firebaseUser?.photoURL ? (
+                <img
+                  src={firebaseUser.photoURL}
+                  alt={firebaseUser.displayName || 'Profile'}
+                  className="profile-avatar-img"
+                />
+              ) : profile.name ? (
+                profile.name.slice(0, 2).toUpperCase()
+              ) : (
+                <UserRound size={20} />
+              )}
+            </div>
+            <div className="profile-info">
+              <div className="profile-header-title">
+                <h3>
+                  {firebaseUser?.displayName || (profile.name ? profile.name : 'Colombo Streetwear Guest')}
+                </h3>
+              </div>
+              <p className="profile-email">
+                {firebaseUser?.email || profile.email || 'Sign in with Google for 1-click checkout'}
+              </p>
+            </div>
+            {firebaseUser && (
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="profile-logout-btn"
+                title="Sign out of Google"
+              >
+                Sign out
+              </button>
             )}
           </div>
-          <div className="profile-info">
-            <div className="profile-header-title">
-              <h3>
-                {firebaseUser?.displayName || (profile.name ? profile.name : 'Guest Explorer')}
-              </h3>
-              <span className={`profile-badge ${firebaseUser ? 'verified' : isGuest ? 'guest' : 'member'}`}>
-                {firebaseUser ? 'GOOGLE VERIFIED' : isGuest ? 'GUEST' : 'VIP MEMBER'}
-              </span>
-            </div>
-            <p className="profile-email">
-              {firebaseUser?.email || profile.email || (isGuest ? 'Guest session · Sign in for faster checkout' : 'Active Streetwear Profile')}
-            </p>
-          </div>
-          {firebaseUser && (
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="profile-logout-btn"
-              title="Sign out of Google"
-            >
-              Sign out
-            </button>
-          )}
         </div>
 
         {/* Google One-Tap / Sign-In Button */}

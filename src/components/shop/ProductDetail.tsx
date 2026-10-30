@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Heart, Minus, Plus, ArrowUpRight, Maximize2, Check, Share2 } from 'lucide-react';
+import { ArrowRight, Heart, Minus, Plus, ArrowUpRight, Maximize2, Check, Share2, Clock } from 'lucide-react';
 import { type Product, categories, products, money } from '@/lib/catalog';
 import { useStore } from '@/store/store';
 import { Modal } from '@/components/ui/Modal';
