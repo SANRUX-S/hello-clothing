@@ -11,9 +11,7 @@ import {
   MapPin,
   ArrowRight,
   ArrowUpRight,
-  MessageCircle,
   Search,
-  ExternalLink,
   ShieldCheck,
   Check
 } from 'lucide-react';
@@ -623,25 +621,6 @@ export default function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
             )}
           </div>
         )}
-
-        {/* Drawer Footer Actions */}
-        <div className="profile-drawer-footer">
-          <a
-            href="https://wa.me/94771234567"
-            target="_blank"
-            rel="noreferrer"
-            className="drawer-concierge-link"
-          >
-            <MessageCircle size={15} color="#25D366" />
-            <span>WhatsApp Concierge Support</span>
-            <ExternalLink size={12} />
-          </a>
-          <div className="drawer-sublinks">
-            <Link href="/track-order" onClick={onClose}>Track Order Page</Link>
-            <span>·</span>
-            <Link href="/admin" onClick={onClose}>Admin Studio</Link>
-          </div>
-        </div>
       </div>
     </Modal>
   );
