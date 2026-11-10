@@ -21,7 +21,9 @@ import {
   MessageCircle,
   FileText,
   PackageCheck,
-  Clock
+  Clock,
+  Lock,
+  Smartphone
 } from 'lucide-react';
 import './receipt.css';
 
@@ -29,7 +31,7 @@ import { useStore } from '@/store/store';
 import { cartSubtotal } from '@/lib/cart';
 import { products, money } from '@/lib/catalog';
 
-type PaymentMethod = 'cod' | 'bank' | 'card';
+type PaymentMethod = 'card' | 'wallet' | 'cod' | 'bank';
 type DeliveryMethod = 'standard' | 'express';
 
 export type StoredOrder = {
@@ -73,6 +75,43 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('standard');
 
+  // Inline card fields state
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardName, setCardName] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+  const [cardBrand, setCardBrand] = useState<'visa' | 'mastercard' | 'amex' | 'unknown'>('unknown');
+
+  // Format and detect card brand
+  function handleCardNumberChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value.replace(/[^0-9]/g, '').slice(0, 16);
+    if (raw.startsWith('4')) {
+      setCardBrand('visa');
+    } else if (/^(5[1-5]|2[2-7])/.test(raw)) {
+      setCardBrand('mastercard');
+    } else if (/^(34|37)/.test(raw)) {
+      setCardBrand('amex');
+    } else {
+      setCardBrand('unknown');
+    }
+    const formatted = raw.match(/.{1,4}/g)?.join(' ') || raw;
+    setCardNumber(formatted);
+  }
+
+  // Format expiry date MM / YY
+  function handleExpiryChange(e: React.ChangeEvent<HTMLInputElement>) {
+    let raw = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+    if (raw.length >= 2) {
+      let mm = parseInt(raw.slice(0, 2), 10);
+      if (mm > 12) mm = 12;
+      if (mm === 0) mm = 1;
+      const mmStr = mm < 10 ? `0${mm}` : `${mm}`;
+      const yyStr = raw.slice(2);
+      raw = yyStr ? `${mmStr} / ${yyStr}` : `${mmStr} / `;
+    }
+    setCardExpiry(raw);
+  }
+
   const subtotal = cartSubtotal(store.cart);
   const deliveryFee = deliveryMethod === 'express' ? 75000 : subtotal >= 1000000 ? 0 : 50000;
   const grandTotal = subtotal + deliveryFee;
@@ -103,6 +142,25 @@ export default function Checkout() {
       postalCode: String(data.get('postalCode') || '').trim() || undefined,
     };
 
+    if (paymentMethod === 'card') {
+      const cleanCard = cardNumber.replace(/\s/g, '');
+      if (cleanCard.length < 15) {
+        setBusy(false);
+        setError('Please enter a valid 16-digit Card Number.');
+        return;
+      }
+      if (!cardExpiry.trim() || cardExpiry.replace(/[^0-9]/g, '').length < 4) {
+        setBusy(false);
+        setError('Please enter a valid expiration date (MM / YY).');
+        return;
+      }
+      if (cardCvv.length < 3) {
+        setBusy(false);
+        setError('Please enter a valid 3 or 4-digit CVV security code.');
+        return;
+      }
+    }
+
     try {
       const response = await fetch('/api/checkout', {
         method: 'POST',
@@ -126,7 +184,7 @@ export default function Checkout() {
         total: result.preview.subtotal + deliveryFee,
         paymentMethod,
         deliveryMethod,
-        status: result.preview.status || (paymentMethod === 'card' ? 'pending_payment' : 'processing'),
+        status: result.preview.status || (paymentMethod === 'card' || paymentMethod === 'wallet' ? 'pending_payment' : 'processing'),
         courier: result.preview.courier || 'PromptX Logistics',
         tracking_number: result.preview.trackingNumber || `PX-${result.preview.reference.replace(/[^a-zA-Z0-9]/g, '').slice(-6)}`,
         trackingNumber: result.preview.trackingNumber || `PX-${result.preview.reference.replace(/[^a-zA-Z0-9]/g, '').slice(-6)}`,
@@ -147,8 +205,8 @@ export default function Checkout() {
         })),
       };
 
-      // 1. If Paying via Card, Launch PayHere Seamless Checkout Gateway
-      if (paymentMethod === 'card' && result.payhere) {
+      // 1. If Paying via Card or Mobile Wallet, Launch PayHere Seamless Gateway
+      if ((paymentMethod === 'card' || paymentMethod === 'wallet') && result.payhere) {
         saveOrder(fullOrder);
         try {
           localStorage.setItem('hello-customer-profile', JSON.stringify(customerData));
@@ -187,7 +245,7 @@ export default function Checkout() {
           payhere.onError = function onError(err: any) {
             setBusy(false);
             console.error('PayHere error:', err);
-            setError(typeof err === 'string' ? err : 'Card payment failed. Please check your card details and try again.');
+            setError(typeof err === 'string' ? err : 'Card authorization failed. Please check your details and try again.');
           };
 
           payhere.startPayment(result.payhere);
@@ -404,18 +462,23 @@ export default function Checkout() {
           <h2>
             <span>03</span> PAYMENT METHOD
           </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {/* 1. Credit / Debit Card (PayHere Gateway) */}
-            <label
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            {/* 1. Credit / Debit Card (Visa, Mastercard, AMEX) */}
+            <div
               className="checkout-option"
               style={{
                 cursor: 'pointer',
-                borderColor: paymentMethod === 'card' ? 'var(--fg)' : 'var(--line)',
-                background: paymentMethod === 'card' ? 'rgba(0, 0, 0, 0.02)' : 'transparent',
+                borderColor: paymentMethod === 'card' ? '#0d0f0d' : '#e4e4e7',
+                borderWidth: paymentMethod === 'card' ? '1.5px' : '1px',
+                background: paymentMethod === 'card' ? '#ffffff' : '#fafafa',
+                borderRadius: '8px',
+                padding: '16px',
+                transition: 'all 0.2s ease',
+                boxShadow: paymentMethod === 'card' ? '0 2px 8px rgba(0,0,0,0.04)' : 'none',
               }}
               onClick={() => setPaymentMethod('card')}
             >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                 <input
                   type="radio"
                   name="payment_opt"
@@ -423,35 +486,296 @@ export default function Checkout() {
                   onChange={() => setPaymentMethod('card')}
                   style={{ marginTop: '3px' }}
                 />
-                <CreditCard size={20} />
+                <CreditCard size={20} color={paymentMethod === 'card' ? '#0d0f0d' : '#71717a'} />
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-                    <strong>Credit / Debit Card (PayHere Gateway)</strong>
+                    <strong style={{ fontSize: '13px', color: '#18181b' }}>Credit / Debit Card</strong>
                     <span style={{ fontSize: '9px', fontWeight: 750, letterSpacing: '0.5px', padding: '2px 8px', borderRadius: '4px', background: '#052e16', color: '#4ade80', border: '1px solid #166534' }}>
                       RECOMMENDED · INSTANT
                     </span>
                   </div>
-                  <p>Visa, Mastercard, AMEX, FriMi, Genie, eZ Cash & Koko</p>
-                  <div style={{ display: 'flex', gap: '5px', marginTop: '6px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>VISA</span>
-                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>MASTERCARD</span>
-                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>AMEX</span>
-                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>FRIMI / GENIE</span>
+                  <p style={{ margin: '3px 0 0', fontSize: '11px', color: '#71717a' }}>
+                    Visa, Mastercard, AMEX &amp; Commercial Bank / Sampath Cards
+                  </p>
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#eff6ff', color: '#1d4ed8', borderRadius: '3px', border: '1px solid #bfdbfe' }}>VISA</span>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#fef2f2', color: '#b91c1c', borderRadius: '3px', border: '1px solid #fecaca' }}>MASTERCARD</span>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f0f9ff', color: '#0369a1', borderRadius: '3px', border: '1px solid #bae6fd' }}>AMEX</span>
                   </div>
                 </div>
               </div>
-            </label>
 
-            {/* 2. Cash on Delivery (COD) */}
-            <label
+              {/* DROPDOWN INLINE CARD DETAILS */}
+              {paymentMethod === 'card' && (
+                <div
+                  className="card-dropdown-fields"
+                  style={{
+                    marginTop: '16px',
+                    paddingTop: '16px',
+                    borderTop: '1px solid #e4e4e7',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    animation: 'fade-in 0.2s ease',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 750, letterSpacing: '0.8px', color: '#52525b', textTransform: 'uppercase' }}>
+                      Card Information
+                    </span>
+                    <span style={{ fontSize: '10px', color: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Lock size={11} /> 256-Bit SSL Encrypted
+                    </span>
+                  </div>
+
+                  {/* Card Number */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#27272a', marginBottom: '5px' }}>
+                      Card Number
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="cc-number"
+                        placeholder="4532  ••••  ••••  8921"
+                        maxLength={19}
+                        value={cardNumber}
+                        onChange={handleCardNumberChange}
+                        style={{
+                          width: '100%',
+                          padding: '10px 48px 10px 12px',
+                          fontSize: '13.5px',
+                          letterSpacing: '1px',
+                          fontFamily: 'monospace',
+                          border: '1px solid #d4d4d8',
+                          borderRadius: '6px',
+                          background: '#fafafa',
+                          color: '#18181b',
+                          outline: 'none',
+                        }}
+                      />
+                      <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+                        {cardBrand === 'visa' && <span style={{ fontSize: '9px', fontWeight: 900, color: '#1d4ed8', background: '#dbeafe', padding: '2px 6px', borderRadius: '3px', border: '1px solid #bfdbfe' }}>VISA</span>}
+                        {cardBrand === 'mastercard' && <span style={{ fontSize: '9px', fontWeight: 900, color: '#b91c1c', background: '#fee2e2', padding: '2px 6px', borderRadius: '3px', border: '1px solid #fecaca' }}>MC</span>}
+                        {cardBrand === 'amex' && <span style={{ fontSize: '9px', fontWeight: 900, color: '#0369a1', background: '#e0f2fe', padding: '2px 6px', borderRadius: '3px', border: '1px solid #bae6fd' }}>AMEX</span>}
+                        {cardBrand === 'unknown' && <CreditCard size={18} color="#a1a1aa" />}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cardholder Name */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#27272a', marginBottom: '5px' }}>
+                      Cardholder Name
+                    </label>
+                    <input
+                      type="text"
+                      autoComplete="cc-name"
+                      placeholder="e.g. KASUN PERERA"
+                      value={cardName}
+                      onChange={(e) => setCardName(e.target.value.toUpperCase())}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        fontSize: '13px',
+                        border: '1px solid #d4d4d8',
+                        borderRadius: '6px',
+                        background: '#fafafa',
+                        color: '#18181b',
+                        textTransform: 'uppercase',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+
+                  {/* Expiry & CVV Row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#27272a', marginBottom: '5px' }}>
+                        Expiration Date
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="cc-exp"
+                        placeholder="MM / YY"
+                        maxLength={7}
+                        value={cardExpiry}
+                        onChange={handleExpiryChange}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          fontSize: '13px',
+                          textAlign: 'center',
+                          border: '1px solid #d4d4d8',
+                          borderRadius: '6px',
+                          background: '#fafafa',
+                          color: '#18181b',
+                          outline: 'none',
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#27272a', marginBottom: '5px' }}>
+                        Security Code (CVV)
+                      </label>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="password"
+                          inputMode="numeric"
+                          autoComplete="cc-csc"
+                          placeholder="•••"
+                          maxLength={4}
+                          value={cardCvv}
+                          onChange={(e) => setCardCvv(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                          style={{
+                            width: '100%',
+                            padding: '10px 32px 10px 12px',
+                            fontSize: '13px',
+                            textAlign: 'center',
+                            border: '1px solid #d4d4d8',
+                            borderRadius: '6px',
+                            background: '#fafafa',
+                            color: '#18181b',
+                            outline: 'none',
+                          }}
+                        />
+                        <Lock size={13} color="#a1a1aa" style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#f4f4f5', borderRadius: '6px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                    <ShieldCheck size={16} color="#16a34a" style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: '10.5px', color: '#52525b', lineHeight: 1.4 }}>
+                      Card details are encrypted with <strong>3D Secure OTP</strong> verification via Central Bank of Sri Lanka &amp; PayHere Level 1 PCI Gateway.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Mobile Wallets & 1-Click Pay (Genie, FriMi, Koko, Google Pay) */}
+            <div
               className="checkout-option"
               style={{
                 cursor: 'pointer',
-                borderColor: paymentMethod === 'cod' ? 'var(--fg)' : 'var(--line)',
+                borderColor: paymentMethod === 'wallet' ? '#0d0f0d' : '#e4e4e7',
+                borderWidth: paymentMethod === 'wallet' ? '1.5px' : '1px',
+                background: paymentMethod === 'wallet' ? '#ffffff' : '#fafafa',
+                borderRadius: '8px',
+                padding: '16px',
+                transition: 'all 0.2s ease',
+                boxShadow: paymentMethod === 'wallet' ? '0 2px 8px rgba(0,0,0,0.04)' : 'none',
+              }}
+              onClick={() => setPaymentMethod('wallet')}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <input
+                  type="radio"
+                  name="payment_opt"
+                  checked={paymentMethod === 'wallet'}
+                  onChange={() => setPaymentMethod('wallet')}
+                  style={{ marginTop: '3px' }}
+                />
+                <Smartphone size={20} color={paymentMethod === 'wallet' ? '#0d0f0d' : '#71717a'} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                    <strong style={{ fontSize: '13px', color: '#18181b' }}>Mobile Wallets &amp; 1-Click Pay</strong>
+                    <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.5px', padding: '2px 8px', borderRadius: '4px', background: '#f4f4f5', color: '#18181b', border: '1px solid #e4e4e7' }}>
+                      QR &amp; 3-INSTALLMENT
+                    </span>
+                  </div>
+                  <p style={{ margin: '3px 0 0', fontSize: '11px', color: '#71717a' }}>
+                    Dialog Genie, Nations FriMi, Koko (Pay in 3) &amp; Google Pay
+                  </p>
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f5f3ff', color: '#7c3aed', borderRadius: '3px', border: '1px solid #ddd6fe' }}>GENIE</span>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#fff7ed', color: '#c2410c', borderRadius: '3px', border: '1px solid #ffedd5' }}>FRIMI</span>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#eff6ff', color: '#2563eb', borderRadius: '3px', border: '1px solid #bfdbfe' }}>KOKO</span>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>G-PAY</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* DROPDOWN INLINE WALLETS INFO */}
+              {paymentMethod === 'wallet' && (
+                <div
+                  className="wallet-dropdown-fields"
+                  style={{
+                    marginTop: '16px',
+                    paddingTop: '16px',
+                    borderTop: '1px solid #e4e4e7',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                    animation: 'fade-in 0.2s ease',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span style={{ fontSize: '10px', fontWeight: 750, letterSpacing: '0.8px', color: '#52525b', textTransform: 'uppercase' }}>
+                    Select Your Wallet or Installment Plan:
+                  </span>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
+                    <div style={{ padding: '8px 10px', borderRadius: '6px', border: '1px solid #e4e4e7', background: '#fafafa', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: 900, fontSize: '10px', background: '#7c3aed', color: '#ffffff', padding: '2px 5px', borderRadius: '3px' }}>GENIE</span>
+                      <div>
+                        <strong style={{ fontSize: '10.5px', display: 'block' }}>Genie</strong>
+                        <span style={{ fontSize: '9px', color: '#71717a' }}>Scan QR or 1-tap</span>
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '8px 10px', borderRadius: '6px', border: '1px solid #e4e4e7', background: '#fafafa', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: 900, fontSize: '10px', background: '#ea580c', color: '#ffffff', padding: '2px 5px', borderRadius: '3px' }}>FRIMI</span>
+                      <div>
+                        <strong style={{ fontSize: '10.5px', display: 'block' }}>FriMi</strong>
+                        <span style={{ fontSize: '9px', color: '#71717a' }}>Debit &amp; wallet</span>
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '8px 10px', borderRadius: '6px', border: '1px solid #e4e4e7', background: '#fafafa', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: 900, fontSize: '10px', background: '#2563eb', color: '#ffffff', padding: '2px 5px', borderRadius: '3px' }}>KOKO</span>
+                      <div>
+                        <strong style={{ fontSize: '10.5px', display: 'block' }}>Pay in 3</strong>
+                        <span style={{ fontSize: '9px', color: '#71717a' }}>Split payments</span>
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '8px 10px', borderRadius: '6px', border: '1px solid #e4e4e7', background: '#fafafa', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: 900, fontSize: '10px', background: '#18181b', color: '#ffffff', padding: '2px 5px', borderRadius: '3px' }}>G-PAY</span>
+                      <div>
+                        <strong style={{ fontSize: '10.5px', display: 'block' }}>Google Pay</strong>
+                        <span style={{ fontSize: '9px', color: '#71717a' }}>Saved cards</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#71717a', lineHeight: 1.4 }}>
+                    Clicking the button below will connect to the official 1-click PayHere gateway to authenticate your selected wallet.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Cash on Delivery (COD) */}
+            <div
+              className="checkout-option"
+              style={{
+                cursor: 'pointer',
+                borderColor: paymentMethod === 'cod' ? '#0d0f0d' : '#e4e4e7',
+                borderWidth: paymentMethod === 'cod' ? '1.5px' : '1px',
+                background: paymentMethod === 'cod' ? '#ffffff' : '#fafafa',
+                borderRadius: '8px',
+                padding: '16px',
+                transition: 'all 0.2s ease',
               }}
               onClick={() => setPaymentMethod('cod')}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <input
                   type="radio"
                   name="payment_opt"
@@ -459,36 +783,77 @@ export default function Checkout() {
                   onChange={() => setPaymentMethod('cod')}
                 />
                 <CheckCircle2 size={20} color="#16a34a" />
-                <div>
-                  <strong>Cash on Delivery (COD)</strong>
-                  <p>Pay in cash directly to courier partner upon delivery</p>
+                <div style={{ flex: 1 }}>
+                  <strong style={{ fontSize: '13px', color: '#18181b' }}>Cash on Delivery (COD)</strong>
+                  <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#71717a' }}>
+                    Pay in cash directly to courier partner upon doorstep delivery
+                  </p>
                 </div>
               </div>
-            </label>
 
-            {/* 3. Direct Bank Transfer */}
-            <label
+              {paymentMethod === 'cod' && (
+                <div
+                  style={{
+                    marginTop: '12px',
+                    paddingTop: '12px',
+                    borderTop: '1px solid #e4e4e7',
+                    animation: 'fade-in 0.2s ease',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <p style={{ margin: 0, fontSize: '11px', color: '#52525b', lineHeight: 1.5 }}>
+                    💵 Pay in cash to our PromptX delivery partner. Please keep exact cash of <strong>{money(grandTotal)}</strong> ready for swift courier handover.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* 4. Direct Bank Transfer */}
+            <div
               className="checkout-option"
               style={{
                 cursor: 'pointer',
-                borderColor: paymentMethod === 'bank' ? 'var(--fg)' : 'var(--line)',
+                borderColor: paymentMethod === 'bank' ? '#0d0f0d' : '#e4e4e7',
+                borderWidth: paymentMethod === 'bank' ? '1.5px' : '1px',
+                background: paymentMethod === 'bank' ? '#ffffff' : '#fafafa',
+                borderRadius: '8px',
+                padding: '16px',
+                transition: 'all 0.2s ease',
               }}
               onClick={() => setPaymentMethod('bank')}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <input
                   type="radio"
                   name="payment_opt"
                   checked={paymentMethod === 'bank'}
                   onChange={() => setPaymentMethod('bank')}
                 />
-                <Building2 size={20} />
-                <div>
-                  <strong>Direct Bank Transfer / Deposit</strong>
-                  <p>Commercial Bank or Sampath Bank (Account details on confirmation)</p>
+                <Building2 size={20} color={paymentMethod === 'bank' ? '#0d0f0d' : '#71717a'} />
+                <div style={{ flex: 1 }}>
+                  <strong style={{ fontSize: '13px', color: '#18181b' }}>Direct Bank Transfer / Deposit</strong>
+                  <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#71717a' }}>
+                    Commercial Bank of Ceylon or Sampath Bank accounts
+                  </p>
                 </div>
               </div>
-            </label>
+
+              {paymentMethod === 'bank' && (
+                <div
+                  style={{
+                    marginTop: '12px',
+                    paddingTop: '12px',
+                    borderTop: '1px solid #e4e4e7',
+                    animation: 'fade-in 0.2s ease',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <p style={{ margin: 0, fontSize: '11px', color: '#52525b', lineHeight: 1.5 }}>
+                    🏦 Official Commercial Bank &amp; Sampath Bank account numbers with 1-click WhatsApp deposit slip submission will appear on your confirmation receipt.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -536,8 +901,8 @@ export default function Checkout() {
             className="button dark"
             type="submit"
             style={{
-              background: paymentMethod === 'card' ? '#0d0f0d' : '#16a34a',
-              borderColor: paymentMethod === 'card' ? '#27272a' : '#15803d',
+              background: paymentMethod === 'card' || paymentMethod === 'wallet' ? '#0d0f0d' : paymentMethod === 'bank' ? '#18181b' : '#16a34a',
+              borderColor: paymentMethod === 'card' || paymentMethod === 'wallet' ? '#27272a' : paymentMethod === 'bank' ? '#3f3f46' : '#15803d',
               color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
@@ -553,13 +918,25 @@ export default function Checkout() {
             {paymentMethod === 'card' ? (
               <>
                 <CreditCard size={18} />
-                <span>{busy ? 'CONNECTING PAYHERE…' : `PAY WITH CARD (${money(grandTotal)})`}</span>
+                <span>{busy ? 'CONNECTING TO 3D SECURE…' : `PAY WITH CARD (${money(grandTotal)})`}</span>
+                <ArrowRight size={17} />
+              </>
+            ) : paymentMethod === 'wallet' ? (
+              <>
+                <Smartphone size={18} />
+                <span>{busy ? 'CONNECTING WALLET…' : `PAY VIA WALLET / KOKO (${money(grandTotal)})`}</span>
+                <ArrowRight size={17} />
+              </>
+            ) : paymentMethod === 'bank' ? (
+              <>
+                <Building2 size={18} />
+                <span>{busy ? 'SAVING ORDER…' : `CONFIRM BANK TRANSFER (${money(grandTotal)})`}</span>
                 <ArrowRight size={17} />
               </>
             ) : (
               <>
                 <MessageCircle size={18} />
-                <span>{busy ? 'PREPARING ORDER…' : 'PLACE ORDER VIA WHATSAPP'}</span>
+                <span>{busy ? 'PREPARING ORDER…' : 'PLACE ORDER (CASH ON DELIVERY)'}</span>
                 <ArrowRight size={17} />
               </>
             )}
@@ -568,8 +945,12 @@ export default function Checkout() {
           <p className="small muted" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
             <ShieldCheck size={14} color="#22c55e" />
             {paymentMethod === 'card'
-              ? 'Secured with 256-Bit SSL encryption powered by PayHere Gateway.'
-              : 'Order will be saved and confirmed directly on HELLO! Official WhatsApp (+94 78 619 1260).'}
+              ? 'Secured with 256-Bit SSL encryption & Central Bank 3D Secure OTP verification.'
+              : paymentMethod === 'wallet'
+              ? '1-Click wallet authentication powered by PayHere & Sri Lanka mobile banking networks.'
+              : paymentMethod === 'bank'
+              ? 'Official bank account details provided upon receipt creation. Slip required within 24 hours.'
+              : 'Order will be dispatched via PromptX Courier. Pay cash on delivery.'}
           </p>
         </aside>
       </form>
@@ -722,11 +1103,11 @@ export function OrderConfirmation({ reference }: { reference: string }) {
         </div>
       ) : order ? (
         <>
-        {order.paymentMethod === 'card' ? (
+        {order.paymentMethod === 'card' || order.paymentMethod === 'wallet' ? (
           <div className="receipt-approved-banner no-print" style={{ background: 'linear-gradient(135deg, rgba(5, 46, 22, 0.45) 0%, rgba(6, 78, 59, 0.35) 100%)', border: '1px solid rgba(74, 222, 128, 0.4)', borderRadius: '12px', padding: '18px 22px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#4ade80', fontSize: '11px', fontWeight: 700, letterSpacing: '1.2px' }}>
-                <CheckCircle2 size={16} /> PAYMENT APPROVED · ONLINE CARD TRANSACTION
+                <CheckCircle2 size={16} /> PAYMENT APPROVED · ONLINE TRANSACTION
               </span>
               <h3 style={{ margin: '6px 0 2px', fontSize: '15px', color: '#ffffff', fontWeight: 650 }}>
                 Order #{order.reference} is confirmed &amp; verified via PayHere Gateway.
@@ -819,10 +1200,10 @@ export function OrderConfirmation({ reference }: { reference: string }) {
             <div className="receipt-meta-card">
               <span className="receipt-meta-label">Payment Method</span>
               <strong className="receipt-meta-val" style={{ color: '#4ade80' }}>
-                {order.paymentMethod === 'cod' ? 'Cash on Delivery (COD)' : order.paymentMethod === 'bank' ? 'Bank Transfer' : 'Card'}
+                {order.paymentMethod === 'cod' ? 'Cash on Delivery (COD)' : order.paymentMethod === 'bank' ? 'Bank Transfer' : order.paymentMethod === 'wallet' ? 'Mobile Wallet / Koko' : 'Credit / Debit Card'}
               </strong>
               <span className="receipt-meta-sub">
-                {order.paymentMethod === 'cod' ? 'Cash payable upon delivery' : order.paymentMethod === 'bank' ? 'Deposit slip verification' : 'Paid'}
+                {order.paymentMethod === 'cod' ? 'Cash payable upon delivery' : order.paymentMethod === 'bank' ? 'Deposit slip verification' : 'Verified via PayHere'}
               </span>
             </div>
           </div>

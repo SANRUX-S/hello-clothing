@@ -67,8 +67,8 @@ export async function POST(request: Request) {
         }
       }
 
-      // Automatically send Resend emails for COD and Bank Transfer (Card emails trigger upon PayHere approval)
-      if (paymentMethod !== 'card') {
+      // Automatically send Resend emails for COD and Bank Transfer (Card / Wallet emails trigger upon PayHere approval)
+      if (paymentMethod !== 'card' && paymentMethod !== 'wallet') {
         Promise.allSettled([
           sendOrderConfirmationEmail({
             reference,
@@ -92,9 +92,9 @@ export async function POST(request: Request) {
       console.error("Failed to persist order to Neon:", dbErr);
     }
 
-    // Generate PayHere Parameters for Card Payment
+    // Generate PayHere Parameters for Online Card / Mobile Wallet Payment
     let payhere = null;
-    if (paymentMethod === 'card') {
+    if (paymentMethod === 'card' || paymentMethod === 'wallet') {
       const nameParts = (customer.name || '').trim().split(' ');
       const firstName = nameParts[0] || 'Valued';
       const lastName = nameParts.slice(1).join(' ') || 'Customer';
@@ -132,14 +132,14 @@ export async function POST(request: Request) {
     return NextResponse.json({
       mode: "live",
       orderPlaced: true,
-      paymentCollected: paymentMethod === 'card',
+      paymentCollected: paymentMethod === 'card' || paymentMethod === 'wallet',
       message: "Order placed successfully! Keep your reference code for tracking.",
       preview: {
         reference,
         ...preview,
         customer,
         paymentMethod,
-        status: paymentMethod === 'card' ? 'pending_payment' : 'processing',
+        status: (paymentMethod === 'card' || paymentMethod === 'wallet') ? 'pending_payment' : 'processing',
         courier: "PromptX Logistics",
         trackingNumber: `PX-${randomHex}`
       },
