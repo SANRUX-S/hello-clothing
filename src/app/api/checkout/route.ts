@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { getProductsFromDb, createOrderInDb, updateProductStockInDb } from "@/lib/server/db";
 import { sendOrderConfirmationEmail, sendAdminNewOrderAlert } from "@/lib/server/mail";
+import { generatePayHereHash, getPayHereConfig } from "@/lib/server/payhere";
 import { calculateDemoCheckout, CommerceError } from "@/lib/server/commerce";
 import { allowDemoRequest, privateHeaders, readJsonBody, RequestError, requireSameOrigin } from "@/lib/server/http";
 
@@ -52,10 +53,10 @@ export async function POST(request: Request) {
         delivery: preview.delivery,
         total: preview.total,
         payment_method: paymentMethod,
-        status: "processing",
+        status: paymentMethod === 'card' ? 'pending_payment' : 'processing',
         courier: "PromptX Logistics",
         tracking_number: `PX-${randomHex}`,
-        notes: "Placed via HELLO! Storefront"
+        notes: paymentMethod === 'card' ? 'Awaiting PayHere Card Payment' : 'Placed via HELLO! Storefront'
       });
 
       // Update stock in Neon for each ordered product
@@ -66,43 +67,83 @@ export async function POST(request: Request) {
         }
       }
 
-      // Automatically send Resend emails (Customer Confirmation & Store Admin Notification)
-      Promise.allSettled([
-        sendOrderConfirmationEmail({
-          reference,
-          customer,
-          items: preview.items,
-          subtotal: preview.subtotal,
-          delivery: preview.delivery,
-          total: preview.total,
-          paymentMethod,
-        }),
-        sendAdminNewOrderAlert({
-          reference,
-          customer,
-          items: preview.items,
-          total: preview.total,
-          paymentMethod,
-        }),
-      ]).catch((err) => console.error("Email sending error:", err));
+      // Automatically send Resend emails for COD and Bank Transfer (Card emails trigger upon PayHere approval)
+      if (paymentMethod !== 'card') {
+        Promise.allSettled([
+          sendOrderConfirmationEmail({
+            reference,
+            customer,
+            items: preview.items,
+            subtotal: preview.subtotal,
+            delivery: preview.delivery,
+            total: preview.total,
+            paymentMethod,
+          }),
+          sendAdminNewOrderAlert({
+            reference,
+            customer,
+            items: preview.items,
+            total: preview.total,
+            paymentMethod,
+          }),
+        ]).catch((err) => console.error("Email sending error:", err));
+      }
     } catch (dbErr) {
       console.error("Failed to persist order to Neon:", dbErr);
+    }
+
+    // Generate PayHere Parameters for Card Payment
+    let payhere = null;
+    if (paymentMethod === 'card') {
+      const nameParts = (customer.name || '').trim().split(' ');
+      const firstName = nameParts[0] || 'Valued';
+      const lastName = nameParts.slice(1).join(' ') || 'Customer';
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL && !process.env.NEXT_PUBLIC_SITE_URL.includes('localhost') 
+        ? process.env.NEXT_PUBLIC_SITE_URL 
+        : 'https://www.helloclothing.store';
+
+      const hash = generatePayHereHash(reference, preview.total, 'LKR');
+      const { merchantId, isSandbox } = getPayHereConfig();
+
+      payhere = {
+        sandbox: isSandbox,
+        merchant_id: merchantId,
+        return_url: `${siteUrl}/order-confirmation/${reference}`,
+        cancel_url: `${siteUrl}/checkout`,
+        notify_url: `${siteUrl}/api/payhere/notify`,
+        order_id: reference,
+        items: preview.items.map(it => it.name).join(', ') || 'HELLO! Clothing Order',
+        amount: (preview.total / 100).toFixed(2),
+        currency: 'LKR',
+        hash,
+        first_name: firstName,
+        last_name: lastName,
+        email: customer.email || 'customer@helloclothing.store',
+        phone: customer.phone || '0786191260',
+        address: customer.address || 'Colombo',
+        city: customer.city || 'Colombo',
+        country: 'Sri Lanka',
+        delivery_address: customer.address || 'Colombo',
+        delivery_city: customer.city || 'Colombo',
+        delivery_country: 'Sri Lanka',
+      };
     }
 
     return NextResponse.json({
       mode: "live",
       orderPlaced: true,
-      paymentCollected: paymentMethod !== "cod",
+      paymentCollected: paymentMethod === 'card',
       message: "Order placed successfully! Keep your reference code for tracking.",
       preview: {
         reference,
         ...preview,
         customer,
         paymentMethod,
-        status: "processing",
+        status: paymentMethod === 'card' ? 'pending_payment' : 'processing',
         courier: "PromptX Logistics",
         trackingNumber: `PX-${randomHex}`
       },
+      payhere,
     }, { headers: privateHeaders });
   } catch (error) {
     if (error instanceof ZodError) {

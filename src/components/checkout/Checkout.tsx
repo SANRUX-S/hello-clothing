@@ -77,6 +77,17 @@ export default function Checkout() {
   const deliveryFee = deliveryMethod === 'express' ? 75000 : subtotal >= 1000000 ? 0 : 50000;
   const grandTotal = subtotal + deliveryFee;
 
+  // Load PayHere JavaScript SDK
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !document.getElementById('payhere-sdk')) {
+      const script = document.createElement('script');
+      script.id = 'payhere-sdk';
+      script.src = 'https://www.payhere.lk/lib/payhere.js';
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }, []);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -115,7 +126,7 @@ export default function Checkout() {
         total: result.preview.subtotal + deliveryFee,
         paymentMethod,
         deliveryMethod,
-        status: result.preview.status || 'processing',
+        status: result.preview.status || (paymentMethod === 'card' ? 'pending_payment' : 'processing'),
         courier: result.preview.courier || 'PromptX Logistics',
         tracking_number: result.preview.trackingNumber || `PX-${result.preview.reference.replace(/[^a-zA-Z0-9]/g, '').slice(-6)}`,
         trackingNumber: result.preview.trackingNumber || `PX-${result.preview.reference.replace(/[^a-zA-Z0-9]/g, '').slice(-6)}`,
@@ -136,8 +147,54 @@ export default function Checkout() {
         })),
       };
 
-      // Format structured WhatsApp order message
-      const paymentText = paymentMethod === 'cod' ? 'Cash on Delivery (COD)' : paymentMethod === 'bank' ? 'Direct Bank Transfer' : 'Card / Online';
+      // 1. If Paying via Card, Launch PayHere Seamless Checkout Gateway
+      if (paymentMethod === 'card' && result.payhere) {
+        saveOrder(fullOrder);
+        try {
+          localStorage.setItem('hello-customer-profile', JSON.stringify(customerData));
+        } catch {}
+
+        const payhere = (window as any).payhere;
+        if (payhere && typeof payhere.startPayment === 'function') {
+          payhere.onCompleted = function onCompleted(orderId: string) {
+            store.clear();
+            router.push(`/order-confirmation/${orderId}?status=paid`);
+          };
+
+          payhere.onDismissed = function onDismissed() {
+            setBusy(false);
+            setError('Payment was cancelled. You can retry or choose Cash on Delivery.');
+          };
+
+          payhere.onError = function onError(err: any) {
+            setBusy(false);
+            console.error('PayHere error:', err);
+            setError(typeof err === 'string' ? err : 'Card payment failed. Please check your card details and try again.');
+          };
+
+          payhere.startPayment(result.payhere);
+          return;
+        } else {
+          // Robust Fallback: direct form submit to PayHere if SDK loading was delayed
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = result.payhere.sandbox ? 'https://sandbox.payhere.lk/pay/checkout' : 'https://www.payhere.lk/pay/checkout';
+          for (const key of Object.keys(result.payhere)) {
+            const hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = key;
+            hidden.value = String((result.payhere as any)[key]);
+            form.appendChild(hidden);
+          }
+          document.body.appendChild(form);
+          store.clear();
+          form.submit();
+          return;
+        }
+      }
+
+      // 2. If COD or Bank Transfer, route with structured WhatsApp confirmation
+      const paymentText = paymentMethod === 'cod' ? 'Cash on Delivery (COD)' : 'Direct Bank Transfer';
       const itemsList = fullOrder.items
         .map(it => `• *${it.name}* (${it.size} / ${it.color}) x ${it.quantity} - LKR ${(it.lineTotal / 100).toLocaleString()}`)
         .join('\n');
@@ -170,7 +227,6 @@ export default function Checkout() {
 
       store.clear();
 
-      // Launch WhatsApp automatically
       try {
         window.open(wpUrl, '_blank');
       } catch {}
@@ -385,17 +441,24 @@ export default function Checkout() {
               }}
               onClick={() => setPaymentMethod('card')}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                 <input
                   type="radio"
                   name="payment_opt"
                   checked={paymentMethod === 'card'}
                   onChange={() => setPaymentMethod('card')}
+                  style={{ marginTop: '3px' }}
                 />
                 <CreditCard size={20} />
-                <div>
-                  <strong>Credit / Debit Card (Visa, Mastercard, Amex)</strong>
-                  <p>Instant secure payment gateway</p>
+                <div style={{ flex: 1 }}>
+                  <strong>Credit / Debit Card (PayHere Gateway)</strong>
+                  <p>Visa, Mastercard, AMEX, FriMi, Genie, eZ Cash & Koko</p>
+                  <div style={{ display: 'flex', gap: '5px', marginTop: '6px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>VISA</span>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>MASTERCARD</span>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>AMEX</span>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>FRIMI / GENIE</span>
+                  </div>
                 </div>
               </div>
             </label>
@@ -445,15 +508,41 @@ export default function Checkout() {
             disabled={busy || !store.ready}
             className="button dark"
             type="submit"
-            style={{ background: '#16a34a', borderColor: '#15803d', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', minHeight: '48px', fontSize: '12px', letterSpacing: '1px' }}
+            style={{
+              background: paymentMethod === 'card' ? '#0d0f0d' : '#16a34a',
+              borderColor: paymentMethod === 'card' ? '#27272a' : '#15803d',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              minHeight: '48px',
+              fontSize: '12px',
+              letterSpacing: '1px',
+              cursor: busy ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+            }}
           >
-            <MessageCircle size={18} />
-            <span>{busy ? 'PREPARING ORDER…' : 'PLACE ORDER VIA WHATSAPP'}</span>
-            <ArrowRight size={17} />
+            {paymentMethod === 'card' ? (
+              <>
+                <CreditCard size={18} />
+                <span>{busy ? 'CONNECTING PAYHERE…' : `PAY WITH CARD (${money(grandTotal)})`}</span>
+                <ArrowRight size={17} />
+              </>
+            ) : (
+              <>
+                <MessageCircle size={18} />
+                <span>{busy ? 'PREPARING ORDER…' : 'PLACE ORDER VIA WHATSAPP'}</span>
+                <ArrowRight size={17} />
+              </>
+            )}
           </button>
 
           <p className="small muted" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
-            <ShieldCheck size={14} color="#22c55e" /> Order will be saved and confirmed directly on HELLO! Official WhatsApp (+94 78 619 1260).
+            <ShieldCheck size={14} color="#22c55e" />
+            {paymentMethod === 'card'
+              ? 'Secured with 256-Bit SSL encryption powered by PayHere Gateway.'
+              : 'Order will be saved and confirmed directly on HELLO! Official WhatsApp (+94 78 619 1260).'}
           </p>
         </aside>
       </form>

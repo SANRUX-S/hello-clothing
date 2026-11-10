@@ -79,7 +79,7 @@ export type DbOrder = {
   delivery: number;
   total: number;
   payment_method: string;
-  status: 'processing' | 'confirmed' | 'production' | 'dispatched' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  status: 'processing' | 'confirmed' | 'production' | 'dispatched' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'pending_payment';
   courier: string;
   tracking_number: string;
   notes: string;
@@ -496,6 +496,24 @@ export async function updateOrderStatusInDb(reference: string, status: string, c
         tracking_number = COALESCE(${trackingNumber || null}, tracking_number),
         updated_at = NOW()
     WHERE reference = ${reference};
+  `;
+}
+
+export async function markOrderPaidInDb(reference: string, paymentId: string, method?: string) {
+  invalidateOrdersCache();
+  const sql = getDb();
+  if (!sql) throw new Error('Database connection is not configured.');
+  const paymentNote = `[PayHere Paid] ID: ${paymentId} (${method || 'CARD'})`;
+  await sql`
+    UPDATE orders
+    SET status = 'order_placed',
+        payment_method = 'card',
+        notes = CASE 
+          WHEN notes IS NULL OR notes = '' THEN ${paymentNote}
+          ELSE notes || ' | ' || ${paymentNote}
+        END,
+        updated_at = NOW()
+    WHERE UPPER(reference) = ${reference.trim().toUpperCase()};
   `;
 }
 
