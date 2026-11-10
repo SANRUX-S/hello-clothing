@@ -70,7 +70,7 @@ export default function Checkout() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('standard');
 
   const subtotal = cartSubtotal(store.cart);
@@ -154,7 +154,25 @@ export default function Checkout() {
           localStorage.setItem('hello-customer-profile', JSON.stringify(customerData));
         } catch {}
 
-        const payhere = (window as any).payhere;
+        let payhere = (window as any).payhere;
+        if (!payhere || typeof payhere.startPayment !== 'function') {
+          // Wait up to 1.5s for SDK to initialize if still loading
+          await new Promise<void>((resolve) => {
+            let elapsed = 0;
+            const timer = setInterval(() => {
+              elapsed += 100;
+              if ((window as any).payhere && typeof (window as any).payhere.startPayment === 'function') {
+                clearInterval(timer);
+                payhere = (window as any).payhere;
+                resolve();
+              } else if (elapsed >= 1500) {
+                clearInterval(timer);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+
         if (payhere && typeof payhere.startPayment === 'function') {
           payhere.onCompleted = function onCompleted(orderId: string) {
             store.clear();
@@ -175,7 +193,7 @@ export default function Checkout() {
           payhere.startPayment(result.payhere);
           return;
         } else {
-          // Robust Fallback: direct form submit to PayHere if SDK loading was delayed
+          // Robust Fallback: direct form submit to PayHere if SDK popup is blocked
           const form = document.createElement('form');
           form.method = 'POST';
           form.action = result.payhere.sandbox ? 'https://sandbox.payhere.lk/pay/checkout' : 'https://www.payhere.lk/pay/checkout';
@@ -387,6 +405,44 @@ export default function Checkout() {
             <span>03</span> PAYMENT METHOD
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {/* 1. Credit / Debit Card (PayHere Gateway) */}
+            <label
+              className="checkout-option"
+              style={{
+                cursor: 'pointer',
+                borderColor: paymentMethod === 'card' ? 'var(--fg)' : 'var(--line)',
+                background: paymentMethod === 'card' ? 'rgba(0, 0, 0, 0.02)' : 'transparent',
+              }}
+              onClick={() => setPaymentMethod('card')}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                <input
+                  type="radio"
+                  name="payment_opt"
+                  checked={paymentMethod === 'card'}
+                  onChange={() => setPaymentMethod('card')}
+                  style={{ marginTop: '3px' }}
+                />
+                <CreditCard size={20} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                    <strong>Credit / Debit Card (PayHere Gateway)</strong>
+                    <span style={{ fontSize: '9px', fontWeight: 750, letterSpacing: '0.5px', padding: '2px 8px', borderRadius: '4px', background: '#052e16', color: '#4ade80', border: '1px solid #166534' }}>
+                      RECOMMENDED · INSTANT
+                    </span>
+                  </div>
+                  <p>Visa, Mastercard, AMEX, FriMi, Genie, eZ Cash & Koko</p>
+                  <div style={{ display: 'flex', gap: '5px', marginTop: '6px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>VISA</span>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>MASTERCARD</span>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>AMEX</span>
+                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>FRIMI / GENIE</span>
+                  </div>
+                </div>
+              </div>
+            </label>
+
+            {/* 2. Cash on Delivery (COD) */}
             <label
               className="checkout-option"
               style={{
@@ -410,6 +466,7 @@ export default function Checkout() {
               </div>
             </label>
 
+            {/* 3. Direct Bank Transfer */}
             <label
               className="checkout-option"
               style={{
@@ -429,36 +486,6 @@ export default function Checkout() {
                 <div>
                   <strong>Direct Bank Transfer / Deposit</strong>
                   <p>Commercial Bank or Sampath Bank (Account details on confirmation)</p>
-                </div>
-              </div>
-            </label>
-
-            <label
-              className="checkout-option"
-              style={{
-                cursor: 'pointer',
-                borderColor: paymentMethod === 'card' ? 'var(--fg)' : 'var(--line)',
-              }}
-              onClick={() => setPaymentMethod('card')}
-            >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                <input
-                  type="radio"
-                  name="payment_opt"
-                  checked={paymentMethod === 'card'}
-                  onChange={() => setPaymentMethod('card')}
-                  style={{ marginTop: '3px' }}
-                />
-                <CreditCard size={20} />
-                <div style={{ flex: 1 }}>
-                  <strong>Credit / Debit Card (PayHere Gateway)</strong>
-                  <p>Visa, Mastercard, AMEX, FriMi, Genie, eZ Cash & Koko</p>
-                  <div style={{ display: 'flex', gap: '5px', marginTop: '6px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>VISA</span>
-                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>MASTERCARD</span>
-                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>AMEX</span>
-                    <span style={{ fontSize: '8.5px', fontWeight: 800, padding: '2px 6px', background: '#f4f4f5', color: '#18181b', borderRadius: '3px', border: '1px solid #e4e4e7' }}>FRIMI / GENIE</span>
-                  </div>
                 </div>
               </div>
             </label>
@@ -695,27 +722,51 @@ export function OrderConfirmation({ reference }: { reference: string }) {
         </div>
       ) : order ? (
         <>
-        <div className="receipt-whatsapp-banner no-print" style={{ background: 'linear-gradient(135deg, rgba(22, 101, 52, 0.3) 0%, rgba(20, 83, 45, 0.2) 100%)', border: '1px solid rgba(74, 222, 128, 0.35)', borderRadius: '12px', padding: '18px 22px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-          <div>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#4ade80', fontSize: '11px', fontWeight: 700, letterSpacing: '1.2px' }}>
-              <MessageCircle size={15} /> ORDER SAVED & WHATSAPP READY
-            </span>
-            <h3 style={{ margin: '6px 0 2px', fontSize: '15px', color: '#ffffff', fontWeight: 650 }}>Order #{order.reference} is ready for dispatch confirmation.</h3>
-            <p style={{ margin: 0, fontSize: '12.5px', color: '#d1d5db' }}>
-              If WhatsApp didn't open automatically, click the button to send your receipt to our team (+94 78 619 1260).
-            </p>
+        {order.paymentMethod === 'card' ? (
+          <div className="receipt-approved-banner no-print" style={{ background: 'linear-gradient(135deg, rgba(5, 46, 22, 0.45) 0%, rgba(6, 78, 59, 0.35) 100%)', border: '1px solid rgba(74, 222, 128, 0.4)', borderRadius: '12px', padding: '18px 22px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#4ade80', fontSize: '11px', fontWeight: 700, letterSpacing: '1.2px' }}>
+                <CheckCircle2 size={16} /> PAYMENT APPROVED · ONLINE CARD TRANSACTION
+              </span>
+              <h3 style={{ margin: '6px 0 2px', fontSize: '15px', color: '#ffffff', fontWeight: 650 }}>
+                Order #{order.reference} is confirmed &amp; verified via PayHere Gateway.
+              </h3>
+              <p style={{ margin: 0, fontSize: '12.5px', color: '#d1d5db' }}>
+                Your payment of {money(order.total)} was successfully processed. Our team will pack and dispatch your streetwear pieces via PromptX Courier. A receipt was sent to {order.customer.email || 'your email'}.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#22c55e', color: '#052e16', fontWeight: 750, padding: '11px 20px', borderRadius: '8px', fontSize: '13px', letterSpacing: '0.4px', flexShrink: 0, border: 'none', cursor: 'pointer' }}
+            >
+              <Printer size={16} />
+              PRINT RECEIPT
+            </button>
           </div>
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#22c55e', color: '#052e16', fontWeight: 750, padding: '11px 20px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', letterSpacing: '0.4px', flexShrink: 0 }}
-          >
-            <MessageCircle size={18} />
-            OPEN IN WHATSAPP
-            <ArrowRight size={16} />
-          </a>
-        </div>
+        ) : (
+          <div className="receipt-whatsapp-banner no-print" style={{ background: 'linear-gradient(135deg, rgba(22, 101, 52, 0.3) 0%, rgba(20, 83, 45, 0.2) 100%)', border: '1px solid rgba(74, 222, 128, 0.35)', borderRadius: '12px', padding: '18px 22px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#4ade80', fontSize: '11px', fontWeight: 700, letterSpacing: '1.2px' }}>
+                <MessageCircle size={15} /> ORDER SAVED & WHATSAPP READY
+              </span>
+              <h3 style={{ margin: '6px 0 2px', fontSize: '15px', color: '#ffffff', fontWeight: 650 }}>Order #{order.reference} is ready for dispatch confirmation.</h3>
+              <p style={{ margin: 0, fontSize: '12.5px', color: '#d1d5db' }}>
+                If WhatsApp didn't open automatically, click the button to send your receipt to our team (+94 78 619 1260).
+              </p>
+            </div>
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#22c55e', color: '#052e16', fontWeight: 750, padding: '11px 20px', borderRadius: '8px', textDecoration: 'none', fontSize: '13px', letterSpacing: '0.4px', flexShrink: 0 }}
+            >
+              <MessageCircle size={18} />
+              OPEN IN WHATSAPP
+              <ArrowRight size={16} />
+            </a>
+          </div>
+        )}
 
         <div id="hello-printable-receipt" className="luxury-receipt-card">
           {/* Top Document Header */}
@@ -885,7 +936,7 @@ export function OrderConfirmation({ reference }: { reference: string }) {
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', borderColor: '#22c55e', color: '#4ade80' }}
           >
             <MessageCircle size={15} />
-            CHAT ON WHATSAPP
+            {order.paymentMethod === 'card' ? 'WHATSAPP CONCIERGE' : 'CONFIRM ON WHATSAPP'}
           </a>
 
           <button
