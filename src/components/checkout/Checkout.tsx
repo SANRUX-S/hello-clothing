@@ -67,6 +67,104 @@ export type StoredOrder = {
   }[];
 };
 
+function VisaLogo() {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '22px',
+        padding: '0 6px',
+        borderRadius: '3px',
+        background: '#ffffff',
+        border: '1px solid var(--line)',
+        fontWeight: 900,
+        fontStyle: 'italic',
+        fontSize: '11px',
+        color: '#1a1f71',
+        letterSpacing: '0.8px',
+        lineHeight: 1,
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      }}
+    >
+      VISA
+    </span>
+  );
+}
+
+function MastercardLogo() {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '22px',
+        padding: '0 5px',
+        borderRadius: '3px',
+        background: '#ffffff',
+        border: '1px solid var(--line)',
+      }}
+    >
+      <svg width="22" height="14" viewBox="0 0 28 18" fill="none">
+        <circle cx="9" cy="9" r="8" fill="#EB001B" />
+        <circle cx="19" cy="9" r="8" fill="#F79E1B" fillOpacity="0.9" />
+      </svg>
+    </span>
+  );
+}
+
+function AmexLogo() {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '22px',
+        padding: '0 5px',
+        borderRadius: '3px',
+        background: '#006fcf',
+        border: '1px solid #005bb5',
+        fontWeight: 800,
+        fontSize: '8px',
+        color: '#ffffff',
+        letterSpacing: '0.6px',
+        lineHeight: 1,
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      }}
+    >
+      AMEX
+    </span>
+  );
+}
+
+function WalletPill({ label }: { label: string }) {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '22px',
+        padding: '0 7px',
+        borderRadius: '3px',
+        background: 'var(--paper)',
+        border: '1px solid var(--line)',
+        fontWeight: 700,
+        fontSize: '9px',
+        color: 'var(--ink)',
+        letterSpacing: '0.5px',
+        lineHeight: 1,
+        textTransform: 'uppercase',
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
 export default function Checkout() {
   const store = useStore();
   const router = useRouter();
@@ -74,43 +172,6 @@ export default function Checkout() {
   const [error, setError] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('standard');
-
-  // Inline card fields state
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardName, setCardName] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvv, setCardCvv] = useState('');
-  const [cardBrand, setCardBrand] = useState<'visa' | 'mastercard' | 'amex' | 'unknown'>('unknown');
-
-  // Format and detect card brand
-  function handleCardNumberChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value.replace(/[^0-9]/g, '').slice(0, 16);
-    if (raw.startsWith('4')) {
-      setCardBrand('visa');
-    } else if (/^(5[1-5]|2[2-7])/.test(raw)) {
-      setCardBrand('mastercard');
-    } else if (/^(34|37)/.test(raw)) {
-      setCardBrand('amex');
-    } else {
-      setCardBrand('unknown');
-    }
-    const formatted = raw.match(/.{1,4}/g)?.join(' ') || raw;
-    setCardNumber(formatted);
-  }
-
-  // Format expiry date MM / YY
-  function handleExpiryChange(e: React.ChangeEvent<HTMLInputElement>) {
-    let raw = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
-    if (raw.length >= 2) {
-      let mm = parseInt(raw.slice(0, 2), 10);
-      if (mm > 12) mm = 12;
-      if (mm === 0) mm = 1;
-      const mmStr = mm < 10 ? `0${mm}` : `${mm}`;
-      const yyStr = raw.slice(2);
-      raw = yyStr ? `${mmStr} / ${yyStr}` : `${mmStr} / `;
-    }
-    setCardExpiry(raw);
-  }
 
   const subtotal = cartSubtotal(store.cart);
   const deliveryFee = deliveryMethod === 'express' ? 75000 : subtotal >= 1000000 ? 0 : 50000;
@@ -141,25 +202,6 @@ export default function Checkout() {
       city: String(data.get('city') || '').trim(),
       postalCode: String(data.get('postalCode') || '').trim() || undefined,
     };
-
-    if (paymentMethod === 'card') {
-      const cleanCard = cardNumber.replace(/\s/g, '');
-      if (cleanCard.length < 15) {
-        setBusy(false);
-        setError('Please enter a valid 16-digit Card Number.');
-        return;
-      }
-      if (!cardExpiry.trim() || cardExpiry.replace(/[^0-9]/g, '').length < 4) {
-        setBusy(false);
-        setError('Please enter a valid expiration date (MM / YY).');
-        return;
-      }
-      if (cardCvv.length < 3) {
-        setBusy(false);
-        setError('Please enter a valid 3 or 4-digit CVV security code.');
-        return;
-      }
-    }
 
     try {
       const response = await fetch('/api/checkout', {
@@ -439,201 +481,234 @@ export default function Checkout() {
               }}
               onClick={() => setPaymentMethod('card')}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <input
-                  type="radio"
-                  name="payment_opt"
-                  checked={paymentMethod === 'card'}
-                  onChange={() => setPaymentMethod('card')}
-                />
-                <CreditCard size={20} strokeWidth={1.2} />
-                <div style={{ flex: 1 }}>
-                  <strong>Credit or Debit Card</strong>
-                  <p>Visa, Mastercard, American Express</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <input
+                    type="radio"
+                    name="payment_opt"
+                    checked={paymentMethod === 'card'}
+                    onChange={() => setPaymentMethod('card')}
+                  />
+                  <CreditCard size={20} strokeWidth={1.2} />
+                  <div>
+                    <strong>Credit or Debit Card</strong>
+                    <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--muted)' }}>
+                      Visa, Mastercard, American Express
+                    </p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '5px', alignItems: 'center', marginLeft: 'auto' }}>
+                  <VisaLogo />
+                  <MastercardLogo />
+                  <AmexLogo />
                 </div>
               </div>
 
               {paymentMethod === 'card' && (
                 <div
                   style={{
-                    marginTop: '16px',
-                    paddingTop: '16px',
-                    borderTop: '1px solid var(--line)',
+                    marginTop: '14px',
+                    padding: '14px 16px',
+                    background: '#ffffff',
+                    border: '1px solid var(--line)',
+                    borderRadius: '4px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '12px',
+                    gap: '10px',
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <label style={{ fontSize: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    Card number
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="cc-number"
-                      placeholder="1234  5678  9012  3456"
-                      maxLength={19}
-                      value={cardNumber}
-                      onChange={handleCardNumberChange}
-                      style={{
-                        height: '46px',
-                        padding: '0 14px',
-                        border: '1px solid var(--line)',
-                        background: 'transparent',
-                        fontSize: '13px',
-                        letterSpacing: '0.5px',
-                        width: '100%',
-                        borderRadius: 0,
-                      }}
-                    />
-                  </label>
-
-                  <label style={{ fontSize: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    Name on card
-                    <input
-                      type="text"
-                      autoComplete="cc-name"
-                      placeholder="Name as printed on card"
-                      value={cardName}
-                      onChange={(e) => setCardName(e.target.value.toUpperCase())}
-                      style={{
-                        height: '46px',
-                        padding: '0 14px',
-                        border: '1px solid var(--line)',
-                        background: 'transparent',
-                        fontSize: '12px',
-                        width: '100%',
-                        borderRadius: 0,
-                        textTransform: 'uppercase',
-                      }}
-                    />
-                  </label>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                    <label style={{ fontSize: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      Expiration date
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        autoComplete="cc-exp"
-                        placeholder="MM / YY"
-                        maxLength={7}
-                        value={cardExpiry}
-                        onChange={handleExpiryChange}
-                        style={{
-                          height: '46px',
-                          padding: '0 14px',
-                          border: '1px solid var(--line)',
-                          background: 'transparent',
-                          fontSize: '12px',
-                          width: '100%',
-                          borderRadius: 0,
-                        }}
-                      />
-                    </label>
-                    <label style={{ fontSize: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      Security code (CVV)
-                      <input
-                        type="password"
-                        inputMode="numeric"
-                        autoComplete="cc-csc"
-                        placeholder="CVV"
-                        maxLength={4}
-                        value={cardCvv}
-                        onChange={(e) => setCardCvv(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
-                        style={{
-                          height: '46px',
-                          padding: '0 14px',
-                          border: '1px solid var(--line)',
-                          background: 'transparent',
-                          fontSize: '12px',
-                          width: '100%',
-                          borderRadius: 0,
-                        }}
-                      />
-                    </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <ShieldCheck size={16} color="#16a34a" />
+                    <strong style={{ fontSize: '11px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                      Central Bank (CBSL) Approved &amp; 256-Bit SSL Encrypted
+                    </strong>
                   </div>
-                  <p style={{ margin: 0, fontSize: '10px', color: 'var(--muted)', lineHeight: 1.6 }}>
-                    Encrypted and secured. Your card is verified through Central Bank 3D Secure OTP authentication.
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--muted)', lineHeight: 1.6 }}>
+                    After clicking <strong>PAY WITH CARD</strong>, you will be securely redirected to PayHere’s official banking portal to enter your card details and complete your bank’s 3D Secure OTP verification.
                   </p>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '12px',
+                      fontSize: '10px',
+                      color: 'var(--muted)',
+                      paddingTop: '8px',
+                      borderTop: '1px dashed var(--line)',
+                    }}
+                  >
+                    <span>✓ Direct bank-grade encryption</span>
+                    <span>✓ 3D Secure 2.0 OTP authentication</span>
+                    <span>✓ Zero card details stored on our site</span>
+                  </div>
                 </div>
               )}
             </div>
 
             {/* 2. Mobile Wallets & Installments */}
-            <label
+            <div
               className="checkout-option"
               style={{
                 cursor: 'pointer',
                 borderColor: paymentMethod === 'wallet' ? 'var(--ink)' : 'var(--line)',
                 background: paymentMethod === 'wallet' ? 'var(--paper)' : 'transparent',
+                transition: 'border-color 0.2s ease',
               }}
               onClick={() => setPaymentMethod('wallet')}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <input
-                  type="radio"
-                  name="payment_opt"
-                  checked={paymentMethod === 'wallet'}
-                  onChange={() => setPaymentMethod('wallet')}
-                />
-                <Smartphone size={20} strokeWidth={1.2} />
-                <div>
-                  <strong>Mobile Wallets &amp; Installments</strong>
-                  <p>Genie, FriMi, Koko (Pay in 3)</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <input
+                    type="radio"
+                    name="payment_opt"
+                    checked={paymentMethod === 'wallet'}
+                    onChange={() => setPaymentMethod('wallet')}
+                  />
+                  <Smartphone size={20} strokeWidth={1.2} />
+                  <div>
+                    <strong>Mobile Wallets &amp; Installments</strong>
+                    <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--muted)' }}>
+                      Genie, FriMi, Koko Pay in 3
+                    </p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '5px', alignItems: 'center', marginLeft: 'auto' }}>
+                  <WalletPill label="GENIE" />
+                  <WalletPill label="FRIMI" />
+                  <WalletPill label="KOKO" />
                 </div>
               </div>
-            </label>
+
+              {paymentMethod === 'wallet' && (
+                <div
+                  style={{
+                    marginTop: '14px',
+                    padding: '14px 16px',
+                    background: '#ffffff',
+                    border: '1px solid var(--line)',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Smartphone size={16} />
+                    <strong style={{ fontSize: '11px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                      Instant Wallets &amp; Split Payments
+                    </strong>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--muted)', lineHeight: 1.6 }}>
+                    After clicking <strong>PAY VIA WALLET / KOKO</strong>, you will be securely redirected to PayHere to pay in seconds using your Dialog Genie, Nations FriMi wallet, or split your purchase into 3 interest-free installments with Koko.
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* 3. Cash on Delivery (COD) */}
-            <label
+            <div
               className="checkout-option"
               style={{
                 cursor: 'pointer',
                 borderColor: paymentMethod === 'cod' ? 'var(--ink)' : 'var(--line)',
                 background: paymentMethod === 'cod' ? 'var(--paper)' : 'transparent',
+                transition: 'border-color 0.2s ease',
               }}
               onClick={() => setPaymentMethod('cod')}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <input
-                  type="radio"
-                  name="payment_opt"
-                  checked={paymentMethod === 'cod'}
-                  onChange={() => setPaymentMethod('cod')}
-                />
-                <CheckCircle2 size={20} strokeWidth={1.2} color="#16a34a" />
-                <div>
-                  <strong>Cash on Delivery (COD)</strong>
-                  <p>Pay in cash directly to courier partner upon delivery</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <input
+                    type="radio"
+                    name="payment_opt"
+                    checked={paymentMethod === 'cod'}
+                    onChange={() => setPaymentMethod('cod')}
+                  />
+                  <CheckCircle2 size={20} strokeWidth={1.2} color="#16a34a" />
+                  <div>
+                    <strong>Cash on Delivery (COD)</strong>
+                    <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--muted)' }}>
+                      Islandwide delivery across all 25 districts
+                    </p>
+                  </div>
                 </div>
+                <span style={{ fontSize: '9px', fontWeight: 700, padding: '2px 7px', border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#166534', borderRadius: '3px', letterSpacing: '0.4px' }}>
+                  AVAILABLE
+                </span>
               </div>
-            </label>
+
+              {paymentMethod === 'cod' && (
+                <div
+                  style={{
+                    marginTop: '14px',
+                    padding: '14px 16px',
+                    background: '#ffffff',
+                    border: '1px solid var(--line)',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--muted)', lineHeight: 1.6 }}>
+                    Pay cash directly to our PromptX courier partner upon doorstep parcel delivery. Please have the exact cash amount ready for the delivery rider.
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* 4. Direct Bank Transfer */}
-            <label
+            <div
               className="checkout-option"
               style={{
                 cursor: 'pointer',
                 borderColor: paymentMethod === 'bank' ? 'var(--ink)' : 'var(--line)',
                 background: paymentMethod === 'bank' ? 'var(--paper)' : 'transparent',
+                transition: 'border-color 0.2s ease',
               }}
               onClick={() => setPaymentMethod('bank')}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <input
-                  type="radio"
-                  name="payment_opt"
-                  checked={paymentMethod === 'bank'}
-                  onChange={() => setPaymentMethod('bank')}
-                />
-                <Building2 size={20} strokeWidth={1.2} />
-                <div>
-                  <strong>Direct Bank Transfer / Deposit</strong>
-                  <p>Commercial Bank or Sampath Bank (Account details on confirmation)</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <input
+                    type="radio"
+                    name="payment_opt"
+                    checked={paymentMethod === 'bank'}
+                    onChange={() => setPaymentMethod('bank')}
+                  />
+                  <Building2 size={20} strokeWidth={1.2} />
+                  <div>
+                    <strong>Direct Bank Transfer / Deposit</strong>
+                    <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--muted)' }}>
+                      Commercial Bank of Ceylon or Sampath Bank
+                    </p>
+                  </div>
                 </div>
               </div>
-            </label>
+
+              {paymentMethod === 'bank' && (
+                <div
+                  style={{
+                    marginTop: '14px',
+                    padding: '14px 16px',
+                    background: '#ffffff',
+                    border: '1px solid var(--line)',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <p style={{ margin: 0, fontSize: '11px', color: 'var(--muted)', lineHeight: 1.6 }}>
+                    Official Commercial Bank and Sampath Bank account numbers will be displayed on your confirmation screen. Please transfer within 24 hours and upload your bank slip via WhatsApp to initiate prompt dispatch.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -684,26 +759,29 @@ export default function Checkout() {
           >
             <span>
               {busy
-                ? 'CONNECTING GATEWAY…'
+                ? 'CONNECTING TO PAYHERE…'
                 : paymentMethod === 'card'
                 ? `PAY WITH CARD (${money(grandTotal)})`
                 : paymentMethod === 'wallet'
-                ? `PAY WITH WALLET / KOKO (${money(grandTotal)})`
+                ? `PAY VIA WALLET / KOKO (${money(grandTotal)})`
                 : paymentMethod === 'bank'
-                ? `CONFIRM ORDER (${money(grandTotal)})`
-                : `PLACE ORDER (${money(grandTotal)})`}
+                ? `CONFIRM BANK TRANSFER (${money(grandTotal)})`
+                : `PLACE ORDER — CASH ON DELIVERY (${money(grandTotal)})`}
             </span>
             <ArrowRight size={17} />
           </button>
 
-          <p className="small muted" style={{ marginTop: '14px' }}>
-            {paymentMethod === 'card'
-              ? 'Secured with 256-Bit SSL encryption & Central Bank 3D Secure OTP verification.'
-              : paymentMethod === 'wallet'
-              ? '1-Click wallet authentication powered by PayHere & Sri Lanka mobile banking networks.'
-              : paymentMethod === 'bank'
-              ? 'Bank deposit slip verification required within 24 hours to secure dispatch.'
-              : 'Order will be dispatched via PromptX Courier. Pay cash on delivery.'}
+          <p className="small muted" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '14px', lineHeight: 1.5 }}>
+            <ShieldCheck size={16} color="#16a34a" style={{ flexShrink: 0 }} />
+            <span>
+              {paymentMethod === 'card'
+                ? 'Secured with 256-Bit SSL encryption & Central Bank 3D Secure OTP verification.'
+                : paymentMethod === 'wallet'
+                ? '1-Click wallet authentication powered by PayHere & Sri Lanka mobile banking networks.'
+                : paymentMethod === 'bank'
+                ? 'Bank deposit slip verification required within 24 hours to secure dispatch.'
+                : 'Order will be dispatched via PromptX Courier. Pay cash on delivery.'}
+            </span>
           </p>
         </aside>
       </form>
