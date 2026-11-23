@@ -92,9 +92,13 @@ export async function POST(request: Request) {
       const nameParts = (customer.name || '').trim().split(' ');
       const firstName = nameParts[0] || 'Valued';
       const lastName = nameParts.slice(1).join(' ') || 'Customer';
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL && !process.env.NEXT_PUBLIC_SITE_URL.includes('localhost') 
-        ? process.env.NEXT_PUBLIC_SITE_URL 
-        : 'https://www.helloclothing.store';
+      let siteUrl = 'https://www.helloclothing.store';
+      const originHeader = request.headers.get('origin');
+      if (originHeader && originHeader.startsWith('https://')) {
+        siteUrl = originHeader.replace(/\/$/, '');
+      } else if (process.env.NEXT_PUBLIC_SITE_URL && !process.env.NEXT_PUBLIC_SITE_URL.includes('localhost')) {
+        siteUrl = process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '');
+      }
 
       const hash = generatePayHereHash(reference, preview.total, 'LKR');
       const { merchantId, isSandbox } = getPayHereConfig();
