@@ -42,7 +42,7 @@ export default function Newsletter() {
   }
 
   return <section className="hello-newsletter" aria-labelledby="newsletter-title">
-    <img className="hello-newsletter-photo" src="/campaign/real/couple-graphic-tees.webp" alt="" width={960} height={1280} loading="lazy"/>
+    <img className="hello-newsletter-photo" src="/campaign/real/man-graphic-tee-back.webp" alt="" width={960} height={1280} loading="lazy"/>
     <div className="hello-newsletter-copy">
       <p className="hello-community-kicker">DROP ALERTS & RESTOCKS</p>
       <h2 id="newsletter-title">NEVER MISS A DROP.</h2>

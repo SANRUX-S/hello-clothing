@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { ArrowDown, ArrowLeft, ArrowRight, Pause, Play } from 'lucide-react';
 
 const slides = [
-  { image: '/hero/couple-campaign.jpg?v=5', alt: 'HELLO! official photoshoot with couple in white hoodie and black tee', edition: 'DROP 01 · COLOMBO', className: 'campaign-wide' },
-  { image: '/campaign/real/couple-graphic-tees.webp', alt: 'HELLO! models wearing black and white graphic tees', edition: '240 GSM HEAVYWEIGHT', className: 'campaign-portrait' },
-  { image: '/campaign/real/man-black-hoodie.webp', secondImage: '/campaign/real/woman-white-hoodie.webp', alt: 'HELLO! black hoodie worn by a male model', edition: '380 GSM BRUSHED FLEECE', className: 'campaign-pair' },
+  { image: '/hero/campaign.webp', alt: 'HELLO! official campaign streetwear drop in Colombo', edition: 'DROP 01 · COLOMBO', className: 'campaign-wide' },
+  { image: '/campaign/real/man-black-hoodie.webp', secondImage: '/campaign/real/woman-white-hoodie.webp', alt: 'HELLO! black hoodie and white hoodie worn by models', edition: '380 GSM BRUSHED FLEECE', className: 'campaign-pair' },
+  { image: '/campaign/real/man-charcoal-hoodie.webp', secondImage: '/campaign/real/man-graphic-tee-back.webp', alt: 'HELLO! charcoal hoodie and heavyweight graphic tee', edition: '240+ GSM STREETWEAR', className: 'campaign-pair' },
 ];
 export default function Hero() {
   const [active, setActive] = useState(0);
@@ -36,15 +36,13 @@ export default function Hero() {
     <div className="campaign-slides">{slides.map((slide, index) => <div key={slide.image} className={`campaign-frame ${slide.className} ${active === index ? 'is-active' : ''}`} aria-hidden={active !== index}>
       <img
         src={slide.image}
-        srcSet={index === 0 ? "/hero/couple-campaign.webp?v=5" : undefined}
-        sizes={index === 0 ? "100vw" : undefined}
         alt={slide.alt}
-        width={index === 0 ? 2560 : 960}
-        height={index === 0 ? 1440 : 1280}
+        width={index === 0 ? 1920 : 960}
+        height={index === 0 ? 1080 : 1280}
         fetchPriority={index === 0 ? 'high' : 'auto'}
         decoding="async"
       />
-      {slide.secondImage && <img src={slide.secondImage} alt="HELLO! white hoodie worn by a female model" width={960} height={1280} />}
+      {slide.secondImage && <img src={slide.secondImage} alt="HELLO! streetwear model" width={960} height={1280} />}
     </div>)}</div>
     <div className="campaign-shade" />
     <div className="campaign-copy"><span className="eyebrow">DESIGNED IN COLOMBO · READY TO WEAR</span><h1><span>ONE DAY,<br />EVEN THE DEVIL<br />WILL SAY</span><img src="/branding/hello-light.webp" alt="Hello!" width={2378} height={964} /></h1><p>Heavyweight cotton. Custom boxy fits. Built for the street.</p><Link href="/new-arrivals" className="button campaign-cta">SHOP LATEST DROP <ArrowRight size={18} /></Link></div>

@@ -60,7 +60,7 @@ const initialReviews: Review[] = [
     rating: 5,
     title: 'Screen print quality is top notch.',
     body: 'Got matching signature graphic tees. Thick screen print that doesn’t crack or peel. WhatsApp support replied to our sizing question in minutes.',
-    image: '/campaign/real/couple-graphic-tees.webp',
+    image: '/campaign/real/man-charcoal-hoodie.webp',
   },
 ];
 
@@ -144,7 +144,7 @@ export default function CommunityReviews() {
           rating: newRating,
           title: formData.title,
           body: formData.body,
-          image: '/campaign/real/couple-graphic-tees.webp',
+          image: '/campaign/real/man-charcoal-hoodie.webp',
         }),
       });
 
