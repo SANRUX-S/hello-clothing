@@ -363,77 +363,14 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('standard');
 
-  // Card payment inputs (Image 2 format)
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardName, setCardName] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvv, setCardCvv] = useState('');
-
-  function handleCardNumberChange(val: string) {
-    const raw = val.replace(/\D/g, '').slice(0, 16);
-    const parts = raw.match(/.{1,4}/g);
-    setCardNumber(parts ? parts.join(' ') : raw);
-  }
-
-  function handleExpiryChange(val: string) {
-    const raw = val.replace(/\D/g, '').slice(0, 4);
-    if (raw.length >= 3) {
-      setCardExpiry(`${raw.slice(0, 2)}/${raw.slice(2)}`);
-    } else {
-      setCardExpiry(raw);
-    }
-  }
-
   const subtotal = cartSubtotal(store.cart);
   const deliveryFee = deliveryMethod === 'express' ? 75000 : subtotal >= 1000000 ? 0 : 50000;
   const grandTotal = subtotal + deliveryFee;
-
-  // Load PayHere JavaScript SDK
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !document.getElementById('payhere-sdk')) {
-      const script = document.createElement('script');
-      script.id = 'payhere-sdk';
-      script.src = 'https://www.payhere.lk/lib/payhere.js';
-      script.async = true;
-      document.body.appendChild(script);
-    }
-  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError('');
-
-    // Validate card inputs if paying with credit/debit card
-    if (paymentMethod === 'card') {
-      const cleanNum = cardNumber.replace(/\s+/g, '');
-      if (cleanNum.length !== 16) {
-        setError('Please enter a valid 16-digit Visa or Mastercard number.');
-        setBusy(false);
-        return;
-      }
-      if (!cardName.trim()) {
-        setError('Please enter the name on your card.');
-        setBusy(false);
-        return;
-      }
-      if (!/^\d{2}\/\d{2}$/.test(cardExpiry)) {
-        setError('Please enter expiry date as MM/YY.');
-        setBusy(false);
-        return;
-      }
-      const [expMonth] = cardExpiry.split('/').map(Number);
-      if (expMonth < 1 || expMonth > 12) {
-        setError('Invalid expiry month. Must be between 01 and 12.');
-        setBusy(false);
-        return;
-      }
-      if (cardCvv.length < 3) {
-        setError('Please enter the 3 or 4 digit CVV on the back of your card.');
-        setBusy(false);
-        return;
-      }
-    }
 
     const data = new FormData(event.currentTarget);
 
@@ -490,7 +427,7 @@ export default function Checkout() {
         })),
       };
 
-      // 1. If Paying via Card or Mobile Wallet, launch PayHere payment panel
+      // 1. If Paying via Card or Mobile Wallet, connect securely to official PayHere portal
       if ((paymentMethod === 'card' || paymentMethod === 'wallet') && result.payhere) {
         saveOrder(fullOrder);
         try {
@@ -499,24 +436,7 @@ export default function Checkout() {
 
         store.clear();
 
-        // Check if PayHere JS SDK is loaded and startPayment is available for modal popup
-        const win = window as any;
-        if (win.payhere && typeof win.payhere.startPayment === 'function') {
-          win.payhere.onCompleted = function onCompleted(orderId: string) {
-            router.push(`/order-confirmation/${fullOrder.reference}`);
-          };
-          win.payhere.onDismissed = function onDismissed() {
-            setBusy(false);
-          };
-          win.payhere.onError = function onError(errorMsg: string) {
-            setError(`Payment error: ${errorMsg}`);
-            setBusy(false);
-          };
-          win.payhere.startPayment(result.payhere);
-          return;
-        }
-
-        // Direct secure form submit fallback (clean full-page redirection)
+        // Direct secure form submission to PayHere official hosted gateway (100% reliable across all devices and domains)
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = result.payhere.sandbox
@@ -765,7 +685,7 @@ export default function Checkout() {
                 </div>
               </div>
 
-              {/* Exact Card Details Panel from Image 2 */}
+              {/* PayHere 3D Secure Card Gateway Panel (matching Image 2) */}
               {paymentMethod === 'card' && (
                 <div
                   style={{
@@ -777,7 +697,7 @@ export default function Checkout() {
                     boxShadow: '0 4px 18px -2px rgba(0, 0, 0, 0.06)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '16px',
+                    gap: '14px',
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -786,11 +706,11 @@ export default function Checkout() {
                     <PayHereLogo />
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#0f172a', fontSize: '13px', fontWeight: 700 }}>
                       <Lock size={15} color="#16a34a" strokeWidth={2.4} />
-                      <span>Secure Payment</span>
+                      <span>Official Central Bank (CBSL) Approved Payment Gateway</span>
                     </div>
                   </div>
 
-                  {/* Soft Blue Card Header Box (matches Image 2) */}
+                  {/* Soft Blue Card Header Box (matches Image 2 style) */}
                   <div
                     style={{
                       background: '#f0f7ff',
@@ -822,144 +742,35 @@ export default function Checkout() {
                     </div>
                   </div>
 
-                  {/* Card Form Inputs (matches Image 2) */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {/* Card Number */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                        Card Number
-                      </label>
-                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                        <CreditCard size={18} color="#94a3b8" style={{ position: 'absolute', left: '12px', pointerEvents: 'none' }} />
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          autoComplete="cc-number"
-                          placeholder="1234 5678 9012 3456"
-                          value={cardNumber}
-                          onChange={(e) => handleCardNumberChange(e.target.value)}
-                          maxLength={19}
-                          style={{
-                            width: '100%',
-                            height: '42px',
-                            paddingLeft: '38px',
-                            paddingRight: '12px',
-                            borderRadius: '8px',
-                            border: '1.5px solid #e2e8f0',
-                            fontSize: '14px',
-                            color: '#0f172a',
-                            letterSpacing: '1.2px',
-                            fontWeight: 500,
-                            outline: 'none',
-                            background: '#ffffff',
-                          }}
-                        />
-                      </div>
+                  {/* Clear Security Explanation */}
+                  <p style={{ margin: 0, fontSize: '12px', color: '#334155', lineHeight: 1.6 }}>
+                    Pay securely with any Visa or Mastercard issued by Commercial, Sampath, HNB, HSBC, Seylan, or any bank. When you click <strong>PROCEED TO PAY WITH CARD</strong>, you will be securely redirected to PayHere’s official banking portal to enter your card details and complete your bank’s 3D Secure SMS OTP verification.
+                  </p>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                      fontSize: '11px',
+                      color: '#475569',
+                      padding: '10px 12px',
+                      background: '#f8fafc',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ color: '#16a34a', fontWeight: 700 }}>✓</span>
+                      <span><strong>Direct Bank-Grade 256-Bit SSL Encryption:</strong> Handled directly by PayHere.</span>
                     </div>
-
-                    {/* Name on Card */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                        Name on Card
-                      </label>
-                      <input
-                        type="text"
-                        autoComplete="cc-name"
-                        placeholder="e.g. John Doe"
-                        value={cardName}
-                        onChange={(e) => setCardName(e.target.value)}
-                        maxLength={60}
-                        style={{
-                          width: '100%',
-                          height: '42px',
-                          padding: '0 12px',
-                          borderRadius: '8px',
-                          border: '1.5px solid #e2e8f0',
-                          fontSize: '14px',
-                          color: '#0f172a',
-                          fontWeight: 500,
-                          outline: 'none',
-                          background: '#ffffff',
-                        }}
-                      />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ color: '#16a34a', fontWeight: 700 }}>✓</span>
+                      <span><strong>3D Secure 2.0 OTP Authentication:</strong> Verified by your card-issuing bank.</span>
                     </div>
-
-                    {/* Expiry Date & CVV Row */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                          Expiry Date (MM/YY)
-                        </label>
-                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                          <Calendar size={17} color="#94a3b8" style={{ position: 'absolute', left: '12px', pointerEvents: 'none' }} />
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            autoComplete="cc-exp"
-                            placeholder="MM/YY"
-                            value={cardExpiry}
-                            onChange={(e) => handleExpiryChange(e.target.value)}
-                            maxLength={5}
-                            style={{
-                              width: '100%',
-                              height: '42px',
-                              paddingLeft: '36px',
-                              paddingRight: '10px',
-                              borderRadius: '8px',
-                              border: '1.5px solid #e2e8f0',
-                              fontSize: '14px',
-                              color: '#0f172a',
-                              fontWeight: 500,
-                              outline: 'none',
-                              background: '#ffffff',
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                          CVV
-                        </label>
-                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                          <Lock size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', pointerEvents: 'none' }} />
-                          <input
-                            type="password"
-                            inputMode="numeric"
-                            autoComplete="cc-csc"
-                            placeholder="CVV"
-                            value={cardCvv}
-                            onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                            maxLength={4}
-                            style={{
-                              width: '100%',
-                              height: '42px',
-                              paddingLeft: '34px',
-                              paddingRight: '32px',
-                              borderRadius: '8px',
-                              border: '1.5px solid #e2e8f0',
-                              fontSize: '14px',
-                              color: '#0f172a',
-                              fontWeight: 500,
-                              outline: 'none',
-                              background: '#ffffff',
-                            }}
-                          />
-                          <span
-                            title="3 or 4 digits on the back of your card"
-                            style={{
-                              position: 'absolute',
-                              right: '10px',
-                              color: '#94a3b8',
-                              fontSize: '12px',
-                              fontWeight: 700,
-                              userSelect: 'none',
-                            }}
-                          >
-                            ⓘ
-                          </span>
-                        </div>
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ color: '#16a34a', fontWeight: 700 }}>✓</span>
+                      <span><strong>100% PCI-DSS Level 1 Compliant:</strong> Zero raw card credentials stored on merchant servers.</span>
                     </div>
                   </div>
 
@@ -981,7 +792,7 @@ export default function Checkout() {
                     <span>Accepted cards: Visa &amp; Mastercard only.</span>
                   </div>
 
-                  {/* Blue Pay Now Button (matches Image 2) */}
+                  {/* Blue Pay Now Action Button (matches Image 2) */}
                   <button
                     type="submit"
                     disabled={busy || !store.ready}
@@ -996,15 +807,16 @@ export default function Checkout() {
                       color: '#ffffff',
                       border: 'none',
                       borderRadius: '8px',
-                      fontSize: '15px',
+                      fontSize: '14px',
                       fontWeight: 700,
                       cursor: 'pointer',
                       boxShadow: '0 4px 14px rgba(29, 78, 216, 0.3)',
                       transition: 'all 0.2s ease',
+                      marginTop: '4px',
                     }}
                   >
                     <Lock size={16} />
-                    <span>{busy ? 'CONNECTING TO 3D SECURE…' : `Pay Now (${money(grandTotal)})`}</span>
+                    <span>{busy ? 'CONNECTING TO PAYHERE…' : `PROCEED TO PAY WITH CARD (${money(grandTotal)})`}</span>
                   </button>
                 </div>
               )}
