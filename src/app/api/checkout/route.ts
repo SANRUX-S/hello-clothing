@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     const paymentMethod = (body as any).paymentMethod || "cod";
     const initialStatus = (paymentMethod === 'card' || paymentMethod === 'wallet') ? 'pending_payment' : 'pending_confirmation';
 
-    // Save order in Neon database
+    // Save order in Penetix Cloud database
     try {
       await createOrderInDb({
         reference,
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
         ]).catch((err) => console.error("Email sending error:", err));
       }
     } catch (dbErr) {
-      console.error("Failed to persist order to Neon:", dbErr);
+      console.error("Failed to persist order to Penetix Cloud:", dbErr);
     }
 
     // Generate PayHere Parameters for Online Card / Mobile Wallet Payment

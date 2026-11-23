@@ -90,7 +90,7 @@ export default function CommunityReviews() {
           setReviews(data.reviews);
         }
       })
-      .catch(err => console.error('Failed to load reviews from Neon DB:', err));
+      .catch(err => console.error('Failed to load reviews from Penetix Cloud:', err));
   }, []);
 
   useEffect(() => {

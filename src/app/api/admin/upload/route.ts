@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     const mimeType = ext === 'png' ? 'image/png' : ext === 'jpg' ? 'image/jpeg' : ext === 'gif' ? 'image/gif' : 'image/webp';
     const base64Data = buffer.toString('base64');
 
-    // 1. Always persist to Neon PostgreSQL media table (works 100% reliably on Vercel Serverless)
+    // 1. Always persist to Penetix Cloud media table (works 100% reliably on Vercel Serverless)
     let publicUrl = `/api/media/${filename}`;
     try {
       await saveMediaToDb(mediaId, filename, mimeType, base64Data);

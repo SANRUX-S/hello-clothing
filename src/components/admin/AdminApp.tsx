@@ -1489,7 +1489,7 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
         })
         .catch(() => {});
 
-      // Fetch live customer reviews from Penetix Cloud / Neon DB
+      // Fetch live customer reviews from Penetix Cloud
       fetch('/api/admin/reviews')
         .then(r => r.json())
         .then(d => {
@@ -2207,7 +2207,7 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
         )}
 
         <div className="admin-table-footer">
-          {filteredReviews.length} of {adminReviews.length} review(s) <span style={{ color: '#4ade80' }}>Synced live with Neon PostgreSQL</span>
+          {filteredReviews.length} of {adminReviews.length} review(s) <span style={{ color: '#4ade80' }}>Synced live with Penetix Cloud</span>
         </div>
       </section>
     )}
@@ -2271,7 +2271,7 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
       <Modal title="Delete Customer Review?" onClose={() => setReviewToDelete(null)}>
         <div className="admin-confirm-content">
           <p>Are you sure you want to delete the review by <strong style={{ color: '#ef4444' }}>{reviewToDelete.author}</strong> ({reviewToDelete.location})?</p>
-          <p style={{ fontSize: '11px', color: '#a1a1aa' }}>This review will be permanently erased from Neon PostgreSQL. This action cannot be undone.</p>
+          <p style={{ fontSize: '11px', color: '#a1a1aa' }}>This review will be permanently erased from Penetix Cloud. This action cannot be undone.</p>
           <div className="admin-modal-actions">
             <button className="admin-button admin-button-quiet" onClick={() => setReviewToDelete(null)}>Cancel</button>
             <button className="admin-button admin-button-danger" onClick={() => deleteReviewItem(reviewToDelete.id)}>

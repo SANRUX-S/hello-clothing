@@ -44,7 +44,7 @@ export function getDb() {
     cachedSql = neon(url);
     return cachedSql;
   } catch (err) {
-    console.error('Failed to create Neon client:', err);
+    console.error('Failed to create Penetix Cloud client:', err);
     return null;
   }
 }
