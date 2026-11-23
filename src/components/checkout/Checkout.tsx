@@ -170,7 +170,7 @@ export default function Checkout() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('standard');
 
   const subtotal = cartSubtotal(store.cart);
