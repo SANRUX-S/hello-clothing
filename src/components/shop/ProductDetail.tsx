@@ -251,7 +251,7 @@ export default function ProductDetail({ product: p, allProducts }: { product: Pr
                     <strong>Islandwide Delivery:</strong> LKR 500 flat fee. <strong>FREE islandwide delivery</strong> automatically applied on orders over LKR 10,000.
                   </p>
                   <p>
-                    <strong>Timelines:</strong> 1–2 business days in Colombo & suburbs; 2–4 business days outstation islandwide. Next-day Express available in Western Province (LKR 750).
+                    <strong>Timelines:</strong> 1–2 business days in Western Province & suburbs; 2–4 business days outstation islandwide. Next-day Express available in Western Province (LKR 750).
                   </p>
                   <p>
                     <strong>Courier Partners & Tracking:</strong> Handed over to PromptX Logistics or Domex Courier in sealed branded dust bags. Live SMS waybill tracking sent upon dispatch.
@@ -260,7 +260,7 @@ export default function ProductDetail({ product: p, allProducts }: { product: Pr
                     <strong>Payment Methods:</strong> Cash on Delivery (COD) across all 25 districts with parcel inspection, or Direct Bank Transfer (Commercial Bank / Sampath Bank).
                   </p>
                   <p>
-                    <strong>7-Day Doorstep Size Exchange:</strong> Unworn pieces with original swing tags can be swapped for another size. WhatsApp concierge: <strong>+94 78 619 1260</strong>.
+                    <strong>7-Day Doorstep Size Exchange:</strong> Unworn pieces with original swing tags can be swapped for another size. WhatsApp support: <strong>+94 78 619 1260</strong>.
                   </p>
                 </div>
               </details>

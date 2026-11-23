@@ -35,7 +35,7 @@ const policies: Record<string, { title: string; intro: string; sections: { title
       },
       {
         title: 'Shipping Times, Cutoff & Rates',
-        copy: '• Colombo & Greater Suburbs: 1 to 2 business days (LKR 500).\n• Outstation & Islandwide: 2 to 4 business days (LKR 500).\n• Express Priority (Western Province): Next-day guaranteed delivery (LKR 750).\n• Free Islandwide Shipping is automatically applied to all orders of LKR 10,000 or more.\n• Orders placed before 2:00 PM (Monday–Saturday) are prepared and handed to couriers on the same business day.',
+        copy: '• Western Province & Suburbs: 1 to 2 business days (LKR 500).\n• Outstation & Islandwide: 2 to 4 business days (LKR 500).\n• Express Priority (Western Province): Next-day guaranteed delivery (LKR 750).\n• Free Islandwide Shipping is automatically applied to all orders of LKR 10,000 or more.\n• Orders placed before 2:00 PM (Monday–Saturday) are prepared and handed to couriers on the same business day.',
       },
       {
         title: 'Cash on Delivery (COD) & SMS Tracking',
@@ -110,7 +110,7 @@ const faq = [
   },
   {
     q: 'How long does delivery take?',
-    a: 'Orders in Colombo and surrounding suburbs arrive in 1 to 2 business days. Outstation deliveries typically take 2 to 4 business days via our partner PromptX Logistics. Express next-day delivery is also available for Western Province orders.',
+    a: 'Orders in Western Province and surrounding suburbs arrive in 1 to 2 business days. Outstation deliveries typically take 2 to 4 business days via our partner PromptX Logistics. Express next-day delivery is also available for Western Province orders.',
   },
   {
     q: 'What is your fabric quality?',
@@ -849,7 +849,7 @@ export default function InfoPage({ kind }: { kind: string }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem' }}>
                 <MapPin size={20} />
                 <span>
-                  <strong>Dispatch Hub:</strong> Colombo 07, Sri Lanka
+                  <strong>Dispatch Hub:</strong> Sri Lanka
                 </span>
               </div>
             </div>

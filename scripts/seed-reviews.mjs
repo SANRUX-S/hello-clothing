@@ -18,7 +18,7 @@ const defaultReviews = [
     location: 'Colombo 07',
     rating: 5,
     title: 'Collar stays completely flat after multiple washes.',
-    body: 'Finally a local brand doing actual heavyweight cotton. The 240 GSM has structure without feeling hot in Colombo. The drop-shoulder cut is spot on.',
+    body: 'Finally a local brand doing actual heavyweight cotton. The 240 GSM has structure without feeling hot in the island heat. The drop-shoulder cut is spot on.',
     image: '/campaign/real/woman-black-tee.webp',
     status: 'published',
   },

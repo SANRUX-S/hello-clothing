@@ -161,7 +161,7 @@ export default function LegalPageLayout({
             <MapPin size={18} />
             <div>
               <strong>Dispatch & Fulfillment</strong>
-              <span>Colombo 07, Sri Lanka</span>
+              <span>Sri Lanka</span>
             </div>
           </div>
         </div>

@@ -86,7 +86,7 @@ export default function Newsletter() {
 }
 
 const services = [
-  { icon: Truck, title: 'ISLANDWIDE DELIVERY', text: '1–2 days Colombo · 2–4 days outstation', href: '/policies/shipping' },
+  { icon: Truck, title: 'ISLANDWIDE DELIVERY', text: '1–2 days Western Province · 2–4 days islandwide', href: '/policies/shipping' },
   { icon: PackageCheck, title: '7-DAY EXCHANGES', text: 'Doorstep size swaps made simple', href: '/policies/returns' },
   { icon: ShieldCheck, title: 'CASH ON DELIVERY', text: 'Available across all 25 districts', href: '/checkout' },
   { icon: Headphones, title: 'WHATSAPP SUPPORT', text: '+94 78 619 1260 direct help', href: '/contact' },

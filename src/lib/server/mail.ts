@@ -113,7 +113,7 @@ export async function sendOrderConfirmationEmail(order: {
               <tr>
                 <td style="border-bottom: 1px solid #f1f5f9; padding-bottom: 20px;">
                   <span style="font-size: 26px; font-weight: 900; letter-spacing: 2px; color: #0f172a; display: block; font-family: -apple-system, sans-serif;">HELLO!</span>
-                  <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; font-weight: 600;">Official Order Receipt &middot; Colombo</span>
+                  <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; font-weight: 600;">Official Order Receipt</span>
                 </td>
               </tr>
 
@@ -415,7 +415,7 @@ export async function sendOrderStatusUpdateEmail(order: {
               <tr>
                 <td style="border-bottom: 1px solid #f1f5f9; padding-bottom: 20px;">
                   <span style="font-size: 26px; font-weight: 900; letter-spacing: 2px; color: #0f172a; display: block;">HELLO!</span>
-                  <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; font-weight: 600;">Order Status Notification &middot; Colombo</span>
+                  <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; font-weight: 600;">Order Status Notification</span>
                 </td>
               </tr>
 
@@ -533,7 +533,7 @@ export async function sendContactInquiryEmails({
                   <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 8px;">We've Received Your Message (${inquiryRef})</h2>
                   <p style="color: #aaaaaa; font-size: 14px; line-height: 1.6;">
                     Hello ${name},<br><br>
-                    Thank you for reaching out to HELLO! Clothing. Our Colombo support concierge has received your message and will respond within 24 hours.
+                    Thank you for reaching out to HELLO! Clothing. Our customer support team has received your message and will respond within 24 hours.
                   </p>
                   <div style="background: #1c1d1d; border-radius: 6px; padding: 12px; margin-top: 12px; font-size: 13px; color: #888888; font-style: italic;">
                     "${message}"
