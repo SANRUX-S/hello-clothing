@@ -25,8 +25,6 @@ import {
   Lock,
   Smartphone,
   Calendar,
-  Info,
-  X,
 } from 'lucide-react';
 import './receipt.css';
 
@@ -365,142 +363,14 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('standard');
 
-  // Direct In-Page Card Entry state
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardName, setCardName] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvv, setCardCvv] = useState('');
-
-  // 3D Secure 2.0 On-Site OTP Modal state
-  const [otpModalOpen, setOtpModalOpen] = useState(false);
-  const [pendingOrder, setPendingOrder] = useState<StoredOrder | null>(null);
-  const [otpCode, setOtpCode] = useState('');
-  const [otpBusy, setOtpBusy] = useState(false);
-  const [otpError, setOtpError] = useState('');
-  const [otpSuccess, setOtpSuccess] = useState(false);
-  const [otpTimer, setOtpTimer] = useState(45);
-
   const subtotal = cartSubtotal(store.cart);
   const deliveryFee = deliveryMethod === 'express' ? 75000 : subtotal >= 1000000 ? 0 : 50000;
   const grandTotal = subtotal + deliveryFee;
-
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const digits = e.target.value.replace(/\D/g, '').slice(0, 16);
-    const formatted = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
-    setCardNumber(formatted);
-  };
-
-  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value.replace(/\D/g, '').slice(0, 4);
-    if (val.length >= 3) {
-      val = `${val.slice(0, 2)}/${val.slice(2)}`;
-    }
-    setCardExpiry(val);
-  };
-
-  const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
-    setCardCvv(val);
-  };
-
-  function detectCardBrand(num: string): string {
-    const clean = num.replace(/\s+/g, '');
-    if (clean.startsWith('4')) return 'Visa';
-    if (/^(5[1-5]|2[2-7])/.test(clean)) return 'Mastercard';
-    if (/^3[47]/.test(clean)) return 'Amex';
-    return 'Card';
-  }
-
-  useEffect(() => {
-    if (!otpModalOpen || otpTimer <= 0) return;
-    const interval = setInterval(() => {
-      setOtpTimer((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [otpModalOpen, otpTimer]);
-
-  async function confirmOtp() {
-    if (!pendingOrder) return;
-    const code = otpCode.trim();
-    if (!code || code.length < 4) {
-      setOtpError('Please enter the 6-digit OTP code sent to your phone (or use 123456).');
-      return;
-    }
-
-    setOtpBusy(true);
-    setOtpError('');
-
-    try {
-      const res = await fetch('/api/checkout/card-confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reference: pendingOrder.reference,
-          otp: code,
-          cardLast4: cardNumber.replace(/\s+/g, '').slice(-4),
-          cardBrand: detectCardBrand(cardNumber),
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Bank OTP verification failed.');
-      }
-
-      setOtpSuccess(true);
-      const updatedOrder: StoredOrder = {
-        ...pendingOrder,
-        status: 'order_placed',
-      };
-
-      saveOrder(updatedOrder);
-      try {
-        localStorage.setItem('hello-customer-profile', JSON.stringify(pendingOrder.customer));
-      } catch {}
-
-      store.clear();
-
-      setTimeout(() => {
-        router.push(`/order-confirmation/${pendingOrder.reference}`);
-      }, 1200);
-    } catch (err: any) {
-      setOtpError(err.message || 'OTP verification failed. Please check the code and try again.');
-    } finally {
-      setOtpBusy(false);
-    }
-  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError('');
-
-    // Pre-validate card details if paying via card
-    if (paymentMethod === 'card') {
-      const cleanCard = cardNumber.replace(/\s+/g, '');
-      if (cleanCard.length < 15) {
-        setError('Please enter a valid 16-digit card number.');
-        setBusy(false);
-        return;
-      }
-      if (!cardName.trim() || cardName.trim().length < 2) {
-        setError('Please enter the name on your card.');
-        setBusy(false);
-        return;
-      }
-      const [mm, yy] = cardExpiry.split('/');
-      const expMonth = parseInt(mm, 10);
-      if (!mm || !yy || isNaN(expMonth) || expMonth < 1 || expMonth > 12) {
-        setError('Please enter a valid card expiry date (MM/YY).');
-        setBusy(false);
-        return;
-      }
-      if (cardCvv.length < 3) {
-        setError('Please enter a valid 3 or 4-digit CVV / CVC.');
-        setBusy(false);
-        return;
-      }
-    }
 
     const data = new FormData(event.currentTarget);
 
@@ -557,19 +427,8 @@ export default function Checkout() {
         })),
       };
 
-      // 1. Direct In-Page Card Payment: Open 3D Secure Bank Verification Modal (NO external PayHere redirect!)
-      if (paymentMethod === 'card') {
-        setPendingOrder(fullOrder);
-        setOtpCode('');
-        setOtpError('');
-        setOtpSuccess(false);
-        setOtpTimer(45);
-        setOtpModalOpen(true);
-        return;
-      }
-
-      // 2. Mobile Wallets (FriMi, Q+, iPay) via PayHere Hosted Gateway
-      if (paymentMethod === 'wallet' && result.payhere) {
+      // 1. If Paying via Card or Mobile Wallet, connect securely to official PayHere portal
+      if ((paymentMethod === 'card' || paymentMethod === 'wallet') && result.payhere) {
         saveOrder(fullOrder);
         try {
           localStorage.setItem('hello-customer-profile', JSON.stringify(customerData));
@@ -577,6 +436,7 @@ export default function Checkout() {
 
         store.clear();
 
+        // Direct secure form submission to PayHere official hosted gateway (100% reliable across all devices and domains)
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = result.payhere.sandbox
@@ -825,28 +685,28 @@ export default function Checkout() {
                 </div>
               </div>
 
-              {/* PayHere 3D Secure In-Page Card Entry Panel (Matching Image 2) */}
+              {/* PayHere 3D Secure Card Gateway Panel (matching Image 2) */}
               {paymentMethod === 'card' && (
                 <div
                   style={{
                     marginTop: '16px',
-                    padding: '24px 22px',
+                    padding: '20px 22px',
                     background: '#ffffff',
                     border: '1px solid #e2e8f0',
-                    borderRadius: '16px',
-                    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.08)',
+                    borderRadius: '14px',
+                    boxShadow: '0 4px 18px -2px rgba(0, 0, 0, 0.06)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '16px',
+                    gap: '14px',
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
                   {/* Header: PayHere & Secure Payment */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9' }}>
                     <PayHereLogo />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#16a34a', fontSize: '13px', fontWeight: 700 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#0f172a', fontSize: '13px', fontWeight: 700 }}>
                       <Lock size={15} color="#16a34a" strokeWidth={2.4} />
-                      <span>Secure Payment</span>
+                      <span>Official Central Bank (CBSL) Approved Payment Gateway</span>
                     </div>
                   </div>
 
@@ -882,150 +742,35 @@ export default function Checkout() {
                     </div>
                   </div>
 
-                  {/* Card Inputs Grid */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {/* Card Number */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-                        Card Number
-                      </label>
-                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                        <span style={{ position: 'absolute', left: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
-                          <CreditCard size={18} />
-                        </span>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          autoComplete="cc-number"
-                          placeholder="1234 5678 9012 3456"
-                          value={cardNumber}
-                          onChange={handleCardNumberChange}
-                          maxLength={19}
-                          required={paymentMethod === 'card'}
-                          style={{
-                            width: '100%',
-                            height: '44px',
-                            padding: '0 40px 0 38px',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontFamily: 'monospace, sans-serif',
-                            fontWeight: 600,
-                            color: '#0f172a',
-                            background: '#ffffff',
-                            outline: 'none',
-                          }}
-                        />
-                        {detectCardBrand(cardNumber) !== 'Card' && (
-                          <span style={{ position: 'absolute', right: '10px', fontSize: '10px', fontWeight: 800, color: '#2563eb', background: '#eff6ff', padding: '2px 6px', borderRadius: '4px' }}>
-                            {detectCardBrand(cardNumber)}
-                          </span>
-                        )}
-                      </div>
+                  {/* Clear Security Explanation */}
+                  <p style={{ margin: 0, fontSize: '12px', color: '#334155', lineHeight: 1.6 }}>
+                    Pay securely with any Visa or Mastercard issued by Commercial, Sampath, HNB, HSBC, Seylan, or any bank. When you click <strong>PROCEED TO PAY WITH CARD</strong>, you will be securely redirected to PayHere’s official banking portal to enter your card details and complete your bank’s 3D Secure SMS OTP verification.
+                  </p>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                      fontSize: '11px',
+                      color: '#475569',
+                      padding: '10px 12px',
+                      background: '#f8fafc',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ color: '#16a34a', fontWeight: 700 }}>✓</span>
+                      <span><strong>Direct Bank-Grade 256-Bit SSL Encryption:</strong> Handled directly by PayHere.</span>
                     </div>
-
-                    {/* Name on Card */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-                        Name on Card
-                      </label>
-                      <input
-                        type="text"
-                        autoComplete="cc-name"
-                        placeholder="e.g. John Doe"
-                        value={cardName}
-                        onChange={(e) => setCardName(e.target.value)}
-                        maxLength={60}
-                        required={paymentMethod === 'card'}
-                        style={{
-                          width: '100%',
-                          height: '44px',
-                          padding: '0 12px',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          fontWeight: 500,
-                          color: '#0f172a',
-                          background: '#ffffff',
-                          outline: 'none',
-                        }}
-                      />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ color: '#16a34a', fontWeight: 700 }}>✓</span>
+                      <span><strong>3D Secure 2.0 OTP Authentication:</strong> Verified by your card-issuing bank.</span>
                     </div>
-
-                    {/* Expiry Date & CVV (2 columns) */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      {/* Expiry Date */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-                          Expiry Date (MM/YY)
-                        </label>
-                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                          <span style={{ position: 'absolute', left: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
-                            <Calendar size={16} />
-                          </span>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            autoComplete="cc-exp"
-                            placeholder="MM/YY"
-                            value={cardExpiry}
-                            onChange={handleExpiryChange}
-                            maxLength={5}
-                            required={paymentMethod === 'card'}
-                            style={{
-                              width: '100%',
-                              height: '44px',
-                              padding: '0 12px 0 36px',
-                              border: '1px solid #cbd5e1',
-                              borderRadius: '8px',
-                              fontSize: '14px',
-                              fontFamily: 'monospace, sans-serif',
-                              fontWeight: 600,
-                              color: '#0f172a',
-                              background: '#ffffff',
-                              outline: 'none',
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* CVV */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-                          CVV
-                        </label>
-                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                          <span style={{ position: 'absolute', left: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
-                            <Lock size={15} />
-                          </span>
-                          <input
-                            type="password"
-                            inputMode="numeric"
-                            autoComplete="cc-csc"
-                            placeholder="CVV"
-                            value={cardCvv}
-                            onChange={handleCvvChange}
-                            maxLength={4}
-                            required={paymentMethod === 'card'}
-                            style={{
-                              width: '100%',
-                              height: '44px',
-                              padding: '0 32px 0 34px',
-                              border: '1px solid #cbd5e1',
-                              borderRadius: '8px',
-                              fontSize: '14px',
-                              fontFamily: 'monospace, sans-serif',
-                              fontWeight: 700,
-                              color: '#0f172a',
-                              background: '#ffffff',
-                              outline: 'none',
-                            }}
-                          />
-                          <span style={{ position: 'absolute', right: '10px', color: '#94a3b8', display: 'flex', alignItems: 'center', pointerEvents: 'none' }} title="3-digit security code on the back of your card">
-                            <Info size={15} />
-                          </span>
-                        </div>
-                      </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ color: '#16a34a', fontWeight: 700 }}>✓</span>
+                      <span><strong>100% PCI-DSS Level 1 Compliant:</strong> Zero raw card credentials stored on merchant servers.</span>
                     </div>
                   </div>
 
@@ -1043,7 +788,7 @@ export default function Checkout() {
                       fontWeight: 500,
                     }}
                   >
-                    <Info size={15} color="#2563eb" style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: '14px', lineHeight: 1 }}>ⓘ</span>
                     <span>Accepted cards: Visa &amp; Mastercard only.</span>
                   </div>
 
@@ -1071,7 +816,7 @@ export default function Checkout() {
                     }}
                   >
                     <Lock size={16} />
-                    <span>{busy ? 'PROCESSING CARD DETAILS…' : `Pay Now (${money(grandTotal)})`}</span>
+                    <span>{busy ? 'CONNECTING TO PAYHERE…' : `PROCEED TO PAY WITH CARD (${money(grandTotal)})`}</span>
                   </button>
                 </div>
               )}
@@ -1313,9 +1058,9 @@ export default function Checkout() {
           >
             <span>
               {busy
-                ? 'PROCESSING…'
+                ? 'CONNECTING TO PAYHERE…'
                 : paymentMethod === 'card'
-                ? `PAY NOW (${money(grandTotal)})`
+                ? `PAY WITH CARD (${money(grandTotal)})`
                 : paymentMethod === 'wallet'
                 ? `PAY VIA FRIMI / Q+ / IPAY (${money(grandTotal)})`
                 : paymentMethod === 'bank'
@@ -1339,279 +1084,6 @@ export default function Checkout() {
           </p>
         </aside>
       </form>
-
-      {/* On-Site 3D Secure 2.0 Bank Verification OTP Modal */}
-      {otpModalOpen && pendingOrder && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            zIndex: 999999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px',
-            animation: 'fadeIn 0.2s ease-out',
-          }}
-        >
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '20px',
-              maxWidth: '460px',
-              width: '100%',
-              boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.3)',
-              border: '1px solid #e2e8f0',
-              overflow: 'hidden',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Top Header */}
-            <div
-              style={{
-                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                color: '#ffffff',
-                padding: '20px 24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div
-                  style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '10px',
-                    background: 'rgba(255, 255, 255, 0.12)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <ShieldCheck size={22} color="#38bdf8" />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, letterSpacing: '0.3px', color: '#ffffff' }}>
-                    3D Secure 2.0 Bank Verification
-                  </h3>
-                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                    Issuer Bank Authentication Protocol
-                  </span>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                <VisaLogo />
-                <MastercardLogo />
-              </div>
-            </div>
-
-            <div style={{ padding: '24px' }}>
-              {/* Transaction Summary Card */}
-              <div
-                style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '14px 16px',
-                  marginBottom: '18px',
-                  fontSize: '12px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Merchant:</span>
-                  <strong style={{ color: '#0f172a', letterSpacing: '0.5px' }}>HELLO! CLOTHING</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Order Reference:</span>
-                  <strong style={{ color: '#0f172a', fontFamily: 'monospace' }}>#{pendingOrder.reference}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Card:</span>
-                  <strong style={{ color: '#0f172a' }}>{detectCardBrand(cardNumber)} •••• {cardNumber.replace(/\s+/g, '').slice(-4) || '3456'}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '8px' }}>
-                  <span style={{ color: '#64748b', fontWeight: 600 }}>Total Amount:</span>
-                  <strong style={{ color: '#1d4ed8', fontSize: '14px' }}>LKR {(pendingOrder.total / 100).toLocaleString()}</strong>
-                </div>
-              </div>
-
-              {/* Instructions */}
-              <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#334155', lineHeight: 1.5, textAlign: 'center' }}>
-                A 6-digit One-Time Password (OTP) has been sent via SMS to your mobile ending in <strong>{pendingOrder.customer.phone.slice(-4) || 'XXXX'}</strong>.
-              </p>
-
-              {/* OTP Input Form */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Enter 6-Digit SMS OTP
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  placeholder="• • • • • •"
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  autoFocus
-                  disabled={otpBusy || otpSuccess}
-                  style={{
-                    width: '240px',
-                    height: '52px',
-                    textAlign: 'center',
-                    fontSize: '24px',
-                    fontFamily: 'monospace, sans-serif',
-                    fontWeight: 800,
-                    letterSpacing: '10px',
-                    border: '2px solid #2563eb',
-                    borderRadius: '10px',
-                    outline: 'none',
-                    background: '#ffffff',
-                    boxShadow: '0 0 0 4px rgba(37, 99, 235, 0.1)',
-                  }}
-                />
-
-                {/* Quick test pill button for instant test approval */}
-                <button
-                  type="button"
-                  onClick={() => setOtpCode('123456')}
-                  style={{
-                    background: '#f1f5f9',
-                    border: '1px dashed #94a3b8',
-                    borderRadius: '6px',
-                    padding: '4px 10px',
-                    fontSize: '11px',
-                    color: '#475569',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                  }}
-                >
-                  ⚡ Quick Test: Click to autofill Demo OTP (123456)
-                </button>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-                  <Clock size={13} />
-                  <span>
-                    {otpTimer > 0 ? `Code expires in 0:${otpTimer < 10 ? '0' : ''}${otpTimer}` : 'Code expired. Click resend.'}
-                  </span>
-                  {otpTimer === 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setOtpTimer(45)}
-                      style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
-                    >
-                      Resend OTP
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Error message */}
-              {otpError && (
-                <div
-                  style={{
-                    marginTop: '14px',
-                    padding: '10px 12px',
-                    background: '#fef2f2',
-                    border: '1px solid #fecaca',
-                    borderRadius: '8px',
-                    color: '#b91c1c',
-                    fontSize: '12px',
-                    textAlign: 'center',
-                    fontWeight: 500,
-                  }}
-                >
-                  {otpError}
-                </div>
-              )}
-
-              {/* Success message */}
-              {otpSuccess && (
-                <div
-                  style={{
-                    marginTop: '14px',
-                    padding: '12px',
-                    background: '#f0fdf4',
-                    border: '1px solid #bbf7d0',
-                    borderRadius: '8px',
-                    color: '#166534',
-                    fontSize: '13px',
-                    textAlign: 'center',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  <CheckCircle2 size={18} color="#16a34a" />
-                  <span>Payment Approved! Generating Official Receipt…</span>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <button
-                  type="button"
-                  onClick={confirmOtp}
-                  disabled={otpBusy || otpSuccess || otpCode.length < 4}
-                  style={{
-                    height: '48px',
-                    width: '100%',
-                    background: otpSuccess ? '#16a34a' : '#1d4ed8',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '10px',
-                    fontSize: '14px',
-                    fontWeight: 800,
-                    letterSpacing: '0.4px',
-                    cursor: otpBusy || otpSuccess || otpCode.length < 4 ? 'not-allowed' : 'pointer',
-                    opacity: otpBusy || otpCode.length < 4 ? 0.6 : 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    boxShadow: '0 4px 14px rgba(29, 78, 216, 0.35)',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  <Lock size={16} />
-                  <span>{otpBusy ? 'VERIFYING WITH ISSUER BANK…' : 'AUTHORIZE & COMPLETE PAYMENT'}</span>
-                </button>
-
-                {!otpSuccess && !otpBusy && (
-                  <button
-                    type="button"
-                    onClick={() => setOtpModalOpen(false)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#64748b',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      padding: '6px',
-                      textAlign: 'center',
-                    }}
-                  >
-                    Cancel and change payment method
-                  </button>
-                )}
-              </div>
-
-              <div style={{ marginTop: '16px', borderTop: '1px solid #f1f5f9', paddingTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '10px', color: '#94a3b8' }}>
-                <ShieldCheck size={13} color="#16a34a" />
-                <span>PCI-DSS Level 1 · 256-Bit SSL Encrypted Verification</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 }
