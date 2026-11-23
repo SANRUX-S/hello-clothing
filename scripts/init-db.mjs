@@ -92,10 +92,10 @@ export async function initDb() {
   if (existingCats[0].count === 0) {
     console.log('Seeding initial categories...');
     const defaultCats = [
-      { slug: 't-shirts', name: 'T-Shirts', image: '/categories/t-shirts.webp', caption: 'Heavyweight 240+ GSM boxy cuts.', description: 'Heavyweight streetwear t-shirts designed in Colombo.' },
-      { slug: 'pants', name: 'Pants', image: '/categories/pants.webp', caption: 'Wide-leg stacks and utility pockets.', description: 'Wide-leg utility pants designed in Colombo.' },
-      { slug: 'hoodies', name: 'Hoodies', image: '/categories/hoodies.webp', caption: '380 GSM brushed fleece layers.', description: 'Heavy brushed fleece hoodies designed in Colombo.' },
-      { slug: 'accessories', name: 'Accessories', image: '/categories/accessories.webp', caption: 'Everyday carry and street essentials.', description: 'Everyday carry and street accessories designed in Colombo.' }
+      { slug: 't-shirts', name: 'T-Shirts', image: '/categories/t-shirts.webp', caption: 'Heavyweight 240+ GSM boxy cuts.', description: 'Heavyweight streetwear t-shirts crafted for daily wear.' },
+      { slug: 'pants', name: 'Pants', image: '/categories/pants.webp', caption: 'Wide-leg stacks and utility pockets.', description: 'Wide-leg utility pants crafted for daily wear.' },
+      { slug: 'hoodies', name: 'Hoodies', image: '/categories/hoodies.webp', caption: '380 GSM brushed fleece layers.', description: 'Heavy brushed fleece hoodies crafted for daily wear.' },
+      { slug: 'accessories', name: 'Accessories', image: '/categories/accessories.webp', caption: 'Everyday carry and street essentials.', description: 'Everyday carry and street accessories crafted for daily wear.' }
     ];
     for (const c of defaultCats) {
       await sql`

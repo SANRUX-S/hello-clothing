@@ -24,7 +24,7 @@ export default function ProductDetail({ product: p, allProducts }: { product: Pr
     slug: p.category || 'all',
     name: p.category ? p.category.toUpperCase() : 'COLLECTION',
     image: p.image || '/branding/hello-word.webp',
-    caption: 'HELLO! Colombo',
+    caption: 'HELLO! Streetwear',
     description: ''
   };
 
@@ -218,7 +218,7 @@ export default function ProductDetail({ product: p, allProducts }: { product: Pr
             {p.stock > 0 ? (
               <div className="product-demo-note" style={{ color: '#16a34a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Check size={14} color="#16a34a" />
-                <span><strong>In Stock ({p.stock} available)</strong> · Dispatched within 24 hours from Colombo Hub</span>
+                <span><strong>In Stock ({p.stock} available)</strong> · Dispatched within 24 hours from Central Hub</span>
               </div>
             ) : (
               <div className="product-demo-note" style={{ color: '#dc2626', display: 'flex', alignItems: 'center', gap: '8px' }}>

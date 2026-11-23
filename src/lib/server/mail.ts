@@ -211,7 +211,7 @@ export async function sendOrderConfirmationEmail(order: {
               <!-- Footer -->
               <tr>
                 <td style="padding-top: 32px; border-top: 1px solid #f1f5f9; margin-top: 28px; font-size: 11px; color: #94a3b8; line-height: 1.6; text-align: center;">
-                  HELLO! Clothing Sri Lanka &middot; Designed & Hand-Packed in Colombo<br>
+                  HELLO! Clothing Sri Lanka &middot; Hand-Packed with Care<br>
                   Need assistance? Reply to this email or reach us at <a href="mailto:support@helloclothing.store" style="color: #64748b; text-decoration: underline;">support@helloclothing.store</a><br>
                   &copy; ${new Date().getFullYear()} HELLO! CLOTHING. All rights reserved.<br>
                   <span style="display: inline-block; margin-top: 10px; font-size: 10px; color: #64748b; letter-spacing: 0.5px;">
@@ -368,12 +368,12 @@ export async function sendOrderStatusUpdateEmail(order: {
     subject = `✅ Order Placed & Confirmed: ${order.reference} — HELLO! Clothing`;
     statusTitle = 'ORDER PLACED & VERIFIED.';
     statusBadge = 'ORDER PLACED';
-    statusMessage = `Thank you for shopping with HELLO! Clothing. Your order <strong>${order.reference}</strong> has been officially placed and confirmed in our Colombo fulfillment atelier. Our team will begin hand-packing your streetwear shortly.`;
+    statusMessage = `Thank you for shopping with HELLO! Clothing. Your order <strong>${order.reference}</strong> has been officially placed and confirmed. Our team will begin hand-packing your streetwear shortly.`;
   } else if (status === 'in_progress' || status === 'processing' || status === 'production') {
     subject = `⚡ In Progress: Your HELLO! Order ${order.reference} is Being Prepared`;
     statusTitle = 'HAND-PACKING IN PROGRESS.';
     statusBadge = 'IN PROGRESS';
-    statusMessage = `Great news! Your pieces for order <strong>${order.reference}</strong> are now in progress. Each garment is undergoing rigorous quality inspection and being carefully hand-packed into our signature atelier dust bag.`;
+    statusMessage = `Great news! Your pieces for order <strong>${order.reference}</strong> are now in progress. Each garment is undergoing rigorous quality inspection and being carefully hand-packed into our signature dust bag.`;
   } else if (status === 'ready_to_dispatch' || status === 'dispatched') {
     subject = `📦 Ready & Dispatched: HELLO! Order ${order.reference}`;
     statusTitle = 'PARCEL DISPATCHED TO COURIER.';
@@ -463,7 +463,7 @@ export async function sendOrderStatusUpdateEmail(order: {
 
               <tr>
                 <td style="padding-top: 32px; border-top: 1px solid #f1f5f9; margin-top: 28px; font-size: 11px; color: #94a3b8; line-height: 1.6; text-align: center;">
-                  HELLO! Clothing Sri Lanka &middot; Dispatched from Colombo<br>
+                  HELLO! Clothing Sri Lanka &middot; Heavyweight Streetwear<br>
                   Questions? Reach us at <a href="mailto:orders@helloclothing.store" style="color: #64748b; text-decoration: underline;">orders@helloclothing.store</a><br>
                   <span style="display: inline-block; margin-top: 10px; font-size: 10px; color: #64748b; letter-spacing: 0.5px;">
                     Made by <a href="https://www.penetix.com/" target="_blank" style="color: #0f172a; font-weight: 700; text-decoration: none;">Penetix Cybersecurity Solutions</a>
@@ -542,7 +542,7 @@ export async function sendContactInquiryEmails({
               </tr>
               <tr>
                 <td style="border-top: 1px solid #262727; padding-top: 16px; font-size: 11px; color: #666666; text-align: center;">
-                  HELLO! Support Concierge &middot; <a href="mailto:support@helloclothing.store" style="color: #888888;">support@helloclothing.store</a>
+                  HELLO! Customer Support &middot; <a href="mailto:support@helloclothing.store" style="color: #888888;">support@helloclothing.store</a>
                 </td>
               </tr>
             </table>

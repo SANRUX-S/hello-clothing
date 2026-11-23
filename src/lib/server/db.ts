@@ -79,10 +79,11 @@ export type DbOrder = {
   delivery: number;
   total: number;
   payment_method: string;
-  status: 'processing' | 'confirmed' | 'production' | 'dispatched' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'pending_payment';
+  status: 'processing' | 'confirmed' | 'production' | 'dispatched' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'pending_payment' | 'pending_confirmation' | 'order_placed' | string;
   courier: string;
   tracking_number: string;
   notes: string;
+  stock_deducted?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -383,7 +384,7 @@ export async function getOrdersFromDb(forceFresh = false): Promise<DbOrder[]> {
     const rows = await sql`
       SELECT reference, customer, items, subtotal, delivery, total,
              payment_method, status, courier, tracking_number, notes,
-             created_at, updated_at
+             stock_deducted, created_at, updated_at
       FROM orders
       ORDER BY created_at DESC
     `;
@@ -399,6 +400,7 @@ export async function getOrdersFromDb(forceFresh = false): Promise<DbOrder[]> {
       courier: r.courier || 'PromptX Logistics',
       tracking_number: r.tracking_number || '',
       notes: r.notes || '',
+      stock_deducted: Boolean(r.stock_deducted),
       created_at: r.created_at,
       updated_at: r.updated_at
     }));
@@ -418,7 +420,7 @@ export async function getOrderFromDb(reference: string): Promise<DbOrder | null>
     const rows = await sql`
       SELECT reference, customer, items, subtotal, delivery, total,
              payment_method, status, courier, tracking_number, notes,
-             created_at, updated_at
+             stock_deducted, created_at, updated_at
       FROM orders
       WHERE UPPER(reference) = ${cleanRef}
       LIMIT 1
@@ -437,6 +439,7 @@ export async function getOrderFromDb(reference: string): Promise<DbOrder | null>
       courier: r.courier || 'PromptX Logistics',
       tracking_number: r.tracking_number || '',
       notes: r.notes || '',
+      stock_deducted: Boolean(r.stock_deducted),
       created_at: r.created_at,
       updated_at: r.updated_at
     };
@@ -453,7 +456,7 @@ export async function createOrderInDb(order: Omit<DbOrder, 'created_at' | 'updat
   await sql`
     INSERT INTO orders (
       reference, customer, items, subtotal, delivery, total,
-      payment_method, status, courier, tracking_number, notes, created_at, updated_at
+      payment_method, status, courier, tracking_number, notes, stock_deducted, created_at, updated_at
     )
     VALUES (
       ${order.reference},
@@ -463,10 +466,11 @@ export async function createOrderInDb(order: Omit<DbOrder, 'created_at' | 'updat
       ${order.delivery},
       ${order.total},
       ${order.payment_method},
-      ${order.status || 'processing'},
+      ${order.status || 'pending_confirmation'},
       ${order.courier || 'PromptX Logistics'},
       ${order.tracking_number || ''},
       ${order.notes || ''},
+      ${Boolean(order.stock_deducted)},
       NOW(),
       NOW()
     )
@@ -481,6 +485,7 @@ export async function createOrderInDb(order: Omit<DbOrder, 'created_at' | 'updat
       courier = EXCLUDED.courier,
       tracking_number = EXCLUDED.tracking_number,
       notes = EXCLUDED.notes,
+      stock_deducted = EXCLUDED.stock_deducted,
       updated_at = NOW();
   `;
 }
@@ -499,6 +504,44 @@ export async function updateOrderStatusInDb(reference: string, status: string, c
   `;
 }
 
+export async function deductOrderStockInDb(order: { reference?: string; items: any[] }): Promise<void> {
+  invalidateProductsCache();
+  invalidateOrdersCache();
+  const sql = getDb();
+  if (!sql) return;
+  const dbProducts = await getProductsFromDb(true);
+  for (const item of order.items || []) {
+    const prod = dbProducts.find(p => p.id === item.productId || p.slug === item.slug);
+    if (prod) {
+      const qty = Number(item.quantity) || 1;
+      const newStock = Math.max(0, prod.stock - qty);
+      await updateProductStockInDb(prod.id, newStock).catch(() => {});
+    }
+  }
+  if (order.reference) {
+    await sql`UPDATE orders SET stock_deducted = true, updated_at = NOW() WHERE reference = ${order.reference}`.catch(() => {});
+  }
+}
+
+export async function restoreOrderStockInDb(order: { reference?: string; items: any[] }): Promise<void> {
+  invalidateProductsCache();
+  invalidateOrdersCache();
+  const sql = getDb();
+  if (!sql) return;
+  const dbProducts = await getProductsFromDb(true);
+  for (const item of order.items || []) {
+    const prod = dbProducts.find(p => p.id === item.productId || p.slug === item.slug);
+    if (prod) {
+      const qty = Number(item.quantity) || 1;
+      const newStock = prod.stock + qty;
+      await updateProductStockInDb(prod.id, newStock).catch(() => {});
+    }
+  }
+  if (order.reference) {
+    await sql`UPDATE orders SET stock_deducted = false, updated_at = NOW() WHERE reference = ${order.reference}`.catch(() => {});
+  }
+}
+
 export async function markOrderPaidInDb(reference: string, paymentId: string, method?: string) {
   invalidateOrdersCache();
   const sql = getDb();
@@ -515,6 +558,11 @@ export async function markOrderPaidInDb(reference: string, paymentId: string, me
         updated_at = NOW()
     WHERE UPPER(reference) = ${reference.trim().toUpperCase()};
   `;
+  // Ensure stock is deducted upon confirmed online payment
+  const order = await getOrderFromDb(reference);
+  if (order && !order.stock_deducted) {
+    await deductOrderStockInDb(order);
+  }
 }
 
 export async function deleteOrderFromDb(reference: string): Promise<void> {

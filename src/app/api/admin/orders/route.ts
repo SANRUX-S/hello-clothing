@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getOrdersFromDb, getOrderFromDb, createOrderInDb, updateOrderStatusInDb, deleteOrderFromDb, deleteAllOrdersFromDb } from '@/lib/server/db';
+import { getOrdersFromDb, getOrderFromDb, createOrderInDb, updateOrderStatusInDb, deleteOrderFromDb, deleteAllOrdersFromDb, deductOrderStockInDb, restoreOrderStockInDb } from '@/lib/server/db';
 import { sendOrderStatusUpdateEmail, sendOrderConfirmationEmail } from '@/lib/server/mail';
 import { privateHeaders } from '@/lib/server/http';
 import { randomBytes } from 'node:crypto';
@@ -25,6 +25,18 @@ export async function PATCH(req: Request) {
 
     const previousOrder = await getOrderFromDb(reference);
     await updateOrderStatusInDb(reference, status, courier, trackingNumber);
+
+    // Stock deduction / restoration based on confirmation & cancellation
+    const isConfirmedStatus = ['order_placed', 'confirmed', 'in_progress', 'processing', 'production', 'ready_to_dispatch', 'dispatched', 'out_for_delivery', 'delivered'].includes(status);
+    const isCancelledStatus = status === 'cancelled';
+
+    if (previousOrder) {
+      if (isConfirmedStatus && !previousOrder.stock_deducted) {
+        await deductOrderStockInDb(previousOrder);
+      } else if (isCancelledStatus && previousOrder.stock_deducted) {
+        await restoreOrderStockInDb(previousOrder);
+      }
+    }
 
     // Asynchronously notify customer of status change via Resend (orders@helloclothing.store)
     if (notifyCustomer && previousOrder && previousOrder.customer?.email) {
@@ -77,6 +89,7 @@ export async function POST(req: Request) {
       const trackingNumber = payload.tracking_number || payload.trackingNumber || `PX-${randomHex}`;
       const notes = payload.notes || 'Created via Admin Portal';
 
+      const isConfirmed = ['order_placed', 'confirmed', 'in_progress', 'processing', 'ready_to_dispatch', 'out_for_delivery', 'delivered'].includes(status);
       await createOrderInDb({
         reference: orderRef,
         customer,
@@ -89,7 +102,12 @@ export async function POST(req: Request) {
         courier,
         tracking_number: trackingNumber,
         notes,
+        stock_deducted: isConfirmed,
       });
+
+      if (isConfirmed) {
+        await deductOrderStockInDb({ reference: orderRef, items });
+      }
 
       return NextResponse.json({ success: true, reference: orderRef }, { headers: privateHeaders });
     }
@@ -133,6 +151,11 @@ export async function DELETE(req: Request) {
     if (reference === 'ALL') {
       await deleteAllOrdersFromDb();
       return NextResponse.json({ success: true, message: 'All orders cleared' }, { headers: privateHeaders });
+    }
+
+    const orderToDelete = await getOrderFromDb(reference);
+    if (orderToDelete && orderToDelete.stock_deducted) {
+      await restoreOrderStockInDb(orderToDelete);
     }
 
     await deleteOrderFromDb(reference);

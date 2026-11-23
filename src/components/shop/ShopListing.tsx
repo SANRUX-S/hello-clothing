@@ -305,13 +305,19 @@ export default function ShopListing({
             </div>
           ) : (
             <div className="empty-state">
-              <span className="empty-script">HELLO!</span>
+              <img
+                src="/brand/logo-dark.svg"
+                alt="HELLO!"
+                width={140}
+                height={57}
+                style={{ width: '140px', height: 'auto', marginBottom: '8px' }}
+              />
               <h2>{wishlist ? 'Your favorites start here.' : `${cat?.name ? cat.name + ' Drop Coming Soon.' : 'A little too specific?'}`}</h2>
               <p>
                 {wishlist
                   ? 'Tap the heart on a piece you love. We’ll save it here.'
                   : cat?.name
-                  ? `Our atelier is currently crafting the next drop of ${cat.name}. Check out our live Heavyweight Hoodies drop in the meantime!`
+                  ? `The next drop of ${cat.name} is in production. Check out our live Heavyweight Hoodies drop in the meantime!`
                   : 'Try another search or give your filters a fresh start.'}
               </p>
               {wishlist ? (

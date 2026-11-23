@@ -226,7 +226,7 @@ export default function Checkout() {
         total: result.preview.subtotal + deliveryFee,
         paymentMethod,
         deliveryMethod,
-        status: result.preview.status || (paymentMethod === 'card' || paymentMethod === 'wallet' ? 'pending_payment' : 'processing'),
+        status: result.preview.status || (paymentMethod === 'card' || paymentMethod === 'wallet' ? 'pending_payment' : 'pending_confirmation'),
         courier: result.preview.courier || 'PromptX Logistics',
         tracking_number: result.preview.trackingNumber || `PX-${result.preview.reference.replace(/[^a-zA-Z0-9]/g, '').slice(-6)}`,
         trackingNumber: result.preview.trackingNumber || `PX-${result.preview.reference.replace(/[^a-zA-Z0-9]/g, '').slice(-6)}`,

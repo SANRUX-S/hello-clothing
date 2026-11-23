@@ -4,10 +4,10 @@ import './globals.css';
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.helloclothing.store'),
   title: {
-    default: 'HELLO! — Colombo Heavyweight Streetwear',
+    default: 'HELLO! — Heavyweight Streetwear',
     template: '%s | HELLO!'
   },
-  description: 'Heavyweight streetwear designed in Colombo. Custom oversized fits, 380 GSM brushed fleece hoodies, and daily staples built for the island.',
+  description: 'Heavyweight streetwear crafted for daily wear. Custom oversized fits, 380 GSM brushed fleece hoodies, and daily staples built for the island.',
   robots: {
     index: true,
     follow: true,
@@ -20,16 +20,16 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: 'HELLO! — Colombo Heavyweight Streetwear',
-    description: 'Heavyweight streetwear designed in Colombo. Islandwide courier delivery across Sri Lanka.',
+    title: 'HELLO! — Heavyweight Streetwear',
+    description: 'Heavyweight streetwear crafted for daily wear. Islandwide courier delivery across Sri Lanka.',
     url: 'https://www.helloclothing.store',
-    siteName: 'HELLO! Clothing Colombo',
+    siteName: 'HELLO! Clothing',
     images: [
       {
         url: '/hero/campaign.webp',
         width: 1200,
         height: 630,
-        alt: 'HELLO! Heavyweight Streetwear Colombo',
+        alt: 'HELLO! Heavyweight Streetwear',
       },
     ],
     locale: 'en_LK',
@@ -37,8 +37,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HELLO! — Colombo Heavyweight Streetwear',
-    description: 'Heavyweight streetwear designed in Colombo. Islandwide courier delivery across Sri Lanka.',
+    title: 'HELLO! — Heavyweight Streetwear',
+    description: 'Heavyweight streetwear crafted for daily wear. Islandwide courier delivery across Sri Lanka.',
     images: ['/hero/campaign.webp'],
   },
   icons: {

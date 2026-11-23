@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const p = await getProduct(slug);
   return {
     title: p?.name ? `${p.name} — HELLO!` : 'Product — HELLO!',
-    description: p?.description || 'Heavyweight streetwear designed in Colombo.',
+    description: p?.description || 'Heavyweight streetwear crafted for daily wear.',
   };
 }
 

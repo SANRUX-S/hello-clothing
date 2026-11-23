@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { getProductsFromDb, createOrderInDb, updateProductStockInDb } from "@/lib/server/db";
+import { getProductsFromDb, createOrderInDb } from "@/lib/server/db";
 import { sendOrderConfirmationEmail, sendAdminNewOrderAlert } from "@/lib/server/mail";
 import { generatePayHereHash, getPayHereConfig } from "@/lib/server/payhere";
 import { calculateDemoCheckout, CommerceError } from "@/lib/server/commerce";
@@ -42,6 +42,7 @@ export async function POST(request: Request) {
     };
 
     const paymentMethod = (body as any).paymentMethod || "cod";
+    const initialStatus = (paymentMethod === 'card' || paymentMethod === 'wallet') ? 'pending_payment' : 'pending_confirmation';
 
     // Save order in Neon database
     try {
@@ -53,19 +54,12 @@ export async function POST(request: Request) {
         delivery: preview.delivery,
         total: preview.total,
         payment_method: paymentMethod,
-        status: paymentMethod === 'card' ? 'pending_payment' : 'processing',
+        status: initialStatus,
         courier: "PromptX Logistics",
         tracking_number: `PX-${randomHex}`,
-        notes: paymentMethod === 'card' ? 'Awaiting PayHere Card Payment' : 'Placed via HELLO! Storefront'
+        notes: paymentMethod === 'card' ? 'Awaiting PayHere Card Payment' : 'New Order - Awaiting Confirmation',
+        stock_deducted: false,
       });
-
-      // Update stock in Neon for each ordered product
-      for (const item of preview.items) {
-        const prod = dbProducts.find(p => p.id === item.productId);
-        if (prod && prod.stock >= item.quantity) {
-          await updateProductStockInDb(prod.id, Math.max(0, prod.stock - item.quantity)).catch(() => {});
-        }
-      }
 
       // Automatically send Resend emails for COD and Bank Transfer (Card / Wallet emails trigger upon PayHere approval)
       if (paymentMethod !== 'card' && paymentMethod !== 'wallet') {
@@ -139,7 +133,7 @@ export async function POST(request: Request) {
         ...preview,
         customer,
         paymentMethod,
-        status: (paymentMethod === 'card' || paymentMethod === 'wallet') ? 'pending_payment' : 'processing',
+        status: initialStatus,
         courier: "PromptX Logistics",
         trackingNumber: `PX-${randomHex}`
       },

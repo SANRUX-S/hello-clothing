@@ -39,7 +39,7 @@ const policies: Record<string, { title: string; intro: string; sections: { title
       },
       {
         title: 'Cash on Delivery (COD) & SMS Tracking',
-        copy: 'Cash on Delivery is available across all 25 districts with no extra surcharge. Once your parcel is dispatched from our Colombo fulfillment hub, you will receive an SMS containing your live PromptX tracking number.',
+        copy: 'Cash on Delivery is available across all 25 districts with no extra surcharge. Once your parcel is dispatched from our fulfillment hub, you will receive an SMS containing your live PromptX tracking number.',
       },
     ],
   },
@@ -122,7 +122,7 @@ const faq = [
   },
   {
     q: 'Where is your store located?',
-    a: 'We are primarily an online streetwear label dispatching from our Colombo fulfillment hub, with periodic retail pop-ups and exhibitions announced through our VIP newsletter and Instagram (@hello.streetwear).',
+    a: 'We are primarily an online streetwear label dispatching from our fulfillment hub, with periodic retail pop-ups and exhibitions announced through our VIP newsletter and Instagram (@hello.streetwear).',
   },
 ];
 
@@ -329,7 +329,7 @@ export default function InfoPage({ kind }: { kind: string }) {
           />
           <div />
           <div className="about-hero-copy">
-            <span className="eyebrow">BORN IN COLOMBO</span>
+            <span className="eyebrow">OUR STORY</span>
             <h1>
               HEAVYWEIGHT.
               <br />
@@ -347,7 +347,7 @@ export default function InfoPage({ kind }: { kind: string }) {
               PAPER-THIN TEES.
             </h2>
             <p>
-              We started HELLO! in Colombo because we were sick of buying tees that look great in a photoshoot, but shrink, fade, and turn into bacon around the collar after two washes in the heat.
+              We started HELLO! because we were sick of buying tees that look great in a photoshoot, but shrink, fade, and turn into bacon around the collar after two washes in the heat.
             </p>
             <p>
               We wanted genuine heavyweight streetwear: 240+ GSM combed compact cotton that holds its boxy silhouette, thick double-layered hoods that don’t flop flat, and relaxed drop-shoulder cuts with clean stitching.
@@ -384,7 +384,7 @@ export default function InfoPage({ kind }: { kind: string }) {
               </span>
             </div>
             <strong style={{ display: 'block', fontSize: '1rem', color: '#fff', marginBottom: '4px' }}>
-              {firebaseUser?.displayName || profile.name || 'Colombo Streetwear Club'}
+              {firebaseUser?.displayName || profile.name || 'HELLO! Streetwear Member'}
             </strong>
             <p style={{ margin: 0, fontSize: '0.82rem', color: '#9da097' }}>
               {firebaseUser?.email || profile.email || 'Islandwide Delivery · 7-Day Size Exchanges'}
@@ -595,6 +595,10 @@ export default function InfoPage({ kind }: { kind: string }) {
     const isCancelled = orderStatus === 'cancelled';
 
     const STATUS_RANKS: Record<string, number> = {
+      pending_confirmation: 0,
+      pending_payment: 0,
+      pending: 0,
+      unconfirmed: 0,
       order_placed: 0,
       confirmed: 0,
       processing: 0,
@@ -612,12 +616,12 @@ export default function InfoPage({ kind }: { kind: string }) {
     const timelineSteps = [
       {
         title: '1. Order Placed & Confirmed',
-        desc: 'Order verified and entered into HELLO! fulfillment hub in Colombo',
+        desc: 'Order verified and entered into HELLO! fulfillment hub',
         status: isCancelled ? 'pending' : currentRank > 0 ? 'done' : currentRank === 0 ? 'current' : 'pending',
       },
       {
         title: '2. In Progress (QC & Hand-Packing)',
-        desc: 'Inspected for fabric consistency and hand-packed in signature atelier dust bag',
+        desc: 'Inspected for fabric consistency and hand-packed in signature dust bag',
         status: isCancelled ? 'pending' : currentRank > 1 ? 'done' : currentRank === 1 ? 'current' : 'pending',
       },
       {
@@ -1079,7 +1083,13 @@ export default function InfoPage({ kind }: { kind: string }) {
 
   return (
     <section className="empty-state empty-page">
-      <span className="empty-script">Hello?</span>
+      <img
+        src="/brand/logo-dark.svg"
+        alt="HELLO!"
+        width={140}
+        height={57}
+        style={{ width: '140px', height: 'auto', marginBottom: '8px' }}
+      />
       <h1>This piece is missing.</h1>
       <p>Let’s get you back to the good stuff.</p>
       <Link className="button dark" href="/shop">

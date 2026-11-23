@@ -233,7 +233,7 @@ export default function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
             <div className="profile-info">
               <div className="profile-header-title">
                 <h3>
-                  {firebaseUser?.displayName || (profile.name ? profile.name : 'Colombo Streetwear Guest')}
+                  {firebaseUser?.displayName || (profile.name ? profile.name : 'Streetwear Guest')}
                 </h3>
               </div>
               <p className="profile-email">

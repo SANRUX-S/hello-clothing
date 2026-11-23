@@ -62,7 +62,7 @@ export const ORDER_STAGES = [
     bg: '#0c2d48',
     border: '#0284c7',
     badgeText: '1. ORDER PLACED',
-    description: 'Order placed & confirmed in atelier',
+    description: 'Order placed & confirmed',
   },
   {
     key: 'in_progress',
@@ -114,6 +114,32 @@ export function getOrderStageInfo(status?: string) {
   const norm = (status || 'order_placed').toLowerCase().trim();
   const found = ORDER_STAGES.find(s => s.key === norm || (s.aliases as readonly string[]).includes(norm));
   if (found) return found;
+  if (norm === 'pending_confirmation' || norm === 'unconfirmed' || norm === 'pending') {
+    return {
+      key: 'pending_confirmation',
+      aliases: ['pending_confirmation', 'unconfirmed', 'pending'],
+      label: 'Pending Confirmation',
+      stageNumber: 0,
+      color: '#f59e0b',
+      bg: '#451a03',
+      border: '#d97706',
+      badgeText: 'AWAITING CONFIRMATION',
+      description: 'Customer placed order; awaiting call/WhatsApp verification',
+    };
+  }
+  if (norm === 'pending_payment') {
+    return {
+      key: 'pending_payment',
+      aliases: ['pending_payment'],
+      label: 'Awaiting Payment',
+      stageNumber: 0,
+      color: '#38bdf8',
+      bg: '#082f49',
+      border: '#0284c7',
+      badgeText: 'AWAITING CARD PAYMENT',
+      description: 'Customer is completing PayHere payment',
+    };
+  }
   if (norm === 'cancelled') {
     return {
       key: 'cancelled',
@@ -155,11 +181,14 @@ export function getOrderWhatsAppMessage(order: AdminOrder, targetStageKey?: stri
   const isCod = order.paymentMethod === 'cod';
 
   switch (stage.key) {
+    case 'pending_confirmation':
+      return `Hello ${customerName}! 👋\n\nThank you for placing your order *${ref}* with HELLO! Clothing. Total: Rs. ${(order.total || 0).toLocaleString()} (${isCod ? 'Cash on Delivery' : 'Bank Transfer'}).\n\nPlease reply with *CONFIRM* so our fulfillment team can prepare and dispatch your parcel to ${order.customer?.city || 'your delivery address'}.\n\nThank you for choosing HELLO! 🖤`;
+
     case 'order_placed':
-      return `Hello ${customerName}! 👋\n\nYour order *${ref}* has been *PLACED & CONFIRMED* with HELLO! Clothing. Total: Rs. ${(order.total || 0).toLocaleString()}.\n\nOur Colombo fulfillment atelier is preparing your streetwear parcel. You can track your order live anytime:\n🔗 ${trackUrl}\n\nThank you for shopping with HELLO! 🖤`;
+      return `Hello ${customerName}! 👋\n\nYour order *${ref}* has been *PLACED & CONFIRMED* with HELLO! Clothing. Total: Rs. ${(order.total || 0).toLocaleString()}.\n\nOur fulfillment team is preparing your streetwear parcel. You can track your order live anytime:\n🔗 ${trackUrl}\n\nThank you for shopping with HELLO! 🖤`;
 
     case 'in_progress':
-      return `Hello ${customerName}! ⚡\n\nOrder Update: Your HELLO! Clothing order *${ref}* is now *IN PROGRESS*! Each piece is undergoing quality inspection and being hand-packed into our atelier dust bag.\n\nTrack your live progress here:\n🔗 ${trackUrl}\n\nWe will update you as soon as your parcel is ready for dispatch! 👕`;
+      return `Hello ${customerName}! ⚡\n\nOrder Update: Your HELLO! Clothing order *${ref}* is now *IN PROGRESS*! Each piece is undergoing quality inspection and being hand-packed into our signature dust bag.\n\nTrack your live progress here:\n🔗 ${trackUrl}\n\nWe will update you as soon as your parcel is ready for dispatch! 👕`;
 
     case 'ready_to_dispatch':
       return `Hello ${customerName}! 📦\n\nGreat news! Your HELLO! Clothing order *${ref}* is *READY TO DISPATCH* and handed over to our delivery partner *${courier}*${waybill}.\n\nIslandwide delivery typically takes 1–3 business days. Track your courier rider live:\n🔗 ${trackUrl}\n\nThank you for choosing HELLO! 🚀`;
@@ -198,13 +227,13 @@ const NAV: { id: AdminSection; label: string; icon: typeof Package; minRole?: "a
   { id: "team", label: "Staff & Admins", icon: Users, minRole: "super_admin" },
 ];
 const KEYS = { products: "hello-admin-demo-products-v1", categories: "hello-admin-demo-categories-v1", content: "hello-demo-content-v1", settings: "hello-demo-settings-v1", media: "hello-admin-demo-media-v1", inventory: "hello-admin-demo-inventory-v1", activity: "hello-admin-demo-activity-v1" };
-const DEFAULT_CONTENT: Content = { announcement: "Islandwide delivery across Sri Lanka · Free on orders over LKR 10,000", heroTitle: "ONE DAY, EVEN THE DEVIL WILL SAY HELLO!", heroSubtitle: "Heavyweight streetwear designed in Colombo.", aboutText: "Heavyweight cotton. Custom boxy fits. Built for real wear in the island heat." };
+const DEFAULT_CONTENT: Content = { announcement: "Islandwide delivery across Sri Lanka · Free on orders over LKR 10,000", heroTitle: "ONE DAY, EVEN THE DEVIL WILL SAY HELLO!", heroSubtitle: "Heavyweight streetwear crafted for daily wear.", aboutText: "Heavyweight cotton. Custom boxy fits. Built for real wear in the island heat." };
 const DEFAULT_SETTINGS: Settings = { storeName: "HELLO! Clothing", email: "", currency: "LKR", deliveryFee: 500, logoMotion: true };
 const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const titleCase = (value: string) => value.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 const money = (value: number) => `LKR ${Math.round(value / 100).toLocaleString("en-LK")}`;
 const BASE_PRODUCTS: Product[] = catalogProducts.map(p => ({ ...p, id: String(p.id), status: p.status || "published", isDemo: true, colors: p.colors.map(c => ({ name: c.name, hex: c.hex })), sizes: [...p.sizes] }));
-const BASE_CATEGORIES: Category[] = Array.from(new Set(BASE_PRODUCTS.map(p => p.category))).map(slug => ({ slug, name: titleCase(slug), description: `Heavyweight streetwear ${titleCase(slug).toLowerCase()} designed in Colombo.` }));
+const BASE_CATEGORIES: Category[] = Array.from(new Set(BASE_PRODUCTS.map(p => p.category))).map(slug => ({ slug, name: titleCase(slug), description: `Heavyweight streetwear ${titleCase(slug).toLowerCase()} crafted for daily wear.` }));
 const HEXES: Record<string, string> = { black: "#171818", white: "#f8f7f3", cream: "#e6ddcc", grey: "#969795", gray: "#969795", olive: "#72775c", brown: "#806b59", navy: "#303d4e", beige: "#d5c7b5" };
 
 function readLocal<T>(key: string, fallback: T): T {
@@ -823,7 +852,7 @@ function ProductEditor({ product, categories, onSave, onClose }: { product: Prod
             maxLength={2000}
             value={draft.description}
             onChange={e => setDraft({ ...draft, description: e.target.value })}
-            placeholder="Details about cut, weight, and Colombo streetwear inspiration..."
+            placeholder="Details about cut, weight, and streetwear inspiration..."
           />
         </label>
 
@@ -1806,6 +1835,9 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
             <button className={orderStatus === "all" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("all")}>
               All <span>{customerOrders.length}</span>
             </button>
+            <button className={orderStatus === "pending_confirmation" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("pending_confirmation")}>
+              ⏳ Unconfirmed <span>{customerOrders.filter(o => o.status === 'pending_confirmation' || o.status === 'pending' || o.status === 'unconfirmed').length}</span>
+            </button>
             <button className={orderStatus === "order_placed" ? "admin-filter-active" : ""} onClick={() => setOrderStatus("order_placed")}>
               1. Placed <span>{customerOrders.filter(o => getOrderStageInfo(o.status).key === 'order_placed').length}</span>
             </button>
@@ -2195,7 +2227,7 @@ export default function AdminApp({ initialSection = "overview" }: { initialSecti
       />
     )}
 
-    <footer className="admin-footer"><span className="admin-brand"><img src="/branding/hello-light.webp" alt="HELLO!" style={{ height: "20px", width: "auto", verticalAlign: "middle" }} /></span><p>Heavyweight streetwear · Colombo</p><span>HELLO! CLOTHING · ALL-IN-ONE ADMIN PANEL · {new Date().getFullYear()}</span></footer>
+    <footer className="admin-footer"><span className="admin-brand"><img src="/branding/hello-light.webp" alt="HELLO!" style={{ height: "20px", width: "auto", verticalAlign: "middle" }} /></span><p>Heavyweight streetwear · Sri Lanka</p><span>HELLO! CLOTHING · ALL-IN-ONE ADMIN PANEL · {new Date().getFullYear()}</span></footer>
     </main></div>
     {notice && <div className="admin-toast" role="status"><CheckCircle2 size={18} />{notice}<button aria-label="Dismiss notification" onClick={() => setNotice("")}><X size={15} /></button></div>}
     {editor && <ProductEditor product={editor === "new" ? null : editor} categories={categories} onSave={saveProduct} onClose={() => setEditor(null)} />}
@@ -2357,6 +2389,23 @@ function OrderDetailsModal({
             </span>
           </div>
         </div>
+
+        {/* Unconfirmed Callout */}
+        {(status === 'pending_confirmation' || status === 'unconfirmed' || status === 'pending') && (
+          <div style={{ background: '#451a03', border: '1px solid #d97706', borderRadius: '8px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <div>
+              <strong style={{ color: '#fbbf24', fontSize: '13px', display: 'block' }}>⏳ Order Awaiting Confirmation</strong>
+              <span style={{ color: '#fde68a', fontSize: '11px' }}>Customer placed this order. Verify customer details via WhatsApp or Phone, then confirm to reserve stock.</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleTransitionStage('order_placed')}
+              style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Check size={14} /> Confirm Order
+            </button>
+          </div>
+        )}
 
         {/* 5-Stage Interactive Fulfillment Stepper */}
         <div style={{ background: '#0d0e11', border: '1px solid #27272a', borderRadius: '10px', padding: '14px' }}>

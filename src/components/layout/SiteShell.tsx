@@ -50,7 +50,7 @@ export function Footer() {
    <div className="footer-top">
      <div className="footer-brand">
        <Link href="/" aria-label="Hello! home"><img className="hello-footer-logo" src="/branding/hello-light.webp" width={2378} height={964} alt="Hello!"/></Link>
-       <p>Heavyweight streetwear designed in Colombo.<br/>Cut boxy. Built to last.</p>
+       <p>Heavyweight streetwear crafted for daily wear.<br/>Cut boxy. Built to last.</p>
        <span className="footer-location">HELLO! CLOTHING / SRI LANKA</span>
      </div>
      <nav className="footer-column" aria-label="Shop links">
