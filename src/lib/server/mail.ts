@@ -213,7 +213,10 @@ export async function sendOrderConfirmationEmail(order: {
                 <td style="padding-top: 32px; border-top: 1px solid #f1f5f9; margin-top: 28px; font-size: 11px; color: #94a3b8; line-height: 1.6; text-align: center;">
                   HELLO! Clothing Sri Lanka &middot; Designed & Hand-Packed in Colombo<br>
                   Need assistance? Reply to this email or reach us at <a href="mailto:support@helloclothing.store" style="color: #64748b; text-decoration: underline;">support@helloclothing.store</a><br>
-                  &copy; ${new Date().getFullYear()} HELLO! CLOTHING. All rights reserved.
+                  &copy; ${new Date().getFullYear()} HELLO! CLOTHING. All rights reserved.<br>
+                  <span style="display: inline-block; margin-top: 10px; font-size: 10px; color: #64748b; letter-spacing: 0.5px;">
+                    Made by <a href="https://www.penetix.com/" target="_blank" style="color: #0f172a; font-weight: 700; text-decoration: none;">Penetix Cybersecurity Solutions</a>
+                  </span>
                 </td>
               </tr>
             </table>
@@ -461,7 +464,10 @@ export async function sendOrderStatusUpdateEmail(order: {
               <tr>
                 <td style="padding-top: 32px; border-top: 1px solid #f1f5f9; margin-top: 28px; font-size: 11px; color: #94a3b8; line-height: 1.6; text-align: center;">
                   HELLO! Clothing Sri Lanka &middot; Dispatched from Colombo<br>
-                  Questions? Reach us at <a href="mailto:orders@helloclothing.store" style="color: #64748b; text-decoration: underline;">orders@helloclothing.store</a>
+                  Questions? Reach us at <a href="mailto:orders@helloclothing.store" style="color: #64748b; text-decoration: underline;">orders@helloclothing.store</a><br>
+                  <span style="display: inline-block; margin-top: 10px; font-size: 10px; color: #64748b; letter-spacing: 0.5px;">
+                    Made by <a href="https://www.penetix.com/" target="_blank" style="color: #0f172a; font-weight: 700; text-decoration: none;">Penetix Cybersecurity Solutions</a>
+                  </span>
                 </td>
               </tr>
             </table>

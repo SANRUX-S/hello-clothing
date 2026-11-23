@@ -1118,6 +1118,14 @@ export function OrderConfirmation({ reference }: { reference: string }) {
               </div>
             </div>
           )}
+
+          {/* Receipt Footer Credit */}
+          <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #27272a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#71717a', flexWrap: 'wrap', gap: '8px' }}>
+            <span>© {new Date().getFullYear()} HELLO! CLOTHING. All rights reserved.</span>
+            <span>
+              Made by <a href="https://www.penetix.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#ffffff', fontWeight: 600, textDecoration: 'none' }}>Penetix Cybersecurity Solutions</a>
+            </span>
+          </div>
         </div>
         </>
       ) : (

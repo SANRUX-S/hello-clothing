@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { ArrowDown, ArrowLeft, ArrowRight, Pause, Play } from 'lucide-react';
 
 const slides = [
-  { image: '/hero/campaign.webp', alt: 'HELLO! official campaign streetwear drop in Colombo', edition: 'DROP 01 · COLOMBO', className: 'campaign-wide' },
   { image: '/campaign/real/man-black-hoodie.webp', secondImage: '/campaign/real/woman-white-hoodie.webp', alt: 'HELLO! black hoodie and white hoodie worn by models', edition: '380 GSM BRUSHED FLEECE', className: 'campaign-pair' },
   { image: '/campaign/real/man-charcoal-hoodie.webp', secondImage: '/campaign/real/man-graphic-tee-back.webp', alt: 'HELLO! charcoal hoodie and heavyweight graphic tee', edition: '240+ GSM STREETWEAR', className: 'campaign-pair' },
+  { image: '/campaign/real/man-white-tee.webp', secondImage: '/campaign/real/woman-black-tee.webp', alt: 'HELLO! essential white and black boxy tees', edition: 'CUSTOM BOXY FITS', className: 'campaign-pair' },
 ];
 export default function Hero() {
   const [active, setActive] = useState(0);
@@ -37,8 +37,8 @@ export default function Hero() {
       <img
         src={slide.image}
         alt={slide.alt}
-        width={index === 0 ? 1920 : 960}
-        height={index === 0 ? 1080 : 1280}
+        width={960}
+        height={1280}
         fetchPriority={index === 0 ? 'high' : 'auto'}
         decoding="async"
       />
