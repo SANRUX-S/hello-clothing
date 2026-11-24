@@ -116,31 +116,6 @@ function MastercardLogo() {
   );
 }
 
-function AmexLogo() {
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '22px',
-        padding: '0 5px',
-        borderRadius: '3px',
-        background: '#006fcf',
-        border: '1px solid #005bb5',
-        fontWeight: 800,
-        fontSize: '8px',
-        color: '#ffffff',
-        letterSpacing: '0.6px',
-        lineHeight: 1,
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-      }}
-    >
-      AMEX
-    </span>
-  );
-}
-
 export default function Checkout() {
   const store = useStore();
   const router = useRouter();
@@ -458,14 +433,13 @@ export default function Checkout() {
                 <div>
                   <strong>Pay with Credit or Debit Card</strong>
                   <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--muted)' }}>
-                    Visa, Mastercard, American Express
+                    Visa and Mastercard accepted
                   </p>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '5px', alignItems: 'center', marginLeft: 'auto' }}>
                 <VisaLogo />
                 <MastercardLogo />
-                <AmexLogo />
               </div>
             </label>
 
